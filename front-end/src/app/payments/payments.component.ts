@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from "@angular/core";
+﻿import { ChangeDetectorRef, Component, OnInit } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { EnumFuncao } from "app/models/authentication/EnumFuncao.model";
 import { AuthService } from "app/services/auth.service";
@@ -16,12 +16,15 @@ import { PreviewTokenService } from "app/services/preview-token.service";
 import { MatSnackBar } from "@angular/material/snack-bar";
 
 @Component({
-  selector: "app-payments",
-  templateUrl: "./payments.component.html",
-  styleUrls: ["./payments.component.css"],
+    selector: "app-payments",
+    templateUrl: "./payments.component.html",
+    styleUrls: ["./payments.component.css"],
+    standalone: false
 })
 export class PaymentsComponent implements OnInit {
 
+  isBusy: boolean = false;
+  isReadOnly: boolean = false;
   isAdmin: boolean = false;
   isManager: boolean = false;
   isRequester: boolean = false;

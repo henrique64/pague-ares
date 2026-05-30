@@ -4,9 +4,10 @@ import { AuthService } from '../services/auth.service';
 import { User } from './user';
 
 @Component({
-  selector: 'app-login',
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+    selector: 'app-login',
+    templateUrl: './login.component.html',
+    styleUrls: ['./login.component.css'],
+    standalone: false
 })
 export class LoginComponent implements OnInit {
 
@@ -15,6 +16,7 @@ export class LoginComponent implements OnInit {
 
   ocupado: boolean = false;
   erro: boolean = false;
+  saveLogin: boolean = false;
   mensagemErro: string = "";
 
   ngOnInit() {

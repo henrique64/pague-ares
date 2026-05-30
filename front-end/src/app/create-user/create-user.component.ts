@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
 import { toHash } from "ajv/dist/compile/util";
@@ -11,9 +11,10 @@ import { GenericResponse } from "app/models/GenericResponse";
 import { UserListModel } from "app/models/authentication/UserList.model";
 
 @Component({
-  selector: "create-user",
-  templateUrl: "./create-user.component.html",
-  styleUrls: ["./create-user.component.css"],
+    selector: "create-user",
+    templateUrl: "./create-user.component.html",
+    styleUrls: ["./create-user.component.css"],
+    standalone: false
 })
 export class CreateUserComponent implements OnInit {
   showAdm: boolean = false;

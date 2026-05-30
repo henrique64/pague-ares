@@ -1,5 +1,3 @@
-import { retryWhen } from "rxjs-compat/operator/retryWhen";
-
 export class UtilsService {
 
   static validarCPF(cpf): boolean {

@@ -1,15 +1,12 @@
 # Stage 1: Build Angular
-FROM node:18-alpine AS build-stage
+FROM node:20-alpine AS build-stage
 WORKDIR /app
 
 # Copiar dependencias primeiro para cache do npm install
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 COPY . .
-
-# Angular 12 + Node 18 requer flag de compatibilidade OpenSSL
-ENV NODE_OPTIONS=--openssl-legacy-provider
 
 RUN npx ng build --configuration production --output-hashing=all
 

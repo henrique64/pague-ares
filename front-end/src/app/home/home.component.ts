@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from "@angular/core";
+﻿import { ChangeDetectorRef, Component, OnDestroy, OnInit } from "@angular/core";
 import { PageEvent } from "@angular/material/paginator";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { Router } from "@angular/router";
@@ -16,9 +16,10 @@ import { UsersService } from "app/services/users.service";
 import * as moment from "moment";
 
 @Component({
-  selector: "app-dashboard",
-  templateUrl: "./home.component.html",
-  styleUrls: ["./home.component.css"],
+    selector: "app-dashboard",
+    templateUrl: "./home.component.html",
+    styleUrls: ["./home.component.css"],
+    standalone: false
 })
 export class HomeComponent implements OnInit, OnDestroy {
   showAdm: boolean = false;

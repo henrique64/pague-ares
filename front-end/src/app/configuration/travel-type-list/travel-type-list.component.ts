@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { GenericResponse } from "app/models/GenericResponse";
 import { TipoViagemModel } from "app/models/travel-type/travel-type.model";
@@ -6,9 +6,10 @@ import { TravelTypeService } from "app/services/travel-type.service";
 import { UsersService } from "app/services/users.service";
 
 @Component({
-  selector: "app-travel-type-list",
-  templateUrl: "./travel-type-list.component.html",
-  styleUrls: ["./travel-type-list.component.css"],
+    selector: "app-travel-type-list",
+    templateUrl: "./travel-type-list.component.html",
+    styleUrls: ["./travel-type-list.component.css"],
+    standalone: false
 })
 export class TravelTypeListComponent implements OnInit {
 

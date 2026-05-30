@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { Router, ActivatedRoute } from "@angular/router";
 import { UsuarioDto } from "app/models/authentication/UserDto.model";
@@ -11,9 +11,10 @@ import { PaymentService } from "app/services/payment.service";
 import { UsersService } from "app/services/users.service";
 
 @Component({
-  selector: "payment-report",
-  templateUrl: "./payment-report.component.html",
-  styleUrls: ["./payment-report.component.css"],
+    selector: "payment-report",
+    templateUrl: "./payment-report.component.html",
+    styleUrls: ["./payment-report.component.css"],
+    standalone: false
 })
 export class PaymentReportComponent implements OnInit {
   model: PaymentRequestModel = null;

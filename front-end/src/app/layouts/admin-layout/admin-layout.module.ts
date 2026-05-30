@@ -1,4 +1,4 @@
-import { NgModule } from "@angular/core";
+﻿import { NgModule } from "@angular/core";
 import { RouterModule } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
@@ -21,7 +21,7 @@ import { RddvComponent } from "app/rddv/rddv.component";
 import { RefundsComponent } from "app/refunds/refunds.component";
 import { CreateRequestComponent } from "app/create-request/create-request.component";
 import { CreateUserComponent } from "app/create-user/create-user.component";
-import { NgxMaskModule } from "ngx-mask";
+import { NgxMaskDirective, NgxMaskPipe, provideNgxMask } from "ngx-mask";
 import { CurrencyMaskModule } from "ng2-currency-mask";
 import { CreateRddvComponent } from "app/create-rddv/create-rddv.component";
 import { ConfigurationComponent } from "app/configuration/configuration.component";
@@ -47,11 +47,13 @@ import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginato
     MatNativeDateModule,
     MatSnackBarModule,
     MatCardModule,
-    NgxMaskModule.forRoot(),
+    NgxMaskDirective,
+    NgxMaskPipe,
     CurrencyMaskModule,
     MatProgressSpinnerModule,
     MatPaginatorModule
   ],
+  providers: [provideNgxMask()],
   declarations: [
     HomeComponent,
     PaymentsComponent,

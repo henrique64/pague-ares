@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { Router, ActivatedRoute } from "@angular/router";
 import { UsuarioDto } from "app/models/authentication/UserDto.model";
@@ -14,9 +14,10 @@ import { TravelTypeService } from "app/services/travel-type.service";
 import { UsersService } from "app/services/users.service";
 
 @Component({
-  selector: "rddv-report",
-  templateUrl: "./rddv-report.component.html",
-  styleUrls: ["./rddv-report.component.css"],
+    selector: "rddv-report",
+    templateUrl: "./rddv-report.component.html",
+    styleUrls: ["./rddv-report.component.css"],
+    standalone: false
 })
 export class RddvReportComponent implements OnInit {
   model: RddvModel = null;

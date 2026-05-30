@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { Router } from "@angular/router";
 import { toHash } from "ajv/dist/compile/util";
@@ -12,11 +12,14 @@ import { ConfigService } from "app/services/config.service";
 import { UsersService } from "app/services/users.service";
 
 @Component({
-  selector: "app-config",
-  templateUrl: "./configuration.component.html",
-  styleUrls: ["./configuration.component.css"],
+    selector: "app-config",
+    templateUrl: "./configuration.component.html",
+    styleUrls: ["./configuration.component.css"],
+    standalone: false
 })
 export class ConfigurationComponent implements OnInit {
+  isBusy: boolean = false;
+  isReadOnly: boolean = false;
   userList: UsuarioDto[] = [];
 
   userTypes = {

@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
 import { DialogService } from "app/components/dialog/dialog.service";
@@ -26,9 +26,10 @@ import { UtilsService } from "app/services/utils.service";
 import * as moment from "moment";
 
 @Component({
-  selector: "create-rddv",
-  templateUrl: "./create-rddv.component.html",
-  styleUrls: ["./create-rddv.component.css"],
+    selector: "create-rddv",
+    templateUrl: "./create-rddv.component.html",
+    styleUrls: ["./create-rddv.component.css"],
+    standalone: false
 })
 export class CreateRddvComponent implements OnInit {
   showAdm: boolean = false;

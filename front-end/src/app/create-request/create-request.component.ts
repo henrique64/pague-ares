@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
 import { DialogService } from "app/components/dialog/dialog.service";
@@ -19,9 +19,10 @@ import { UsersService } from "app/services/users.service";
 import { UtilsService } from "app/services/utils.service";
 
 @Component({
-  selector: "create-request",
-  templateUrl: "./create-request.component.html",
-  styleUrls: ["./create-request.component.css"],
+    selector: "create-request",
+    templateUrl: "./create-request.component.html",
+    styleUrls: ["./create-request.component.css"],
+    standalone: false
 })
 export class CreateRequestComponent implements OnInit {
   showAdm: boolean = false;

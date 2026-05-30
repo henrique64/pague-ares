@@ -1,8 +1,7 @@
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { APP_INITIALIZER, NgModule } from "@angular/core";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
-import { HTTP_INTERCEPTORS, HttpClientModule } from "@angular/common/http";
-import { RouterModule } from "@angular/router";
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
 import { AppRoutingModule } from "./app.routing";
 import { ComponentsModule } from "./components/components.module";
 import { AppComponent } from "./app.component";
@@ -28,18 +27,6 @@ export const configFactory = (system: SystemService) => {
 };
 
 @NgModule({
-  imports: [
-    BrowserAnimationsModule,
-    FormsModule,
-    ReactiveFormsModule,
-    HttpClientModule,
-    ComponentsModule,
-    RouterModule,
-    HttpClientModule,
-    AppRoutingModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule
-  ],
   exports: [],
   declarations: [
     AppComponent,
@@ -47,6 +34,16 @@ export const configFactory = (system: SystemService) => {
     LoginComponent,
     PaymentReportComponent,
     RddvReportComponent
+  ],
+  bootstrap: [AppComponent],
+  imports: [
+    BrowserAnimationsModule,
+    FormsModule,
+    ReactiveFormsModule,
+    ComponentsModule,
+    AppRoutingModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule
   ],
   providers: [
     AuthService,
@@ -62,8 +59,8 @@ export const configFactory = (system: SystemService) => {
       useClass: AuthInterceptor,
       multi: true
     },
-    { provide: MatPaginatorIntl, useValue: getPortuguesePaginatorIntl() }
-  ],
-  bootstrap: [AppComponent],
+    { provide: MatPaginatorIntl, useValue: getPortuguesePaginatorIntl() },
+    provideHttpClient(withInterceptorsFromDi())
+  ]
 })
 export class AppModule {}
