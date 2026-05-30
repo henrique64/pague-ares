@@ -20,15 +20,15 @@ Ambos seguem um **fluxo de aprovação em três estágios**: Gestor → Financei
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Framework | ASP.NET Core 8.0 |
-| Linguagem | C# 11+ |
-| ORM | Entity Framework Core 8.0 |
+| Framework | ASP.NET Core 10.0 |
+| Linguagem | C# 13+ |
+| ORM | Entity Framework Core 10.0 |
 | Banco | SQL Server 2019+ |
 | Autenticação | JWT HS256 + Active Directory (LDAP) |
 | E-mail | SMTP |
-| Excel | FreeSpire.XLS 14.2.0 |
+| Excel | FreeSpire.XLS 16.4.0 |
 | ZIP | SharpZipLib 1.4.2 |
-| Docs API | Swagger / OpenAPI 9.0.6 |
+| Docs API | Microsoft.AspNetCore.OpenApi 10.0 + Scalar UI |
 
 ---
 

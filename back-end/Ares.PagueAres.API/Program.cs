@@ -5,12 +5,11 @@ using Ares.PagueAres.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
 
 // Options
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
@@ -19,42 +18,40 @@ builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"
 
 // Controllers
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
 
-// Swagger
-builder.Services.AddSwaggerGen(c =>
+// OpenAPI (Microsoft.AspNetCore.OpenApi) + Scalar UI
+builder.Services.AddOpenApi(options =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "API PagueAres", Version = "v1" });
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
-        Description = @"JWT Authorization header using the Bearer scheme. \r\n\r\n 
-                      Enter 'Bearer' [space] and then your token in the text input below.
-                      \r\n\r\nExample: 'Bearer 12345abcdef'",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
+        document.Info.Title = "API PagueAres";
+        document.Info.Version = "v1";
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
-      {
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
         {
-          new OpenApiSecurityScheme
-          {
-            Reference = new OpenApiReference
-              {
-                Type = ReferenceType.SecurityScheme,
-                Id = "Bearer"
-              },
-              Scheme = "oauth2",
-              Name = "Bearer",
-              In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "JWT Authorization header. Insira seu token JWT abaixo."
+        };
 
-            },
-            new List<string>()
-          }
-        });
+        // Aplica o requisito de segurança a todas as operações
+        var requirement = new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer")] = []
+        };
+
+        foreach (var path in document.Paths.Values)
+            foreach (var operation in path.Operations.Values)
+            {
+                operation.Security ??= [];
+                operation.Security.Add(requirement);
+            }
+
+        return Task.CompletedTask;
+    });
 });
 
 // Database
@@ -77,7 +74,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"] ?? string.Empty))
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"] ?? string.Empty))
         };
     });
 
@@ -86,7 +84,6 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Auto-migrate no startup — ativado por variável de ambiente (Docker/CI).
-// Em desenvolvimento local use "dotnet ef database update" manualmente.
 if (app.Configuration["RunMigrations"] == "true"
     || Environment.GetEnvironmentVariable("ASPNETCORE_RUN_MIGRATIONS") == "true")
 {
@@ -95,11 +92,10 @@ if (app.Configuration["RunMigrations"] == "true"
     db.Database.Migrate();
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.MapScalarApiReference(options => options.Title = "API PagueAres");
 }
 
 // Sem TLS no container Docker — redirecionamento condicional.
