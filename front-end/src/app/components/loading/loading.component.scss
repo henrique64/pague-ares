@@ -1,0 +1,32 @@
+app-loading {
+  $loading-size: 16px;
+  $loading-border-size: 2px;
+
+  width: calc(#{$loading-size} + #{$loading-border-size * 2});
+  height: calc(#{$loading-size} + #{$loading-border-size * 2});
+  margin: calc(#{- $loading-size} / 2 - #{$loading-border-size}) 0 0
+    calc(#{- $loading-size} / 2 - #{$loading-border-size});
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 100;
+  box-shadow: 1px 1px 4px transparentize(black, 0.4);
+  border-radius: 100px;
+
+  .loading {
+    display: flex;
+
+    &:after {
+      content: "";
+      width: $loading-size;
+      height: $loading-size;
+      border-width: $loading-border-size;
+      border-style: solid;
+      border-color: red;
+
+      border-top-color: white !important;
+      border-radius: 100rem;
+      transition: 1s linear infinite;
+    }
+  }
+}

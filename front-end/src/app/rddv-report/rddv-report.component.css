@@ -1,0 +1,117 @@
+.report {
+    font-family: Tahoma !important;
+}
+
+.report strong {
+    font-weight: bold !important;
+}
+.align-right {
+    text-align: right;
+}
+
+.align-center {
+    text-align: center;
+}
+.row {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.report {
+    background-color: #fff;
+    width: 29cm;
+}
+
+.report [class*="col-md"] {
+    padding-right:0;
+    padding-left:0;
+}
+
+.margin-bottom-6 {
+    margin-bottom: 6px;
+}
+
+.row.header {
+    border: 4px solid #000;
+    font-weight: bolder;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 12px;
+}
+
+.row.header h3 {
+    font-weight: bolder;
+}
+
+table.header {
+    width: 100%;
+    border: 4px solid #000;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+table.expenses {
+    width: 95%;
+    margin-top: 6px;
+    font-size: small;
+}
+
+table.expenses thead {
+    border: 4px solid #000;
+}
+
+table.expenses td:last-of-type {
+    text-align: right;
+}
+
+table.abstract {
+    width: 100%;
+    margin-top: 6px;
+    font-size: small;
+}
+
+table.abstract thead {
+    border: 4px solid #000;
+}
+
+table.abstract tbody {
+    border-left: 4px solid #000;
+    border-right: 4px solid #000;
+    border-bottom: 4px solid #000;
+}
+
+table.abstract td:last-of-type {
+    text-align: right;
+}
+
+table.abstract tfoot {
+    border-left: 4px solid #000;
+    border-right: 4px solid #000;
+    border-bottom: 4px solid #000;
+}
+
+table.abstract tbody tr:last-of-type,
+table.abstract tfoot tr:last-of-type {
+    border-top: 4px solid #000;
+}
+
+.comments {
+    border: 4px solid #000;
+    margin-top: 6px;
+    margin-left: 0px;
+    margin-right: 0px;
+    min-height: 120px;
+}
+
+.footnotes {
+    font-size: small;
+}
+
+.payment {
+    font-size: small;
+}
+
+.table-resumo {
+    border: 1px solid #000;
+    width: 312px;
+}

@@ -1,0 +1,845 @@
+<div class="main-content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-danger">
+            <h4 class="card-title">Relatório de Despesa de Viagem - RDDV</h4>
+            <p class="card-category">Cadastro</p>
+          </div>
+
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nome do funcionário</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    type="text"
+                    [(ngModel)]="model.nomeFuncionario"
+                    [disabled]="true"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>CPF/CNPJ</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    type="text"
+                    mask="000.000.000-00||00.000.000/0000-00"
+                    [(ngModel)]="model.cpf"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Departamento</mat-label>
+                  <mat-select
+                    [(ngModel)]="model.idDepartamento"
+                    [disabled]="!liberarEdicaoDepartamento"
+                  >
+                    <mat-option
+                      *ngFor="let dept of departmentList"
+                      [value]="dept.idDepartamento"
+                      >{{ dept.nome }}</mat-option
+                    >
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Banco</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="model.banco"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Agência</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="model.agencia"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Conta</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="model.conta"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Data do Vencimento</mat-label>
+                  <input matInput [matDatepicker]="picker3" [(ngModel)]="model.dataVencimento"
+                    [disabled]="isReadOnly" />
+                  <mat-datepicker-toggle matSuffix [for]="picker3"></mat-datepicker-toggle>
+                  <mat-datepicker #picker3></mat-datepicker>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-7">
+                <mat-form-field appearance="outline">
+                  <mat-label>Finalidade</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    type="text"
+                    [(ngModel)]="model.finalidade"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo de Relatório</mat-label>
+                  <mat-select
+                    [(ngModel)]="model.tipoRelatorio"
+                    [disabled]="isReadOnly"
+                  >
+                    <mat-option
+                      *ngFor="let item of tiposRelatorio"
+                      [value]="item.id"
+                      >{{ item.name }}</mat-option
+                    >
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Moeda</mat-label>
+                  <mat-select [(ngModel)]="model.moeda" [disabled]="isReadOnly">
+                    <mat-option
+                      *ngFor="let item of tiposMoeda"
+                      [value]="item.name"
+                      >{{ item.name }}</mat-option
+                    >
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4">
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo de Viagem</mat-label>
+                  <mat-select
+                    [(ngModel)]="model.tipoViagem"
+                    [disabled]="isReadOnly"
+                  >
+                    <mat-option
+                      *ngFor="let item of travelTypes"
+                      [value]="item.idTipoViagem"
+                      >{{ item.nome }}</mat-option
+                    >
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Início da Viagem</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="picker"
+                    [(ngModel)]="model.dataInicio"
+                    [disabled]="isReadOnly"
+                    (ngModelChange)="ajustarDiarias()"
+                  />
+                  <mat-datepicker-toggle
+                    matSuffix
+                    [for]="picker"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #picker></mat-datepicker>
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Fim da Viagem</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="picker2"
+                    [(ngModel)]="model.dataFim"
+                    [disabled]="isReadOnly"
+                    (ngModelChange)="ajustarDiarias()"
+                  />
+                  <mat-datepicker-toggle
+                    matSuffix
+                    [for]="picker2"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #picker2></mat-datepicker>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <mat-form-field appearance="outline">
+                  <mat-label>Local da Viagem</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="model.localViagem"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Centro de Custos</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="model.centroCusto"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Projeto</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="model.projeto"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>PCA</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="model.pca"
+                    [disabled]="isReadOnly"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Diária de Viagem?</mat-label>
+                  <mat-select
+                    [(ngModel)]="model.diariaViagem"
+                    (ngModelChange)="diariaViagemChanged()"
+                    [disabled]="isReadOnly"
+                  >
+                    <mat-option [value]="true">Sim</mat-option>
+                    <mat-option [value]="false">Não</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-2" *ngIf="model.diariaViagem">
+                <mat-form-field appearance="outline">
+                  <mat-label>Diárias</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    type="number"
+                    [(ngModel)]="model.diarias"
+                    [disabled]="isReadOnly"
+                    [options]="valueConfig"
+                    step="0.5"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Pediu Adiantamento?</mat-label>
+                  <mat-select
+                    [(ngModel)]="model.adiantamento"
+                    (ngModelChange)="adiantamentoChanged()"
+                    [disabled]="isReadOnly"
+                  >
+                    <mat-option [value]="true">Sim</mat-option>
+                    <mat-option [value]="false">Não</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field appearance="outline" *ngIf="model.adiantamento">
+                  <mat-label>Valor do adiantamento</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="model.valorAdiantamento"
+                    [disabled]="isReadOnly"
+                    currencyMask
+                    [options]="{
+                      prefix: '',
+                      thousands: '.',
+                      decimal: ',',
+                      align: 'left'
+                    }"
+                  />
+                </mat-form-field>
+              </div>
+              <div class="col-md-2">
+                <mat-form-field
+                  appearance="outline"
+                  *ngIf="model.adiantamento && model.tipoViagem > 1"
+                >
+                  <mat-label>Saldo Cartão VTM</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="model.saldoCartaoVtm"
+                    [disabled]="isReadOnly"
+                    currencyMask
+                    [options]="{
+                      prefix: '',
+                      thousands: '.',
+                      decimal: ',',
+                      align: 'left'
+                    }"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <mat-form-field appearance="outline">
+                  <mat-label>Observação</mat-label>
+                  <textarea
+                    matInput
+                    [(ngModel)]="model.observacao"
+                    [disabled]="isReadOnly"
+                  ></textarea>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <h4>Anexos</h4>
+
+            <div class="row">
+              <div class="col-md-4" *ngIf="!isReadOnly">
+                <mat-form-field class="example-full-width" appearance="outline">
+                  <mat-select
+                    placeholder="Tipo de Anexo"
+                    [(ngModel)]="selectedAttachmentType"
+                    [disabled]="isReadOnly"
+                  >
+                    <mat-option
+                      *ngFor="let type of attachmentTypes"
+                      [value]="type.id"
+                      >{{ type.name }}</mat-option
+                    >
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-4" *ngIf="!isReadOnly">
+                <input
+                  [disabled]="!selectedAttachmentType"
+                  type="file"
+                  (change)="fileChangeEvent($event)"
+                  class="fileInputProfile"
+                />
+              </div>
+              <div class="col-md-4">
+                <button mat-raised-button type="button" class="btn btn-danger" (click)="downloadAttachments()" [disabled]="isBusy"
+                  *ngIf="isDownloadAvailable">
+                  Baixar Anexos
+                </button>
+              </div>
+            </div>
+
+            <table class="attachments">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Nome do Arquivo</th>
+                  <th>Tipo</th>
+                  <th>Data do Envio</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let file of validAttachments">
+                  <td>
+                    <a
+                      *ngIf="file.idDocumentoRddv > 0"
+                      href="javascript:void(0)"
+                      (click)="launchPreview(file)"
+                      ><i class="fa fa-search" aria-hidden="true"></i>
+                      Visualizar</a
+                    >
+
+                    <a
+                      *ngIf="!isEdit"
+                      href="javascript:void(0)"
+                      (click)="delete(file)"
+                      ><i class="fa fa-times" aria-hidden="true"></i>
+                      Remover</a
+                    >
+                  </td>
+                  <td>{{ file.nomeArquivo }}</td>
+                  <td>{{ attachmentTypeName(file.idTipoDocumento) }}</td>
+                  <td>{{ file.dataCriacao | date: "dd/MM/yyyy" }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="separator"></div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <h4>Despesas</h4>
+              </div>
+              <div class="col-md-6">
+                <div class="pull-right">
+                  <button
+                    mat-raised-button
+                    type="button"
+                    class="btn btn-danger"
+                    [disabled]="isBusy"
+                    *ngIf="!isEditingExpense && !isEdit"
+                    (click)="newExpense()"
+                  >
+                    Cadastrar Despesa
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <mat-card *ngIf="isEditingExpense">
+              <div class="row">
+                <div class="col-md-12">
+                  <h5>Incluir Despesa</h5>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-3">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Data</mat-label>
+                    <input
+                      matInput
+                      [matDatepicker]="picker3"
+                      [(ngModel)]="expenseModel.dataDespesa"
+                      [disabled]="isReadOnly"
+                    />
+                    <mat-datepicker-toggle
+                      matSuffix
+                      [for]="picker3"
+                    ></mat-datepicker-toggle>
+                    <mat-datepicker #picker3></mat-datepicker>
+                  </mat-form-field>
+                </div>
+                <div class="col-md-3">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Tipo</mat-label>
+                    <mat-select
+                      [(ngModel)]="expenseModel.tipoDespesa"
+                      [disabled]="isReadOnly"
+                    >
+                      <mat-option
+                        *ngFor="let item of tiposDespesa"
+                        [value]="item.id"
+                        >{{ item.name }}</mat-option
+                      >
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="col-md-3" *ngIf="expenseModel.tipoDespesa === 5">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Km</mat-label>
+                    <input
+                      matInput
+                      type="text"
+                      [(ngModel)]="expenseModel.quantidade"
+                      [disabled]="isReadOnly"
+                      currencyMask
+                      [options]="{
+                        prefix: '',
+                        thousands: '.',
+                        decimal: ',',
+                        align: 'left'
+                      }"
+                      (ngModelChange)="calcularKm(expenseModel)"
+                    />
+                  </mat-form-field>
+                </div>
+                <div class="col-md-3">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Valor</mat-label>
+                    <input
+                      matInput
+                      type="text"
+                      [(ngModel)]="expenseModel.valor"
+                      [disabled]="isReadOnly || expenseModel.tipoDespesa === 5"
+                      currencyMask
+                      [options]="{
+                        prefix: '',
+                        thousands: '.',
+                        decimal: ',',
+                        align: 'left'
+                      }"
+                    />
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="pull-right">
+                <button
+                  mat-raised-button
+                  type="submit"
+                  class="btn btn-danger"
+                  (click)="cancelEditExpense()"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  mat-raised-button
+                  type="submit"
+                  class="btn btn-danger"
+                  (click)="saveExpense()"
+                >
+                  Salvar
+                </button>
+              </div>
+              <div class="clearfix"></div>
+            </mat-card>
+
+            <table class="expenses">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let despesa of model.despesas">
+                  <td>
+                    <a
+                      href="javascript:void(0)"
+                      (click)="editExpense(despesa)"
+                      [disabled]="isEditingExpense"
+                      ><i class="fa fa-search" aria-hidden="true"></i>
+                      Editar</a
+                    >&nbsp;
+                    <a
+                      href="javascript:void(0)"
+                      (click)="removeExpense(despesa)"
+                      [disabled]="isEditingExpense"
+                      ><i class="material-icons">delete</i> Excluir</a
+                    >&nbsp;
+                    <a
+                      href="javascript:void(0)"
+                      (click)="cloneExpense(despesa)"
+                      [disabled]="isEditingExpense"
+                      ><i class="fa fa-clone" aria-hidden="true"></i> Duplicar</a
+                    >
+                    
+                  </td>
+                  <td>{{ despesa.dataDespesa | date: "dd/MM/yyyy" }}</td>
+                  <td>{{ labelTipoDespesa(despesa.tipoDespesa) }}</td>
+                  <td>{{ despesa.valor | number: "1.2-2" }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="separator"></div>
+
+            <h4>Autorização</h4>
+
+            <div class="row">
+              <div class="col-md-4">
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo de Autorização</mat-label>
+                  <mat-select
+                    placeholder="Selecione"
+                    [(ngModel)]="model.tipoAutorizacao"
+                    [disabled]="isReadOnly"
+                  >
+                    <mat-option [value]="1">Por Anexo</mat-option>
+                    <mat-option [value]="2">Por Sistema</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row" *ngIf="model.idUsuarioAtribuido > 0">
+              <div class="col-md-6">
+                <mat-form-field class="example-full-width" appearance="outline">
+                  <mat-label>Atribuído a</mat-label>
+                  <mat-select
+                    placeholder="Atribuído a"
+                    [(ngModel)]="model.idUsuarioAtribuido"
+                    [disabled]="true"
+                  >
+                    <mat-option
+                      *ngFor="let user of userList"
+                      [value]="user.idUsuario"
+                      >{{ user.nome }}</mat-option
+                    >
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="col-md-6">
+                <mat-form-field appearance="outline">
+                  <mat-label>Data da Atribuição</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="pickerAssign"
+                    [(ngModel)]="model.dataAtribuicao"
+                    [disabled]="true"
+                  />
+                  <mat-datepicker-toggle
+                    matSuffix
+                    [for]="pickerAssign"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #pickerAssign></mat-datepicker>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row" *ngIf="model.tipoAutorizacao === 2">
+              <div class="col-md-3">
+                <mat-form-field class="example-full-width" appearance="outline">
+                  <mat-select
+                    placeholder="Gestor"
+                    [(ngModel)]="model.idGestor"
+                    [disabled]="isReadOnly"
+                  >
+                    <mat-option
+                      *ngFor="let user of managersList"
+                      [value]="user.idUsuario"
+                      >{{ user.nome }}</mat-option
+                    >
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Autorização do Gestor</mat-label>
+                  <mat-select
+                    placeholder="Selecione"
+                    [(ngModel)]="model.aprovadoGestor"
+                    [disabled]="isManagerReadOnly || !isEdit"
+                  >
+                    <mat-option [value]="null">Selecione</mat-option>
+                    <mat-option [value]="true">Aprovado</mat-option>
+                    <mat-option [value]="false">Não Aprovado</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-6">
+                <mat-form-field appearance="outline">
+                  <mat-label>Observação do Gestor da Área</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="model.observacaoGestor"
+                    [disabled]="isManagerReadOnly || !isEdit"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Autorização do Financeiro</mat-label>
+                  <mat-select
+                    placeholder="Selecione"
+                    [(ngModel)]="model.aprovadoSetor"
+                    [disabled]="isFinanceReadOnly || !isEdit"
+                  >
+                    <mat-option [value]="null">Selecione</mat-option>
+                    <mat-option [value]="true">Aprovado</mat-option>
+                    <mat-option [value]="false">Não Aprovado</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-9">
+                <mat-form-field appearance="outline">
+                  <mat-label>Observação do Gestor Financeiro</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="model.observacaoSetor"
+                    [disabled]="(!isAccounting && isFinanceReadOnly) || !isEdit || model.statusGestor === 3"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Status Contabilidade</mat-label>
+                  <mat-select
+                    placeholder="Selecione"
+                    [(ngModel)]="model.statusContabilidade"
+                    [disabled]="isAccountingReadOnly || !isEdit || !model.idUsuarioAtribuido || model.statusFinanceiro === 3 || model.statusGestor === 3"
+                  >
+                    <mat-option [value]="1">Aguardando Lançamento</mat-option>
+                    <mat-option [value]="2">Lançado</mat-option>
+                    <mat-option [value]="3">Negado</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <div class="col-md-3">
+                {{ assignee }}
+              </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <h4>Resumo do RDDV</h4>
+
+            <div class="row">
+              <div class="col-md-6">
+                <table class="table-resumo">
+                  <thead>
+                    <th>&nbsp;</th>
+                    <th>Valor</th>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Diária</td>
+                      <td>{{totalDiaria | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Alimentação</td>
+                      <td>{{getTotal(1) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Hospedagem</td>
+                      <td>{{getTotal(2) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Passagens</td>
+                      <td>{{getTotal(3) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Táxi</td>
+                      <td>{{getTotal(4) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Kilometragem</td>
+                      <td>{{getTotal(5) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Estacionamento</td>
+                      <td>{{getTotal(6) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Pedágio</td>
+                      <td>{{getTotal(7) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Combustível</td>
+                      <td>{{getTotal(8) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Aluguel de Automóvel</td>
+                      <td>{{getTotal(9) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Comunicações</td>
+                      <td>{{getTotal(10) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Bagagens</td>
+                      <td>{{getTotal(11) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Outros</td>
+                      <td>{{getTotal(12) | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Subtotal</td>
+                      <td>{{subTotal | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Adiantamento Recebido</td>
+                      <td>{{totalAdiantamento | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Saldo Cartão VTM</td>
+                      <td>{{totalVtm | number:'1.2-2'}}</td>
+                    </tr>
+                    <tr>
+                      <td>Total</td>
+                      <td>{{totalAres | number:'1.2-2'}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="pull-right">
+              <button
+                mat-raised-button
+                type="button"
+                class="btn btn-danger"
+                (click)="showClone()"
+                [disabled]="isBusy"
+                *ngIf="isEdit && isUserView"
+              >
+                Clonar Solicitação
+              </button>
+
+              <button mat-raised-button type="button" class="btn btn-danger" (click)="cancel()" [disabled]="isBusy" *ngIf="
+                  !(
+                    isAccountingReadOnly &&
+                    isFinanceReadOnly &&
+                    isManagerReadOnly &&
+                    isEdit
+                  ) || (isDraft && isUserView) || (!isReadOnly && isUserView)
+                ">
+                Cancelar
+              </button>
+              <button mat-raised-button type="button" class="btn btn-danger" (click)="save(true)" [disabled]="isBusy" *ngIf="
+                  isUserView && isDraft
+                ">
+                Salvar (Rascunho)
+              </button>
+              <button mat-raised-button type="button" class="btn btn-danger" (click)="save(false)" [disabled]="isBusy" *ngIf="
+                  !(
+                    isAccountingReadOnly &&
+                    isFinanceReadOnly &&
+                    isManagerReadOnly &&
+                    isEdit
+                  ) || (isDraft && isUserView) || (!isReadOnly && isUserView)
+                ">
+                <span *ngIf="isDraft">Enviar</span>
+                <span *ngIf="!isDraft">Salvar</span>
+              </button>
+            </div>
+            <div class="clearfix"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

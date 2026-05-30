@@ -1,0 +1,291 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat');
+
+/* body {
+    background-color: #d84f52;
+    background-image: url('/assets/img/red.jpg');
+    background-position: center;
+    background-size: 150%;
+} */
+
+h3 {
+    margin: 0px 0px 10px 0px;
+    text-align: center;
+}
+
+body {
+  font-family: "Montserrat", sans-serif;
+  height: 100vh;
+}
+
+/* Username + Password */
+p.logTitle {
+  color: #808080;
+  text-align: left;
+  font-size: 14px;
+  margin: 4px 0px 0px 0px;
+  padding: 0px;
+}
+
+/* Remind password */
+label.remindLog {
+  color: #B22D30;
+  text-align: right;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+/* forgot password */
+a.underlineHover {
+  color: #B22D30;
+  font-size: 12px;
+  margin-top: 0px;
+}
+
+/* Checkbox color */
+input[type="checkbox"]{
+  outline: 2px solid #B22D30;
+  outline-offset: -2px;
+}
+
+/* Icon Ares */
+img.centerImage {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* structure */
+.wrapper {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  padding: 5px;
+  min-height: 100%;
+}
+
+/* main box */
+#formContent {
+  width: 320px;
+  text-align: left;
+  background: #fff;
+  position: relative;
+  padding: 37px 20px 37px 20px; /* top, right, bottom, left */
+  /* border-bottom: 5px solid #B22D30; */
+  border-radius: 40px 40px 40px 40px;
+  box-shadow: 0 30px 60px 0 rgba(0,0,0,0.3);
+}
+
+/* Login bottom */
+input[type=button], input[type=submit] {
+  background-color: #B22D30;
+  width: 100%;
+  border: none;
+  color: white;
+  padding: 12px 0px 12px 0px;
+  margin: 15px 0px 20px 0px;
+  text-align: center;
+  font-weight: bold;
+  display: inline-block;
+  font-size: 20px;
+  border-radius: 10px 10px 10px 10px;
+  -webkit-transition: all 0.3s ease-in-out;
+  -moz-transition: all 0.3s ease-in-out;
+  -ms-transition: all 0.3s ease-in-out;
+  -o-transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+}
+
+/* login buttom hover */
+input[type=button]:hover, input[type=submit]:hover, input[type=reset]:hover  {
+  background-color: #d84f52;
+}
+
+/* login buttom active */
+input[type=button]:active, input[type=submit]:active, input[type=reset]:active  {
+  color: rgb(255, 255, 255);
+  -moz-transform: scale(0.95);
+  -webkit-transform: scale(0.95);
+  -o-transform: scale(0.95);
+  -ms-transform: scale(0.95);
+  transform: scale(0.95);
+}
+
+/* input text */
+input[type=text] {
+  background-color: #E6E6E6;
+  border: none;
+  color: #808080;
+  padding: 6px 10px;
+  text-align: left;
+  display: inline-block;
+  font-size: 16px;
+  width: 100%;
+  border: 1px solid #E6E6E6;
+  -webkit-transition: all 0.5s ease-in-out;
+  -moz-transition: all 0.5s ease-in-out;
+  -ms-transition: all 0.5s ease-in-out;
+  -o-transition: all 0.5s ease-in-out;
+  transition: all 0.5s ease-in-out;
+  border-radius: 10px 10px 10px 10px;
+}
+
+input[type=text]:focus {
+  background-color: #fff;
+}
+
+/* input password */
+input[type=password] {
+  background-color: #E6E6E6;
+  border: none;
+  color: #808080;
+  padding: 6px 10px;
+  text-align: left;
+  display: inline-block;
+  font-size: 16px;
+  width: 100%;
+  border: 1px solid #E6E6E6;
+  -webkit-transition: all 0.5s ease-in-out;
+  -moz-transition: all 0.5s ease-in-out;
+  -ms-transition: all 0.5s ease-in-out;
+  -o-transition: all 0.5s ease-in-out;
+  transition: all 0.5s ease-in-out;
+  border-radius: 10px 10px 10px 10px;
+}
+
+input[type=password]:focus {
+  background-color: #fff;
+}
+
+/* text color inside the gray box */
+input[type=text]:placeholder {
+  color: #cccccc;
+}
+
+/* ANIMATIONS */
+
+/* Simple CSS3 Fade-in-down Animation */
+.fadeInDown {
+  -webkit-animation-name: fadeInDown;
+  animation-name: fadeInDown;
+  -webkit-animation-duration: 0.5s;
+  animation-duration: 0.5s;
+  -webkit-animation-fill-mode: both;
+  animation-fill-mode: both;
+}
+
+@-webkit-keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    -webkit-transform: translate3d(0, -100%, 0);
+    transform: translate3d(0, -100%, 0);
+  }
+  100% {
+    opacity: 1;
+    -webkit-transform: none;
+    transform: none;
+  }
+}
+
+@keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    -webkit-transform: translate3d(0, -100%, 0);
+    transform: translate3d(0, -100%, 0);
+  }
+  100% {
+    opacity: 1;
+    -webkit-transform: none;
+    transform: none;
+  }
+}
+
+/* Simple CSS3 Fade-in Animation */
+@-webkit-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@-moz-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.fadeIn {
+  opacity:0;
+  -webkit-animation:fadeIn ease-in 1;
+  -moz-animation:fadeIn ease-in 1;
+  animation:fadeIn ease-in 1;
+
+  -webkit-animation-fill-mode:forwards;
+  -moz-animation-fill-mode:forwards;
+  animation-fill-mode:forwards;
+
+  -webkit-animation-duration:1s;
+  -moz-animation-duration:1s;
+  animation-duration:0.5s;
+}
+
+.fadeIn.first {
+  -webkit-animation-delay: 0.1s;
+  -moz-animation-delay: 0.1s;
+  animation-delay: 0.1s;
+}
+
+.fadeIn.second {
+  -webkit-animation-delay: 0.2s;
+  -moz-animation-delay: 0.2s;
+  animation-delay: 0.2s;
+}
+
+.fadeIn.third {
+  -webkit-animation-delay: 0.3s;
+  -moz-animation-delay: 0.3s;
+  animation-delay: 0.3s;
+}
+
+.fadeIn.fourth {
+  -webkit-animation-delay: 0.4s;
+  -moz-animation-delay: 0.4s;
+  animation-delay: 0.4s;
+}
+
+
+/* Simple CSS3 Fade-in Animation */
+
+.underlineHover:hover {
+  color: #d84f52;
+}
+
+.underlineHover:hover:after{
+  width: 100%;
+}
+
+.faqFormHover:hover {
+  color: #808080;
+}
+
+.faqFormHover:hover:after{
+  width: 100%;
+}
+
+/* OTHERS */
+
+*:focus {
+    outline: none;
+} 
+
+#icon {
+  width:35%;
+  margin-bottom: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.loader {
+  text-align: center;
+}
+
+.error-message {
+  color: red;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+}

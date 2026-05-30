@@ -1,0 +1,271 @@
+<div class="container-fluid report">
+  <div class="cell-group">
+    <div class="row">
+      <div class="col-md-9">
+        <div class="logo-img">
+          <img src="/assets/img/ares_report.png" />
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="cell">
+          <div class="label">Valor</div>
+          <div class="value right">{{model.valor | number: "1.2-2"}}</div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-9">
+        <h5>SOLICITAÇÃO DE PAGAMENTO</h5>
+        Data do Relatório: {{ now | date:"dd/MM/yyyy HH:mm" }}
+      </div>
+      <div class="col-md-3">
+        <div class="cell">
+          <div class="label">Vencimento</div>
+          <div class="value right">{{ model.dataVencimento | date:"dd/MM/yyyy" }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell-group">
+    <div class="row">
+      <div class="col-md-3">
+        <div class="cell">
+          <div class="label">Cod Sistema</div>
+          <div class="value center">SO-{{model.idSolicitacao}}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="cell">
+          <div class="label">Solicitante</div>
+          <div class="value center">{{model.nomeUsuario}}&nbsp;</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="cell">
+          <div class="label">Área</div>
+          <div class="value center">{{departmentList[model.idDepartamento]}}&nbsp;</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="cell">
+          <div class="label">Data Emissão</div>
+          <div class="value center">{{ model.dataSolicitacao | date:"dd/MM/yyyy" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Tipo Solicitação</div>
+          <div class="value center">{{ documentTypes[model.tipoSolicitacao] }}</div>
+        </div>
+      </div>
+      <div class="col-md-1">
+        <div class="cell">
+          <div class="label">Parcelado</div>
+          <div class="value center">{{ bool[model.parcelado]}}</div>
+        </div>
+      </div>
+      <div class="col-md-1">
+        <div class="cell">
+          <div class="label">QT Parc.</div>
+          <div class="value center">{{model.parcelas}}</div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Forma Pagamento</div>
+          <div class="value center">{{ paymentTypes[model.formaPagamento]}}</div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Centro Custo</div>
+          <div class="value center">{{model.centroCusto}}</div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Projeto</div>
+          <div class="value center">{{model.projeto}}</div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">PCA</div>
+          <div class="value center">{{model.pca}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="cell">
+          <div class="label">Descrição do Pagamento</div>
+          <div class="value left">{{model.descricao}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="cell">
+          <div class="label">Parceiro</div>
+          <div class="value left">
+            {{model.nomeParceiro}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Cod Parceiro</div>
+          <div class="value left">{{model.codigoParceiro}}&nbsp;</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="cell">
+          <div class="label">CNPJ</div>
+          <div class="value left">{{model.numDocParceiro}}&nbsp;</div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Banco</div>
+          <div class="value left">{{model.bancoParceiro}}&nbsp;</div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Agência</div>
+          <div class="value left">{{model.agenciaParceiro}}&nbsp;</div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="cell">
+          <div class="label">Conta Corrente</div>
+          <div class="value left">{{model.contaParceiro}}&nbsp;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="cell">
+          <div class="label">Observações do Solicitante</div>
+          <div class="value left">
+            {{model.observacao}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-header">ARQUIVOS ANEXADOS</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Documento</th>
+        <th>Nome do Arquivo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let doc of documentos">
+        <td>DOC {{doc.indice}}</td>
+        <td>{{attachmentTypes[doc.idTipoDocumento]}}</td>
+        <td>{{doc.nomeArquivo}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="table-header" *ngIf="model.tipoAutorizacao === 1">AUTORIZAÇÃO ANEXADA</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Documento</th>
+        <th>Nome do Arquivo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let doc of autorizacoes">
+        <td>AUT {{doc.indice}}</td>
+        <td>{{attachmentTypes[doc.idTipoDocumento]}}</td>
+        <td>{{doc.nomeArquivo}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cell-group margin-bottom-6">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="cell">
+          <div class="label">Tipo de Autorização</div>
+          <div class="value left">{{authTypes[model.tipoAutorizacao]}}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="cell">
+          <div class="label">Gestor Autorizador</div>
+          <div class="value left">{{model.nomeGestor}}&nbsp;</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="cell">
+          <div class="label">Data de Aprovação</div>
+          <div class="value center"><span *ngIf="model.aprovadoGestor || model.tipoAutorizacao === 1">{{ model.dataSolicitacao | date:"dd/MM/yyyy HH:mm" }}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Status Gestor</th>
+        <th>Observacao do Gestor da Área</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{statusGestor[model.statusGestor]}}</td>
+        <td>{{model.observacaoGestor}}&nbsp;</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Status Financeiro</th>
+        <th>Observacao do Gestor da Área</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{statusFinanceiro[model.statusFinanceiro]}}</td>
+        <td>{{model.observacaoSetor}}&nbsp;</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Status Contabilidade</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{statusContabil[model.statusContabilidade]}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

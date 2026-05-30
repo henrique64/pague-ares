@@ -1,0 +1,11 @@
+# Linha de final padrão: CRLF no Windows, LF no Linux
+* text=auto
+
+# Scripts shell DEVEM ter LF (executados em containers Linux)
+*.sh text eol=lf
+
+# Dockerfiles e configs Nginx com LF
+Dockerfile text eol=lf
+nginx.conf text eol=lf
+docker-entrypoint.sh text eol=lf
+entrypoint.sh text eol=lf

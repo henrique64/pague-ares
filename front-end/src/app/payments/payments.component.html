@@ -1,0 +1,500 @@
+<div class="main-content">
+  <mat-card class="container-fluid">
+    <div class="row">
+      <div class="col-md-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Número do Documento</mat-label>
+          <input
+            matInput
+            placeholder=""
+            [(ngModel)]="myFilter.documentNumber"
+            [disabled]="isReadOnly"
+            (ngModelChange)="saveFilter()"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Código</mat-label>
+          <input
+            matInput
+            placeholder=""
+            [(ngModel)]="myFilter.documentId"
+            [disabled]="isReadOnly"
+            (ngModelChange)="saveFilter()"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col-md-6">
+        <mat-form-field appearance="outline">
+          <mat-label>Parceiro</mat-label>
+          <input
+            matInput
+            placeholder=""
+            [(ngModel)]="myFilter.partnerName"
+            [disabled]="isReadOnly"
+            (ngModelChange)="saveFilter()"
+          />
+        </mat-form-field>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Solicitante</mat-label>
+          <mat-select
+            placeholder="Solicitante"
+            [(ngModel)]="myFilter.requesterId"
+            (ngModelChange)="saveFilter()"
+          >
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option
+              *ngFor="let user of userList"
+              [value]="user.idUsuario"
+              >{{ user.nome }}</mat-option
+            >
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Atribuído a</mat-label>
+          <mat-select
+            placeholder="Atribuído a"
+            [(ngModel)]="myFilter.assigneeId"
+            (ngModelChange)="saveFilter()"
+          >
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option
+              *ngFor="let user of userList"
+              [value]="user.idUsuario"
+              >{{ user.nome }}</mat-option
+            >
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <!--[rangePicker]="myDateRangeFilter"-->
+        <mat-form-field class="filter-datepicker-range" appearance="outline">
+          <mat-label>Período da Solicitação</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input
+              matStartDate
+              placeholder="Início"
+              [(ngModel)]="myFilter.requestStart"
+              (ngModelChange)="saveFilter()"
+            />
+            <input
+              matEndDate
+              placeholder="Fim"
+              [(ngModel)]="myFilter.requestEnd"
+              (ngModelChange)="saveFilter()"
+            />
+          </mat-date-range-input>
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="picker"
+          ></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field class="filter-datepicker-range" appearance="outline">
+          <mat-label>Período de Vencimento</mat-label>
+          <mat-date-range-input [rangePicker]="picker2">
+            <input
+              matStartDate
+              placeholder="Início"
+              [(ngModel)]="myFilter.dueStart"
+              (ngModelChange)="saveFilter()"
+            />
+            <input
+              matEndDate
+              placeholder="Fim"
+              [(ngModel)]="myFilter.dueEnd"
+              (ngModelChange)="saveFilter()"
+            />
+          </mat-date-range-input>
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="picker2"
+          ></mat-datepicker-toggle>
+          <mat-date-range-picker #picker2></mat-date-range-picker>
+        </mat-form-field>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-4">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Status Gestor</mat-label>
+          <mat-select
+            placeholder="Status Gestor"
+            [(ngModel)]="myFilter.managerStatus"
+            (ngModelChange)="saveFilter()"
+          >
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option
+              *ngFor="let item of listStatusGestor"
+              [value]="item.id"
+              >{{ item.name }}</mat-option
+            >
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="col-md-4">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Status Financeiro</mat-label>
+          <mat-select
+            placeholder="Status Financeiro"
+            [(ngModel)]="myFilter.financeStatus"
+            (ngModelChange)="saveFilter()"
+          >
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option
+              *ngFor="let item of listStatusFinanceiro"
+              [value]="item.id"
+              >{{ item.name }}</mat-option
+            >
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="col-md-4">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Status Contabilidade</mat-label>
+          <mat-select
+            placeholder="Status Contabilidade"
+            [(ngModel)]="myFilter.accountingStatus"
+            (ngModelChange)="saveFilter()"
+          >
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option
+              *ngFor="let item of listStatusContabil"
+              [value]="item.id"
+              >{{ item.name }}</mat-option
+            >
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <button
+          mat-raised-button
+          type="button"
+          class="btn btn-danger"
+          (click)="newRequest()"
+          [disabled]="isBusy"
+        >
+          Solicitar Pagamento
+        </button>
+
+        <button
+          mat-raised-button
+          type="button"
+          class="btn btn-danger"
+          (click)="newRddv()"
+          [disabled]="isBusy"
+        >
+          Solicitar RDDV
+        </button>
+      </div>
+      <div class="col-md-6">
+        <div class="pull-right">
+          <button
+            mat-raised-button
+            type="button"
+            class="btn btn-danger"
+            (click)="exportFinancialView()"
+            *ngIf="allowExport"
+          >
+            Exportar
+          </button>
+          
+          <button
+            mat-raised-button
+            type="button"
+            class="btn btn-danger"
+            (click)="clearFilters()"
+          >
+            Limpar Filtros
+          </button>
+
+          <button
+            mat-raised-button
+            type="button"
+            class="btn btn-danger"
+            (click)="loadPayments()"
+          >
+            Filtrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+
+  <mat-tab-group [(selectedIndex)]="currentTab" (selectedTabChange)="setView($event)">
+    <mat-tab 
+      label="Minhas Solicitações" 
+      [disabled]="isLoadingRequests">
+      
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header card-header-danger">
+                <h4 class="card-title">Minhas Solicitações de Pagamento</h4>
+              </div>
+
+              <div class="loader" *ngIf="isLoadingRequests">
+                <mat-progress-spinner diameter="32" mode="indeterminate"></mat-progress-spinner>
+              </div>
+
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead class="text-primary">
+                      <th>Ações</th>
+                      <th>Código</th>
+                      <th>Tipo</th>
+                      <th>
+                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data Inclusão</a>
+                        <span *ngIf="isSortAsc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-asc"></i></span>
+                        <span *ngIf="isSortDesc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-desc"></i></span>
+                      </th>
+                      <th>
+                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data Vencimento</a>
+                        <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
+                        <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
+                      </th>
+                      <th>Status Gestor</th>
+                      <th>Status Financeiro</th>
+                      <th>Status Contabilidade</th>
+                      <th>Solicitante</th>
+                      <th>Parceiro</th>
+                      <th>Valor</th>
+                      <th>Descrição</th>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let req of requests">
+                        <td>
+                          <a
+                            matTooltip="Visualizar"
+                            href="javascript:void(0)"
+                            (click)="edit(req)"
+                            ><i class="material-icons">edit</i></a
+                          >
+                          <a
+                            matTooltip="Imprimir"
+                            href="javascript:void(0)"
+                            (click)="print(req)"
+                            ><i class="material-icons">print</i></a
+                          >&nbsp;
+                          <a
+                            matTooltip="Duplicar"
+                            href="javascript:void(0)"
+                            (click)="clone(req)"
+                            ><i class="fa fa-clone" aria-hidden="true"></i
+                          ></a>
+                        </td>
+                        <td>{{ req.codigo }}</td>
+                        <td>{{ req.tipo }}</td>
+                        <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
+                        <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
+                        <td>
+                          <span *ngIf="req.rascunho">#</span>
+                          <span *ngIf="req.cancelado">Cancelado</span>
+                          <span *ngIf="!req.rascunho && !req.cancelado">{{ req.statusGestor }}</span>
+                        </td>
+                        <td>
+                          <span *ngIf="req.rascunho">#</span>
+                          <span *ngIf="req.cancelado">Cancelado</span>
+                          <span *ngIf="!req.rascunho && !req.cancelado">{{ req.statusFinanceiro }}</span>
+                        </td>
+                        <td>
+                          <span *ngIf="req.rascunho">#</span>
+                          <span *ngIf="req.cancelado">Cancelado</span>
+                          <span *ngIf="!req.rascunho && !req.cancelado">{{ req.statusContabilidade }}</span>
+                        </td>
+                        <td>{{ req.nomeSolicitante }}</td>
+                        <td>{{ req.nomeParceiro }}</td>
+                        <td>{{ req.valor | currency: "BRL":true }}</td>
+                        <td>{{ req.descricao }}</td>
+                      </tr>
+                      <tr></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+    <mat-tab 
+      label="Gestor" 
+      *ngIf="isManager || isAdmin" 
+      [disabled]="isLoadingRequests">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header card-header-danger">
+                <h4 class="card-title">Solicitações de Pagamento</h4>
+              </div>
+
+              <div class="loader" *ngIf="isLoadingRequests">
+                <mat-progress-spinner diameter="32" mode="indeterminate"></mat-progress-spinner>
+              </div>
+
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead class="text-primary">
+                      <th>Ações</th>
+                      <th>Código</th>
+                      <th>Tipo</th>
+                      <th>
+                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data Inclusão</a>
+                        <span *ngIf="isSortAsc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-asc"></i></span>
+                        <span *ngIf="isSortDesc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-desc"></i></span>
+                      </th>
+                      <th>
+                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data Vencimento</a>
+                        <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
+                        <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
+                      </th>
+                      <th>Doc. Número</th>
+                      <th>Solicitante</th>
+                      <th>Descrição</th>
+                      <th>Valor Bruto</th>
+                      <th>Status Gestor</th>
+                      <th>Status Financeiro</th>
+                      <th>Obs. Gestor</th>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let req of requests">
+                        <td>
+                          <a
+                          (click)="edit(req)"
+                          href="javascript:void(0)"
+                            ><i class="material-icons">edit</i></a
+                          >
+                          <a href="javascript:void(0)" (click)="print(req)"
+                            ><i class="material-icons">print</i></a
+                          >
+                        </td>
+                        <td>{{ req.codigo }}</td>
+                        <td>{{ req.tipo }}</td>
+                        <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
+                        <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
+                        <td>{{ req.numeroDocumento }}</td>
+                        <td>{{ req.nomeSolicitante }}</td>
+                        <td>{{ req.descricao }}</td>
+                        <td>{{ req.valor | currency: "BRL":true }}</td>
+                        <td>{{ req.statusGestor }}</td>
+                        <td>{{ req.statusFinanceiro }}</td>
+                        <td>{{ req.observacaoGestor }}</td>
+                      </tr>
+                      <tr></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+    <mat-tab
+      label="Financeiro/Contábil"
+      *ngIf="isFinancial || isAccounting || isAdmin"
+      [disabled]="isLoadingRequests"
+    >
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header card-header-danger">
+                <h4 class="card-title">Solicitações de Pagamento</h4>
+              </div>
+
+              <div class="loader" *ngIf="isLoadingRequests">
+                <mat-progress-spinner diameter="32" mode="indeterminate"></mat-progress-spinner>
+              </div>
+
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead class="text-primary">
+                      <th>Ações</th>
+                      <th>Código</th>
+                      <th>Tipo</th>
+                      <th>
+                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data Inclusão</a>
+                        <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
+                        <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
+                      </th>
+                      <th>
+                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data Vencimento</a>
+                        <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
+                        <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
+                      </th>
+                      <th>Doc. Número</th>
+                      <th>Solicitante</th>
+                      <th>Parceiro</th>
+                      <th>Valor</th>
+                      <th>Status Gestor</th>
+                      <th>Status Contábil</th>
+                      <th>Status Financeiro</th>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let req of requests">
+                        <td>
+                          <a
+                          (click)="edit(req)"
+                          href="javascript:void(0)"
+                            ><i class="material-icons">edit</i></a
+                          >
+                          <a href="javascript:void(0)" (click)="print(req)"
+                            ><i class="material-icons">print</i></a
+                          >
+                        </td>
+                        <td>{{ req.codigo }}</td>
+                        <td>{{ req.tipo }}</td>
+                        <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
+                        <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
+                        <td>{{ req.numeroDocumento }}</td>
+                        <td>{{ req.nomeSolicitante }}</td>
+                        <td>{{ req.nomeParceiro }}</td>
+                        <td>{{ req.valor | currency: "BRL":true }}</td>
+                        <td>{{ req.statusGestor }}</td>
+                        <td>{{ req.statusContabilidade }}</td>
+                        <td>{{ req.statusFinanceiro }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <mat-paginator #paginator
+                class="demo-paginator"
+                (page)="handlePageEvent($event)"
+                [length]="length"
+                [pageSize]="pageSize"
+                [disabled]="disabled"
+                [showFirstLastButtons]="showFirstLastButtons"
+                [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                [hidePageSize]="hidePageSize"
+                [pageIndex]="pageIndex"
+                aria-label="Select page">
+  </mat-paginator>
+</div>

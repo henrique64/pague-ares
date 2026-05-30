@@ -1,0 +1,48 @@
+.separator {
+    height: 1px;
+    background-color: silver;
+    width: 100%;
+    margin-top: 6px;
+    margin-bottom: 18px;
+}
+
+.attachments {
+    width: 50%
+}
+
+.attachments .th {
+    border-bottom: 1px solid silver;
+}
+
+.expenses {
+    width: 100%
+}
+
+.expenses .th {
+    border-bottom: 1px solid silver;
+}
+
+.table-resumo {
+    width: 100%;
+}
+
+.table-resumo tr {
+    border-bottom: 1px silver solid;
+}
+
+.table-resumo tr > td:first {
+    width: 50%;
+}
+
+.table-resumo tr > td:last-child {
+    width: 50%;
+}
+
+.table-resumo th:last-child, .table-resumo td:last-child {
+    text-align: right;
+}
+
+.mat-form-field-label {
+    color: green !important;
+    font-size: 20px;
+} 

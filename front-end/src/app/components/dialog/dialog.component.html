@@ -1,0 +1,30 @@
+<section class="dialog app-dialog">
+  <header>
+    <h5 class="title">{{ options.title }}</h5>
+
+    <ul class="dialog-actions">
+      <li>
+        <button *ngIf="options.allowClose" (click)="close()">
+          <i class="fa fa-times"></i>
+        </button>
+      </li>
+    </ul>
+  </header>
+
+  <!-- ============================================================================================================= -->
+
+  <div class="content">
+    {{ options.content }}
+  </div>
+
+  <!-- ============================================================================================================= -->
+
+  <div class="buttons">
+    <button mat-raised-button (click)="ok()" *ngIf="hasOk">OK</button>
+    <button mat-raised-button (click)="cancel()" *ngIf="hasCancel" class="bt-orange">Cancelar</button>
+    <button mat-raised-button (click)="yes()" *ngIf="hasYes">Sim</button>
+    <button mat-raised-button (click)="no()" *ngIf="hasNo" class="bt-orange">Não</button>
+  </div>
+
+  <!-- ============================================================================================================= -->
+</section>

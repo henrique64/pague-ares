@@ -1,0 +1,25 @@
+version: "3.9"
+
+# Overrides de desenvolvimento local
+# Este arquivo é carregado automaticamente pelo docker compose junto com docker-compose.yml
+
+services:
+
+  db:
+    # Expõe o banco para ferramentas externas (SSMS, Azure Data Studio, etc.)
+    ports:
+      - "1433:1433"
+
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_RUN_MIGRATIONS: "true"
+    # Swagger fica disponível em desenvolvimento
+    # Acesse: http://localhost:5000/swagger
+
+  frontend:
+    # Para usar a URL da API explicitamente em vez de proxy relativo:
+    # environment:
+    #   FRONTEND_API_BASE_URL: "http://localhost:5000"
+    environment:
+      FRONTEND_API_BASE_URL: ""

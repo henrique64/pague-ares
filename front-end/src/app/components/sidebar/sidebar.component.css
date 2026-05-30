@@ -1,0 +1,16 @@
+.user-data {
+    background-color: #fff;
+    padding: 6px;
+    margin: 6px;
+    border-radius: 6px;
+}
+
+.logout {
+    background-color: silver;
+    border-radius: 3px;
+    border: none;
+}
+
+.logout-area {
+    text-align: right;
+}

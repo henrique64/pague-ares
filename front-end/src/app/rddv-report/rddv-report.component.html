@@ -1,0 +1,215 @@
+<div class="container-fluid report">
+  <div class="row header">
+    <div class="col-md-6">
+      <h3>RDDV - Relatório de Despesas de Viagem</h3>
+    </div>
+    <div class="col-md-6 align-right">
+      <div class="logo-img" pull-right>
+        <img src="/assets/img/ares_report.png" />
+      </div>
+    </div>
+  </div>
+
+  <table class="header">
+    <tbody>
+      <tr>
+        <td><strong>Funcionário:</strong></td>
+        <td>{{ model.nomeFuncionario }}</td>
+        <td><strong>CPF:</strong></td>
+        <td>{{ model.cpf }}</td>
+        <td><strong>Local:</strong></td>
+        <td>{{ model.localViagem }}</td>
+      </tr>
+      <tr>
+        <td><strong>Finalidade:</strong></td>
+        <td>{{ model.finalidade }}</td>
+        <td><strong>Departamento:</strong></td>
+        <td>{{departmentList[model.idDepartamento]}}</td>
+        <td><strong>Tipo de Relatório:</strong></td>
+        <td>{{ tiposRelatorio[model.tipoRelatorio] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Moeda:</strong></td>
+        <td>{{ model.moeda }}</td>
+        <td><strong>Data Emissão: </strong></td>
+        <td>{{ model.dataCadastro | date: "dd/MM/yyyy" }}</td>
+        <td><strong>Data de Vencimento: </strong></td>
+        <td>{{ model.dataVencimento | date: "dd/MM/yyyy" }}</td>
+      </tr>
+      <tr>
+        <td><strong>Centro de Custo:</strong></td>
+        <td>{{ model.centroCusto }}</td>
+        <td><strong>Projeto:</strong></td>
+        <td>{{ model.projeto }}</td>
+        <td><strong>PCA: </strong></td>
+        <td>{{ model.pca }}</td>
+      </tr>
+      <tr>
+        <td>//</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td><strong>Período de Viagem:</strong></td>
+        <td>{{ model.dataInicio | date: "dd/MM/yyyy" }} a
+          {{ model.dataFim | date: "dd/MM/yyyy" }}</td>
+      </tr>
+      <tr>
+        <td><strong>Aprovador: </strong></td>
+        <td>{{nomeGestor}}</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="row">
+    <div class="col-md-8">
+      <table class="expenses">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let despesa of model.despesas">
+            <td>{{ despesa.dataDespesa | date: "dd/MM/yyyy" }}</td>
+            <td>{{ labelTipoDespesa(despesa.tipoDespesa) }}</td>
+            <td>{{ despesa.valor | number: "1.2-2" }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="col-md-4">
+      <table class="abstract">
+        <thead>
+          <th colspan="2" class="align-center">RESUMO</th>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Diária</td>
+            <td>{{ totalDiaria | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Alimentação</td>
+            <td>{{ getTotal(1) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Hospedagem</td>
+            <td>{{ getTotal(2) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Passagens</td>
+            <td>{{ getTotal(3) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Táxi</td>
+            <td>{{ getTotal(4) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Kilometragem</td>
+            <td>{{ getTotal(5) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Estacionamento</td>
+            <td>{{ getTotal(6) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Pedágio</td>
+            <td>{{ getTotal(7) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Combustível</td>
+            <td>{{ getTotal(8) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Aluguel de Automóvel</td>
+            <td>{{ getTotal(9) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Comunicações</td>
+            <td>{{ getTotal(10) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Bagagens</td>
+            <td>{{getTotal(11) | number:'1.2-2'}}</td>
+          </tr>
+          <tr>
+            <td>Outros</td>
+            <td>{{ getTotal(12) | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td><strong>Subtotal</strong></td>
+            <td><strong>{{ subTotal | number: "1.2-2" }}</strong></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Adiantamento Recebido</td>
+            <td>{{ totalAdiantamento | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td>Saldo Cartão VTM</td>
+            <td>{{ totalVtm | number: "1.2-2" }}</td>
+          </tr>
+          <tr>
+            <td><strong>Total</strong></td>
+            <td><strong>{{ totalAres | number: "1.2-2" }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="row comments">
+    <div class="col-md-12">
+      <strong>Observações:</strong>
+      <p>{{ model?.observacao }}</p>
+    </div>
+  </div>
+
+  <div class="row payment">
+    <div class="col-md-8">
+      <strong>Dados bancários para pagamento do reembolso</strong>
+      <table class="table-resumo">
+        <tbody>
+          <tr>
+            <td>Banco</td>
+            <td>{{ model.banco }}</td>
+          </tr>
+          <tr>
+            <td>Agência</td>
+            <td>{{ model.agencia }}</td>
+          </tr>
+          <tr>
+            <td>Conta</td>
+            <td>{{ model.conta}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12 footnotes">
+      <strong>Notas:</strong>
+      <p>
+        Atenção, é obrigatório apresentar todos os comprovantes das despesas
+        relacionadas neste formulário.<br />
+        Não serão aceitos comprovantes de pagamento em cartões(crédito/débito)
+        para comprovação de despesas.<br />
+        Passagens e táxi, é obrigatório o preenchimento do trajeto no verso do
+        recibo.<br />
+        Para o campo "Uso do veículo próprio", é obrigatório preenchimento do
+        trajeto no campo de Observações.<br />
+        Para reembolso das despesas de alimentação deverá ser preenchido no
+        verso do comprovante o nome de todas pessoas que fizeram a refeição.<br />
+        Todas as despesas relacionadas no campo "Outros" deverão ser detalhadas
+        no campo Observações.
+      </p>
+    </div>
+  </div>
+</div>

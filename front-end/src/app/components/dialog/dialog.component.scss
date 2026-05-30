@@ -1,0 +1,364 @@
+$dialog-header : 30px !default;
+$dialog-padding : 20px !default;
+$dialog-box-padding : 20px !default;
+$dialog-box-margin : 20px !default;
+
+/*$font: 'azo-sans-web', sans-serif !default;*/
+$font: 'Roboto', sans-serif !default;
+$font-awesome-pro: "Font Awesome 5 Pro" !default;
+
+/* ///////////////////////////////////////////////////////////////////// */
+
+$fs-10 : 0.625rem !default;
+/*10px*/
+$fs-12 : 0.75rem !default;
+/*12px*/
+$fs-14 : 0.875rem !default;
+/*14px*/
+$fs-16 : 1rem !default;
+/*16px*/
+$fs-18 : 1.125rem !default;
+/*18px*/
+$fs-20 : 1.25rem !default;
+/*20px*/
+$fs-22 : 1.375rem !default;
+/*22px*/
+$fs-24 : 1.5rem !default;
+/*24px*/
+$fs-26 : 1.625rem !default;
+/*24px*/
+$fs-28 : 1.75rem !default;
+/*30px*/
+$fs-30 : 1.875rem !default;
+/*30px*/
+$fs-32 : 2rem !default;
+/*32px*/
+$fs-34 : 2.125rem !default;
+/*34px*/
+$fs-36 : 2.25rem !default;
+/*36px*/
+$fs-38 : 2.375rem !default;
+/*38px*/
+$fs-40 : 2.5rem !default;
+/*40px*/
+$fs-42 : 2.625rem !default;
+/*42px*/
+$fs-44 : 2.75rem !default;
+/*44px*/
+$fs-46 : 2.875rem !default;
+/*46px*/
+$fs-48 : 3rem !default;
+/*48px*/
+$fs-50 : 3.125rem !default;
+/*60px*/
+$fs-60 : 3.75rem !default;
+/*60px*/
+$fs-70 : 4.375rem !default;
+/*70px*/
+$fs-80 : 5rem !default;
+/*80px*/
+$fs-100 : 6.25rem !default;
+/*100px*/
+$fs-140 : 8.75rem !default;
+/*140px*/
+
+$color-white     : #ffffff !default;
+$color-black     : #000000 !default;
+$color-gray      : #656565 !default;
+$color-gray-xlt  : #eeeeee !default;
+$color-gray-lt   : #e1e1e1 !default;
+$color-gray-md   : #999999 !default;
+$color-gray-hv   : #4a4b4d !default;
+$color-blue-lt   : #0777c5 !default;
+$color-blue      : #006cb7 !default;
+$color-blue-hv   : #254268 !default;
+$color-green-lt  : #77c451 !default;
+$color-green     : #71bf4b !default;
+$color-green-hv  : #009248 !default;
+$color-red-lt    : #e7383e !default;
+$color-red       : #e02a31 !default;
+$color-red-hv    : #b31319 !default;
+$color-yellow-lt : #f5b829 !default;
+$color-yellow    : #ebaf23 !default;
+$color-yellow-hv : #dbc32b !default;
+$color-orange-lt : #f57236 !default;
+$color-orange    : #f06423 !default;
+$color-orange-hv : #dc7612 !default;
+$color-purple-lt : #a50464 !default;
+$color-purple    : #96005A !default;
+$color-pink      : #fe93b0 !default;
+
+$gutter      : 1rem !default;
+$spacing-sm  : 10px !default;
+$spacing-md  : 20px !default;
+$spacing-lg  : 40px !default;
+$spacing-xlg : 60px !default;
+
+$main-padding : 20px !default;
+$home-padding : 10px !default;
+$container-x  : 20px !default;
+$container-y  : 20px !default;
+
+$header-height         : 60px !default;
+$header-height-smaller : 30px !default;
+$breadcrumb-height     : 40px !default;
+
+$sidenav-fixed-size-w        : 6vw !default;
+$sidenav-fixed-size-h        : calc(100vh - #{$header-height-smaller}) !default;
+$sidenav-fixed-size-bt       : calc(100vh / 6) !default;
+$sidenav-fixed-size-bt-hover : calc(100vh / 6 - 5px) !default;
+
+$dialog-background : #f6f6f6 !default;
+
+@mixin border-radius($border-radius) {
+    -webkit-border-radius : $border-radius;
+    -moz-border-radius : $border-radius;
+    border-radius : $border-radius;
+  }
+
+@mixin flexbox {
+    display: -webkit-flex;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: -moz-box;
+    display: flex;
+}
+
+@mixin flex-align-items($flex-align-items) {
+    -ms-flex-align: $flex-align-items;
+    /* position vertically ie */
+    align-items: $flex-align-items;
+    /* usage @include flex-align-items(center); */
+}
+
+@mixin flex-justify-content-end {
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    -ms-flex-pack: justify;
+}
+
+@mixin flex-justify-content($flex-justify-content) {
+    -webkit-justify-content: $flex-justify-content;
+    justify-content: $flex-justify-content;
+    -ms-flex-pack: $flex-justify-content;
+    /* usage @include flex-justify-content(center); */
+  }
+
+@mixin transition($transition) {
+    -webkit-transition : $transition;
+    -moz-transition : $transition;
+    -o-transition : $transition;
+    transition : $transition;
+    // usage @include transition (all 0.1s ease-in-out);
+  }
+
+.dialog {
+    padding: 0;
+    position: relative;
+
+    >header {
+        height: $dialog-header;
+        margin-bottom: $dialog-padding;
+        @include flexbox();
+        @include flex-align-items(center);
+        @include flex-justify-content-end();
+
+        .actions {
+            @include flexbox();
+            @include flex-align-items(center);
+
+            li {
+                position: relative;
+                cursor: pointer;
+
+                &:last-child {
+                    a {
+                        padding-right: 0;
+                    }
+
+                    button {
+                        margin-right: 0;
+                    }
+                }
+
+                button {
+                    width: 40px;
+                    height: 24px;
+                    font-size: $fs-18;
+                    color: $color-gray;
+                    background: none;
+                    border: none;
+                    margin: 0 5px;
+                    @include transition (all 0.1s ease-in-out);
+
+                    &:hover,
+                    &.active {
+                        @include transition (all 0.1s ease-in-out);
+                    }
+                }
+            }
+
+            a {
+                padding: 0 10px;
+            }
+        }
+
+        .tooltip {
+            &.top {
+                &.right {
+                    right: 10px;
+                    top: 37px;
+                }
+            }
+        }
+    }
+
+    .box {
+        padding: $dialog-box-padding;
+    }
+
+    .label {
+        font-size: $fs-14;
+        margin-bottom: $spacing-sm;
+    }
+
+    .group-inline {
+        @include flexbox();
+
+        .group {
+            +.group {
+                margin-left: $main-padding;
+            }
+        }
+    }
+
+    /* /////////////////////////////////////////////////////////////////// */
+    /* table */
+
+    mat-row {
+        min-height: 30px !important;
+    }
+
+    mat-header-cell,
+    mat-cell,
+    mat-footer-cell {
+        font-size: $fs-12;
+        flex: auto;
+
+        &:first-child,
+        &:last-child {
+            padding: 0;
+        }
+    }
+
+    .dialog-close,
+    .dialog-actions {
+        width: auto;
+        position: absolute;
+        top: 0;
+        right: 0;
+        cursor: pointer;
+        @include flexbox();
+        @include flex-align-items(center);
+
+        li {
+            position: relative;
+
+            &:last-child {
+                button {
+                    padding-right: 0;
+                }
+            }
+
+            list-style-type: none;
+        }
+
+        button {
+            width: 40px;
+            font-size: $fs-18;
+            color: $color-gray;
+            background: none;
+            border: none;
+            padding: 0 10px;
+        }
+
+        .tooltip {
+            &.top {
+                &.right {
+                    right: 5px;
+                }
+            }
+        }
+
+        .mat-button-wrapper {
+            @include flexbox();
+            @include flex-align-items(center);
+
+            .mat-icon {
+                margin-right: 5px;
+            }
+        }
+    }
+
+    .buttons {
+        button {
+            margin-left: 6px;
+        }
+    }
+
+    .title {
+        font-weight: bold;
+    }
+
+    .content {
+        margin-bottom: 12px;
+    }
+}
+
+/* /////////////////////////////////////////////////////////////////// */
+/* skeleton */
+
+.dialog-full-screen {
+    width: calc(100% - #{$sidenav-fixed-size-w});
+    height: calc(100% - 30px) !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: auto 0 0 auto;
+
+    .dialog {
+        width: 100%;
+        height: 100%;
+    }
+
+    .mat-dialog-container {
+        @include border-radius(0 !important);
+    }
+}
+
+.mat-dialog-container {
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: none !important;
+    display: -webkit-flex !important;
+    display: -webkit-box !important;
+    display: -ms-flexbox !important;
+    display: -moz-box !important;
+    display: flex !important;
+    @include border-radius(2px !important);
+    @include flex-align-items(center);
+    @include flex-justify-content(center);
+
+    >.ng-star-inserted {
+        width: calc(100% - #{$dialog-padding * 2});
+        height: calc(100% - #{$dialog-padding * 2});
+        padding: $dialog-padding;
+        background: $dialog-background;
+        @include flexbox();
+        @include flex-align-items(center);
+        @include flex-justify-content(center);
+    }
+}
+
+.cdk-overlay-pane {
+    max-width: 95vw !important;
+}

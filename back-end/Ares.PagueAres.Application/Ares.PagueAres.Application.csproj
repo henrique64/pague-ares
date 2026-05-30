@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.DirectoryServices.AccountManagement" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ares.PagueAres.Domain\Ares.PagueAres.Domain.csproj" />
+    <ProjectReference Include="..\Ares.PagueAres.Infrastructure\Ares.PagueAres.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

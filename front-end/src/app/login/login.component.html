@@ -1,0 +1,65 @@
+<div class="wrapper fadeInDown">
+  <div id="formContent">
+    <form autocomplete="off" name="loginForm">
+      <h3>
+        Bem-vindo ao <br />
+        Pague Ares!
+      </h3>
+
+      <p class="logTitle">Usuário:</p>
+      <input
+        [(ngModel)]="user.name"
+        type="text"
+        id="login"
+        class="fadeIn second"
+        name="username"
+        placeholder="RJ00000"
+        autocomplete="false"
+        autofocus
+        [disabled]="ocupado"
+      />
+
+      <p class="logTitle">Senha:</p>
+      <input
+        [(ngModel)]="user.password"
+        type="password"
+        id="password"
+        class="fadeIn third"
+        name="login"
+        placeholder="Sua senha aqui"
+        autocomplete="false"
+        [disabled]="ocupado"
+      />
+
+      <!--<a class="underlineHover pull-right" href="#">Esqueceu a senha?</a>-->
+      <label class="remindLog">
+        <input type="checkbox" [(ngModel)]="saveLogin" name="saveLogin"/> Lembrar E-mail
+      </label>
+
+      <div class="loader" *ngIf="ocupado">
+        <mat-progress-spinner diameter="32" mode="indeterminate"></mat-progress-spinner>
+      </div>
+
+      <div class="error-message" *ngIf="erro">
+        {{ mensagemErro }}
+      </div>
+
+      <input
+        type="submit"
+        class="fadeIn fourth"
+        value="Login"
+        (click)="ExecuteLogin()"
+        [disabled]="ocupado"
+      />
+    </form>
+
+    <div class="fadeIn first">
+      <img
+        src="/assets/img/iconAres.png"
+        id="icon"
+        alt="Ares logo"
+        class="centerImage"
+      />
+    </div>
+  </div>
+</div>

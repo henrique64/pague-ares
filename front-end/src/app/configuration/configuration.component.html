@@ -1,0 +1,176 @@
+<div class="main-content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-danger">
+            <h4 class="card-title">Gerenciar Usuários</h4>
+          </div>
+          <div class="card-body">
+            <button
+              mat-raised-button
+              type="button"
+              class="btn btn-danger"
+              [routerLink]="['/create-user']"
+              routerLinkActive="router-link-active"
+              [disabled]="isBusy"
+            >
+              Cadastrar Usuário
+            </button>
+            <div class="table-responsive">
+              <table class="table">
+                <thead class="text-primary">
+                  <th>Ações</th>
+                  <th>ID</th>
+                  <th>Nome</th>
+                  <th>Tipo de Usuário</th>
+                  <th>Email</th>
+                  <th>Área</th>
+                  <th>Cod Área</th>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let user of userList">
+                    <td>
+                      <a
+                        [routerLink]="['/create-user', user.idUsuario]"
+                        routerLinkActive="router-link-active"
+                        ><i class="material-icons">edit</i></a
+                      >
+                      <!--<i class="material-icons">mail</i>
+                      <i class="material-icons">print</i>
+                      <i class="material-icons">delete</i>-->
+                    </td>
+                    <td>{{ user.idUsuario }}</td>
+                    <td>{{ user.nome }}</td>
+                    <td>{{ userTypes[user.origem] }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.idDepartamento }}</td>
+                    <td>{{ user.idDepartamento }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header card-header-danger">
+            <h4 class="card-title">Parâmetros de RDDV</h4>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-12">
+                <mat-form-field appearance="outline">
+                  <mat-label>Valor/Km</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="rddv.ValorKm"
+                    [disabled]="isReadOnly"
+                    currencyMask
+                    [options]="{
+                      prefix: 'R$ ',
+                      thousands: '.',
+                      decimal: ',',
+                      align: 'left'
+                    }"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+            
+            <!--
+            <div class="row">
+              <div class="">
+                <h5>Valor/Diária</h5>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nacional</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="rddv.DiariaNacional"
+                    [disabled]="isReadOnly"
+                    currencyMask
+                    [options]="defaultValueMask"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <mat-form-field appearance="outline">
+                  <mat-label>Internacional</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="rddv.DiariaInternacional"
+                    [disabled]="isReadOnly"
+                    currencyMask
+                    [options]="defaultValueMask"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <mat-form-field appearance="outline">
+                  <mat-label>Internacional Israel</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="rddv.DiariaInternacionalIsrael"
+                    [disabled]="isReadOnly"
+                    currencyMask
+                    [options]="defaultValueMask"
+                  />
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <mat-form-field appearance="outline">
+                  <mat-label>Internacional Euro</mat-label>
+                  <input
+                    matInput
+                    placeholder=""
+                    [(ngModel)]="rddv.DiariaInternacionalEuro"
+                    [disabled]="isReadOnly"
+                    currencyMask
+                    [options]="defaultValueMask"
+                  />
+                </mat-form-field>
+              </div>
+            </div>-->
+
+            <div class="row">
+              <button
+                mat-raised-button
+                type="button"
+                class="btn btn-danger"
+                (click)="saveRddvConfig()"
+                [disabled]="isBusy"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <app-travel-type-list></app-travel-type-list>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,148 @@
+<div class="main-content">
+  <div class="container-fluid">
+    <div class="row statistic">
+      <i class="material-icons">access_time</i> {{ pollString }}
+    </div>
+
+    <div class="row" *ngIf="showAdm">
+      <div class="col-md-4">
+        <div class="card card-chart">
+          <div class="card-header card-header-success">
+            <div class="ct-chart" id="dailySalesChart"></div>
+          </div>
+          <div class="card-body">
+            <h4 class="card-title">Pagamentos aprovados</h4>
+
+            <h2>{{ dashboardData.aprovados }}</h2>
+          </div>
+          <div class="card-footer">
+            <div class="stats"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-chart">
+          <div class="card-header card-header-warning">
+            <div class="ct-chart" id="websiteViewsChart"></div>
+          </div>
+          <div class="card-body">
+            <h4 class="card-title">Pagamentos Pendentes de Lançamento</h4>
+            <h2>{{ dashboardData.pendentes }}</h2>
+
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-chart">
+          <div class="card-header card-header-danger">
+            <div class="ct-chart" id="completedTasksChart"></div>
+          </div>
+          <div class="card-body">
+            <h4 class="card-title">Pagamentos negados</h4>
+
+            <h2>{{ dashboardData.reprovados }}</h2>
+          </div>
+          <div class="card-footer">
+            <div class="stats">
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-danger">
+            <h4 class="card-title">Solicitações Não Atribuídas</h4>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table">
+                <thead class="text-primary">
+                  <th>Ações</th>
+                  <th>Tipo</th>
+                  <th>Atribuir</th>
+                  <th>Código</th>
+                  <th>Data Inclusão</th>
+                  <th>Data Vencimento</th>
+                  <th>Status</th>
+                  <th>Solicitante</th>
+                  <th>Parceiro</th>
+                  <th>Valor</th>
+                  <th>Descrição</th>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let req of requests">
+                    <td>
+                      <a
+                        (click)="details(req)"
+                        routerLinkActive="router-link-active"
+                        target="_blank"
+                        ><i class="material-icons">edit</i></a
+                      >
+                      <a href="javascript:void(0)" (click)="print(req)"
+                        ><i class="material-icons">print</i></a
+                      >
+                    </td>
+                    <td>
+                      {{ req.tipo }}
+                    </td>
+                    <td>
+                      <mat-form-field
+                        class="example-full-width"
+                        appearance="outline"
+                      >
+                        <mat-select
+                          placeholder="Atribuir"
+                          [(ngModel)]="req.idUsuarioAtribuido"
+                          [disabled]="isSettingUser || !req.aprovadoGestor || !canAssign || req.idStatusFinanceiro !== 2"
+                          (ngModelChange)="setUser(req)"
+                        >
+                          <mat-option
+                            *ngFor="let user of userList"
+                            [value]="user.idUsuario"
+                            >{{ user.nome }}</mat-option
+                          >
+                        </mat-select>
+                      </mat-form-field>
+                    </td>
+                    <td>{{ req.codigo }}</td>
+                    <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
+                    <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
+                    <td>{{ req.statusGestor }}</td>
+                    <td>{{ req.nomeSolicitante }}</td>
+                    <td>{{ req.nomeParceiro }}</td>
+                    <td>{{ req.valor | currency: "BRL":true }}</td>
+                    <td>{{ req.descricao }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <mat-paginator #paginator
+                class="demo-paginator"
+                (page)="handlePageEvent($event)"
+                [length]="length"
+                [pageSize]="pageSize"
+                [disabled]="disabled"
+                [showFirstLastButtons]="showFirstLastButtons"
+                [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                [hidePageSize]="hidePageSize"
+                [pageIndex]="pageIndex"
+                aria-label="Select page">
+  </mat-paginator>
+</div>

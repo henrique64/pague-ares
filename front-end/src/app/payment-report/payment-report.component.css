@@ -1,0 +1,101 @@
+.row {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.report {
+    background-color: #fff;
+    width: 21cm;
+}
+
+.report [class*="col-md"] {
+    padding-right:0;
+    padding-left:0;
+}
+
+.cell {
+    border-left: 2px solid black;
+    border-top: 2px solid black;
+    border-right: none;
+    padding: 2px;
+}
+
+[class*="col-md"]:last-of-type .cell {
+    border-right: 2px solid black;
+}
+
+.cell-group .row:last-of-type .cell {
+    border-bottom: 2px solid black;
+}
+
+.cell .label {
+    font-family: Arial, Helvetica, sans-serif;
+    display: block;
+    font-weight: 400;
+    font-size: 11px;
+}
+
+.cell .value {
+    display: block;
+}
+
+.cell .value.left {
+    text-align: left;
+}
+
+.cell .value.right {
+    text-align: right;
+}
+
+.cell .value.center {
+    text-align: center;
+}
+
+.table-header {
+    background-color: grey;
+    text-align: center;
+    display: block;
+    margin-top: 6px;
+    border: 2px solid black;
+    border-bottom: none;
+    color: black;
+    width: 100%;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+table {
+    width: 100%;
+    font-size: small;
+    margin-bottom: 6px;
+}
+
+table th {
+    text-align: center;
+    background-color: silver;
+    border: 2px solid black;
+    border-bottom: none;
+}
+
+table tr {
+    text-align: center;
+    border: 2px solid black;
+    border-bottom: none;
+}
+
+table td {
+    border-right: 2px solid black;
+}
+
+table td:last-of-type {
+    border-right: none
+}
+
+table tr:last-of-type {
+    text-align: center;
+    border: 2px solid black;
+}
+
+.margin-bottom-6 {
+    margin-bottom: 6px;
+}

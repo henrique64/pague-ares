@@ -1,0 +1,115 @@
+<div class="card">
+  <div class="card-header card-header-danger">
+    <h4 class="card-title">Tipos de Viagem</h4>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="pull-right">
+          <button
+            mat-raised-button
+            type="button"
+            class="btn btn-danger"
+            [disabled]="isBusy"
+            *ngIf="!isEditing"
+            (click)="new()"
+          >
+            Novo
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <mat-card *ngIf="isEditing">
+      <div class="row">
+        <div class="col-md-12">
+          <h5>Incluir Tipo de Viagem</h5>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-3">
+          <mat-form-field appearance="outline">
+            <mat-label>Nome</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="model.nome"
+              [disabled]="isReadOnly"
+            />
+          </mat-form-field>
+        </div>
+
+        <div class="col-md-3">
+          <mat-form-field appearance="outline">
+            <mat-label>Valor Diária</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="model.valorDiaria"
+              [disabled]="isReadOnly"
+              currencyMask
+              [options]="{
+                prefix: '',
+                thousands: '.',
+                decimal: ',',
+                align: 'left'
+              }"
+            />
+          </mat-form-field>
+        </div>
+      </div>
+
+      <div class="pull-right">
+        <button
+          mat-raised-button
+          type="submit"
+          class="btn btn-danger"
+          (click)="cancelEdit()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          mat-raised-button
+          type="submit"
+          class="btn btn-danger"
+          (click)="save()"
+        >
+          Salvar
+        </button>
+      </div>
+      <div class="clearfix"></div>
+    </mat-card>
+
+    <table class="travelTypes">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Nome</th>
+          <th>Valor Diária</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let type of types">
+          <td>
+            <a
+              href="javascript:void(0)"
+              (click)="edit(type)"
+              [disabled]="isEditing"
+              ><i class="fa fa-pencil" aria-hidden="true"></i>
+              Editar</a
+            >
+            <!--<a
+              href="javascript:void(0)"
+              (click)="removeExpense(despesa)"
+              [disabled]="isEditingExpense"
+              ><i class="material-icons">delete</i> Excluir</a
+            >-->
+          </td>
+          <td>{{ type.nome }}</td>
+          <td>{{ type.valorDiaria | number: "1.2-2" }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

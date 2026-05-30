@@ -1,0 +1,25 @@
+# Secrets — nunca commitar
+.env
+*.env.local
+*.env.production
+
+# Build outputs do backend
+back-end/**/bin/
+back-end/**/obj/
+back-end/**/.vs/
+back-end/**/*.user
+
+# Build outputs do frontend
+front-end/node_modules/
+front-end/dist/
+
+# Editor / IDE
+.vscode/settings.json
+.vscode/.ropeproject
+*.suo
+*.sln.docstates
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

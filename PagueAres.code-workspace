@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"name": "PagueAres (root)",
+			"path": "."
+		},
+		{
+			"name": "back-end",
+			"path": "back-end"
+		},
+		{
+			"name": "front-end",
+			"path": "front-end"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"back-end/**/bin": true,
+			"back-end/**/obj": true,
+			"front-end/node_modules": true,
+			"front-end/dist": true
+		}
+	}
+}
