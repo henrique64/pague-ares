@@ -105,9 +105,9 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                 {
                     IdFornecedor = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    NumDocumento = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Nome = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Codigo = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    NumDocumento = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: false),
+                    Nome = table.Column<string>(type: "varchar(256)", unicode: false, maxLength: 256, nullable: false),
+                    Codigo = table.Column<string>(type: "varchar(128)", unicode: false, maxLength: 128, nullable: false)
                 },
                 constraints: table =>
                 {

@@ -398,10 +398,9 @@ namespace Ares.PagueAres.Infrastructure
 
                 entity.ToTable("Fornecedor", tb => tb.HasTrigger("TRG"));
 
-                entity.Property(e => e.IdFornecedor).IsRequired();
-                entity.Property(e => e.NumDocumento).IsRequired();
-                entity.Property(e => e.Nome).IsRequired();
-                entity.Property(e => e.Codigo).IsRequired();
+                entity.Property(e => e.NumDocumento).IsRequired().HasMaxLength(64).IsUnicode(false);
+                entity.Property(e => e.Nome).IsRequired().HasMaxLength(256).IsUnicode(false);
+                entity.Property(e => e.Codigo).IsRequired().HasMaxLength(128).IsUnicode(false);
             });
 
             modelBuilder.Entity<TipoViagem>(entity =>
