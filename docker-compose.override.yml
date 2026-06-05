@@ -8,7 +8,7 @@ services:
   db:
     # Expõe o banco para ferramentas externas (SSMS, Azure Data Studio, etc.)
     ports:
-      - "1433:1433"
+      - "${DB_PORT:-14330}:1433"
 
   api:
     environment:
