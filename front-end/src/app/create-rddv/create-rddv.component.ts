@@ -566,7 +566,7 @@ export class CreateRddvComponent implements OnInit {
       return;
     }
 
-    const url = `${this.url.Payment.PreviewAttachment}/${file.idRelatorio}/${file.idDocumentoRddv}?key=${token.previewKey}`;
+    const url = `${this.url.Rddv.PreviewAttachment}/${file.idRelatorio}/${file.idDocumentoRddv}?key=${token.previewKey}`;
 
     window.open(url, "_blank");
   }
@@ -692,6 +692,8 @@ export class CreateRddvComponent implements OnInit {
   }
 
   get totalDiaria(): number {
+    if (!this.model.diariaViagem) return 0;
+
     let valorDiaria;
 
     if (this.isEdit) {

@@ -809,14 +809,8 @@
                 Clonar Solicitação
               </button>
 
-              <button mat-raised-button type="button" class="btn btn-danger" (click)="cancel()" [disabled]="isBusy" *ngIf="
-                  !(
-                    isAccountingReadOnly &&
-                    isFinanceReadOnly &&
-                    isManagerReadOnly &&
-                    isEdit
-                  ) || (isDraft && isUserView) || (!isReadOnly && isUserView)
-                ">
+              <button mat-raised-button type="button" class="btn btn-danger" (click)="cancel()" [disabled]="isBusy"
+                *ngIf="isEdit && isUserView && !model.cancelado && !isFinal">
                 Cancelar
               </button>
               <button mat-raised-button type="button" class="btn btn-danger" (click)="save(true)" [disabled]="isBusy" *ngIf="
