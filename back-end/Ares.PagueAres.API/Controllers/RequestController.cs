@@ -299,6 +299,19 @@ namespace Ares.PagueAres.API.Controllers
                             Records = 0
                         });
                     }
+
+                    if (requestData.Cancelado)
+                    {
+                        return Ok(new GenericResponse<object>()
+                        {
+                            Success = false,
+                            Message = "Registro cancelado não pode ser alterado.",
+                            Data = null,
+                            Page = 1,
+                            Pages = 1,
+                            Records = 0
+                        });
+                    }
                 }
 
                 if (!solicitacao.Rascunho && requestData.Rascunho)

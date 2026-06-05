@@ -323,6 +323,19 @@ namespace Ares.PagueAres.API.Controllers
                             Records = 0
                         });
                     }
+
+                    if (requestData.Cancelado)
+                    {
+                        return Ok(new GenericResponse<object>()
+                        {
+                            Success = false,
+                            Message = "Registro cancelado não pode ser alterado.",
+                            Data = null,
+                            Page = 1,
+                            Pages = 1,
+                            Records = 0
+                        });
+                    }
                 }
 
                 if (!rddv.Rascunho && requestData.Rascunho)
@@ -580,9 +593,11 @@ namespace Ares.PagueAres.API.Controllers
         {
             try
             {
-                var pendentes = await _dbContext.Solicitacaos.Where(s => s.StatusFinanceiro == 1).CountAsync();
-                var aprovados = await _dbContext.Solicitacaos.Where(s => s.StatusFinanceiro == 2).CountAsync();
-                var reprovados = await _dbContext.Solicitacaos.Where(s => s.StatusFinanceiro == 3 || s.StatusContabilidade == 3).CountAsync();
+                var pendentes = await _dbContext.Rddv.Where(s => (s.StatusContabilidade ?? 1) == 1 &&
+                                                                  (s.StatusFinanceiro ?? 1) == 2 &&
+                                                                  (s.AprovadoGestor ?? false) && !s.Rascunho && !s.Cancelado).CountAsync();
+                var aprovados = await _dbContext.Rddv.Where(s => s.StatusFinanceiro == 2 && !s.Rascunho && !s.Cancelado).CountAsync();
+                var reprovados = await _dbContext.Rddv.Where(s => (s.StatusFinanceiro == 3 || s.StatusContabilidade == 3) && !s.Rascunho && !s.Cancelado).CountAsync();
 
                 return Ok(new GenericResponse<DashboardDto>()
                 {

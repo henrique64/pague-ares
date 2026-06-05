@@ -1,4 +1,5 @@
-﻿import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Subscription } from "rxjs";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
 import { DialogService } from "app/components/dialog/dialog.service";
@@ -21,6 +22,8 @@ import { PreviewTokenService } from "app/services/preview-token.service";
 import { RddvService } from "app/services/rddv.service";
 import { TravelTypeService } from "app/services/travel-type.service";
 import { UsersService } from "app/services/users.service";
+import { DepartmentService } from "app/services/department.service";
+import { DepartamentoModel } from "app/models/department/departamento.model";
 import { UtilsService } from "app/services/utils.service";
 
 import * as moment from "moment";
@@ -31,7 +34,7 @@ import * as moment from "moment";
     styleUrls: ["./create-rddv.component.css"],
     standalone: false
 })
-export class CreateRddvComponent implements OnInit {
+export class CreateRddvComponent implements OnInit, OnDestroy {
   showAdm: boolean = false;
 
   reportId: number = 0;
@@ -50,6 +53,8 @@ export class CreateRddvComponent implements OnInit {
   imageError: string = "";
 
   isBusy: boolean = false;
+
+  private subs = new Subscription();
 
   isEditingExpense: boolean = false;
   isNewExpense: boolean = false;
@@ -104,23 +109,6 @@ export class CreateRddvComponent implements OnInit {
     { id: 12, name: "Outros" },
   ];
 
-  departmentList: any[] = [
-    { idDepartamento: 1, nome: "TI", codigoLancamento: "TIN" },
-    { idDepartamento: 2, nome: "Almoxarifado", codigoLancamento: "ALM" },
-    { idDepartamento: 3, nome: "Compras", codigoLancamento: "CPS" },
-    { idDepartamento: 4, nome: "Contabilidade", codigoLancamento: "CTB" },
-    { idDepartamento: 5, nome: "Diretoria", codigoLancamento: "DIR" },
-    { idDepartamento: 6, nome: "Engenharia", codigoLancamento: "ENG" },
-    { idDepartamento: 7, nome: "Financeiro", codigoLancamento: "FIN" },
-    { idDepartamento: 8, nome: "ILS", codigoLancamento: "ILS" },
-    { idDepartamento: 9, nome: "Infraestrutura", codigoLancamento: "INF" },
-    { idDepartamento: 10, nome: "Marketing", codigoLancamento: "MKT" },
-    { idDepartamento: 11, nome: "Montagem", codigoLancamento: "MTG" },
-    { idDepartamento: 12, nome: "Produção", codigoLancamento: "PRD" },
-    { idDepartamento: 13, nome: "Projetos", codigoLancamento: "PJT" },
-    { idDepartamento: 14, nome: "Qualidade", codigoLancamento: "QLD" },
-    { idDepartamento: 15, nome: "RH", codigoLancamento: "RHU" },
-  ];
 
   labelTipoDespesa(tipo: number) {
     return this.tiposDespesa.find((x) => x.id === tipo).name;
@@ -129,6 +117,7 @@ export class CreateRddvComponent implements OnInit {
   userList: UserListModel[] = [];
   managersList: UserListModel[] = [];
   travelTypes: TipoViagemModel[] = [];
+  departmentList: DepartamentoModel[] = [];
 
   /* Parâmetros de Configuração */
 
@@ -151,12 +140,17 @@ export class CreateRddvComponent implements OnInit {
     private config: ConfigService,
     private exportService: ExportService,
     private dialog: DialogService,
-    private previewTokenService: PreviewTokenService
+    private previewTokenService: PreviewTokenService,
+    private departmentService: DepartmentService
   ) {}
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   ngOnInit() {
-    this.thisRoute.params.subscribe((routeParams) => {
-      this.thisRoute.queryParamMap.subscribe((queryParams) => {
+    this.subs.add(this.thisRoute.params.subscribe((routeParams) => {
+      this.subs.add(this.thisRoute.queryParamMap.subscribe((queryParams) => {
         if (routeParams["id"]) {
           this.reportId = routeParams["id"];
           this.isEdit = true;
@@ -175,6 +169,7 @@ export class CreateRddvComponent implements OnInit {
         this.getUserList();
         this.getManagersList();
         this.getTravelTypes();
+        this.getDepartmentList();
         this.initForm();
       });
     });
@@ -210,6 +205,18 @@ export class CreateRddvComponent implements OnInit {
 
       if (res.success) {
         this.travelTypes = res.data;
+      }
+    } catch (ex) {
+      console.log(ex);
+    }
+  }
+
+  async getDepartmentList() {
+    try {
+      let res = await this.departmentService.GetAll().toPromise();
+
+      if (res.success) {
+        this.departmentList = res.data;
       }
     } catch (ex) {
       console.log(ex);
@@ -444,16 +451,19 @@ export class CreateRddvComponent implements OnInit {
     }
 
     try {
-      await this.rddv.UpsertRddv(this.model).toPromise();
+      const res = await this.rddv.UpsertRddv(this.model).toPromise();
+
+      if (!res.success) {
+        this.snack.open(res.message || "Ocorreu um erro ao salvar este relatório.", "OK");
+        return;
+      }
+
+      this.router.navigateByUrl("/payments?view=" + this.returnTo);
     } catch (ex) {
-      this.isBusy = false;
-
       this.snack.open("Ocorreu um erro ao salvar este relatório.", "OK");
-
-      return;
+    } finally {
+      this.isBusy = false;
     }
-
-    this.router.navigateByUrl("/payments?view=" + this.returnTo);
   }
 
   /*///////////////////////////////////////////////////////////////////*/

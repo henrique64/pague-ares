@@ -64,7 +64,9 @@ export class LoginComponent implements OnInit {
         this.displayError("Usuário ou senha inválidos.");
       }
     }
-    catch {}
+    catch {
+      this.displayError("Erro de conexão. Verifique sua rede e tente novamente.");
+    }
     finally {
       this.ocupado = false;
     }

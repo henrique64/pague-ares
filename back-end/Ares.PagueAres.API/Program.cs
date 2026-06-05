@@ -20,6 +20,20 @@ builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 
+// CORS: se AllowedOrigins estiver configurado restringe às origens listadas; senão permite qualquer origem.
+var allowedOrigins = builder.Configuration["AllowedOrigins"];
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        if (string.IsNullOrWhiteSpace(allowedOrigins))
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        else
+            policy.WithOrigins(allowedOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                  .AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
 // OpenAPI (Microsoft.AspNetCore.OpenApi) + Scalar UI
 builder.Services.AddOpenApi(options =>
 {
@@ -105,7 +119,7 @@ if (!app.Environment.IsEnvironment("Docker"))
 
 app.UseAuthorization();
 
-app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+app.UseCors("CorsPolicy");
 
 // Authentication Middleware
 app.UseMiddleware<JwtMiddleware>();

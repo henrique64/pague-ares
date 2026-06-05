@@ -141,6 +141,7 @@ export class PaymentsComponent implements OnInit {
       }
     } catch (ex) {
       console.log(ex);
+      this.snackbar.open("Erro ao carregar as solicitações. Tente novamente.", "OK", { duration: 4000 });
     }
     finally {
       this.isLoadingRequests = false;

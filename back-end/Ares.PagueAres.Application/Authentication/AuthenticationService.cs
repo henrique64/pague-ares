@@ -122,11 +122,14 @@ namespace Ares.PagueAres.Application.Authentication
             // Validar senha
             if (!isAdUser)
             {
-                string passwordHash = ComputeSha256Hash(password);
-
-                if (!passwordHash.Equals(dbUser.Senha, StringComparison.CurrentCultureIgnoreCase))
-                {
+                if (!VerifyPassword(password, dbUser.Senha))
                     throw new LoginFailedException();
+
+                // Migração transparente: se ainda é SHA256 (64 chars hex), re-hash com BCrypt
+                if (dbUser.Senha.Length == 64 && !dbUser.Senha.StartsWith("$2"))
+                {
+                    dbUser.Senha = BCrypt.Net.BCrypt.HashPassword(password);
+                    await dbContext.SaveChangesAsync();
                 }
             }
 
@@ -230,12 +233,20 @@ namespace Ares.PagueAres.Application.Authentication
             return false;
         }
 
+        private static bool VerifyPassword(string password, string storedHash)
+        {
+            // BCrypt hash
+            if (storedHash.StartsWith("$2"))
+                return BCrypt.Net.BCrypt.Verify(password, storedHash);
+
+            // SHA256 legado
+            return ComputeSha256Hash(password).Equals(storedHash, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string ComputeSha256Hash(string rawData)
         {
-            // ComputeHash - returns byte array  
             byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawData));
 
-            // Convert byte array to a string   
             StringBuilder builder = new();
             for (int i = 0; i < bytes.Length; i++)
             {

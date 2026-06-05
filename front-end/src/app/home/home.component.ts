@@ -71,6 +71,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.intervalHandle) clearInterval(this.intervalHandle);
+    if (this.timerHandle) clearInterval(this.timerHandle);
   }
 
   ngOnInit() {

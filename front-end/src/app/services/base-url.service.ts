@@ -62,6 +62,10 @@ export class BaseUrlService {
     };
   }
 
+  get Department() {
+    return { Get: this.BaseUrl + "/api/Department" };
+  }
+
   get Export() {
     return {
       DownloadRddvAttachments: this.BaseUrl + "/api/Export/rddv/attachment",

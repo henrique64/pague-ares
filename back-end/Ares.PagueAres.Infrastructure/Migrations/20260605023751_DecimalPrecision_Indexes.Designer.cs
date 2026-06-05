@@ -4,6 +4,7 @@ using Ares.PagueAres.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ares.PagueAres.Infrastructure.Migrations
 {
     [DbContext(typeof(PagueAresContext))]
-    partial class PagueAresContextModelSnapshot : ModelSnapshot
+    [Migration("20260605023751_DecimalPrecision_Indexes")]
+    partial class DecimalPrecision_Indexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -1,4 +1,5 @@
-﻿import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Subscription } from "rxjs";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
 import { DialogService } from "app/components/dialog/dialog.service";
@@ -24,7 +25,7 @@ import { UtilsService } from "app/services/utils.service";
     styleUrls: ["./create-request.component.css"],
     standalone: false
 })
-export class CreateRequestComponent implements OnInit {
+export class CreateRequestComponent implements OnInit, OnDestroy {
   showAdm: boolean = false;
 
   requestId: number = 0;
@@ -42,6 +43,8 @@ export class CreateRequestComponent implements OnInit {
   imageError: string = "";
 
   isBusy: boolean = false;
+
+  private subs = new Subscription();
 
   attachmentTypes: any[] = [
     { id: 1, name: "Nota Fiscal" },
@@ -75,9 +78,13 @@ export class CreateRequestComponent implements OnInit {
     private previewTokenService: PreviewTokenService
   ) {}
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   ngOnInit() {
-    this.thisRoute.params.subscribe(routeParams => {
-      this.thisRoute.queryParamMap.subscribe(queryParams => {
+    this.subs.add(this.thisRoute.params.subscribe(routeParams => {
+      this.subs.add(this.thisRoute.queryParamMap.subscribe(queryParams => {
         if (routeParams["id"]) {
           this.requestId = routeParams["id"];
           this.isEdit = true;
@@ -302,16 +309,19 @@ export class CreateRequestComponent implements OnInit {
     }
 
     try {
-      await this.payment.UpsertRequest(this.model).toPromise();
+      const res = await this.payment.UpsertRequest(this.model).toPromise();
+
+      if (!res.success) {
+        this.snack.open(res.message || "Ocorreu um erro ao salvar esta solicitação.", "OK");
+        return;
+      }
+
+      this.router.navigateByUrl("/payments?view=" + this.returnTo);
     } catch (ex) {
-      this.isBusy = false;
-
       this.snack.open("Ocorreu um erro ao salvar esta solicitação.", "OK");
-
-      return;
+    } finally {
+      this.isBusy = false;
     }
-
-    this.router.navigateByUrl("/payments?view=" + this.returnTo);
   }
 
   /*///////////////////////////////////////////////////////////////////*/
