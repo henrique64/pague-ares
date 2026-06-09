@@ -10,7 +10,7 @@ import { NavbarComponent } from "../../components/navbar/navbar.component";
 import { Router, NavigationEnd, NavigationStart } from "@angular/router";
 import { Subscription } from "rxjs";
 import PerfectScrollbar from "perfect-scrollbar";
-import * as $ from "jquery";
+import $ from "jquery";
 import { AuthService } from "app/services/auth.service";
 
 @Component({

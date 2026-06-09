@@ -9,16 +9,14 @@
           </div>
 
           <div class="card-body">
-            <h4>Dados da Usuário</h4>
+            <h4>Dados do Usuário</h4>
 
+            <!-- Linha 1: Tipo, Login, Nome, E-mail -->
             <div class="row">
-              <div class="col-md-3">
-                <mat-form-field class="example-full-width" appearance="outline">
-                  <mat-select
-                    placeholder="Tipo de Usuário"
-                    [(ngModel)]="model.origem"
-                    [disabled]="isEdit"
-                  >
+              <div class="col-md-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo</mat-label>
+                  <mat-select [(ngModel)]="model.origem" [disabled]="isEdit">
                     <mat-option [value]="0">Interno</mat-option>
                     <mat-option [value]="1">Externo</mat-option>
                   </mat-select>
@@ -29,122 +27,80 @@
                   <mat-label>Login</mat-label>
                   <input
                     matInput
-                    placeholder=""
                     type="text"
                     [(ngModel)]="model.codigo"
                     [disabled]="isEdit || model.origem === 0"
                   />
+                  <button
+                    matSuffix
+                    mat-icon-button
+                    type="button"
+                    *ngIf="!isEdit && !model.idExterno"
+                    (click)="searchDirectory()"
+                  >
+                    <i class="material-icons">search</i>
+                  </button>
                 </mat-form-field>
-                <a href="javascript:void(0)" (click)="searchDirectory()" *ngIf="!isEdit && !model.idExterno"><i class="material-icons">search</i></a>
               </div>
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <mat-form-field appearance="outline">
                   <mat-label>Nome</mat-label>
-                  <input
-                    matInput
-                    placeholder=""
-                    type="text"
-                    [(ngModel)]="model.nome"
-                    [disabled]="isReadOnly"
-                  />
+                  <input matInput type="text" [(ngModel)]="model.nome" [disabled]="isReadOnly" />
                 </mat-form-field>
               </div>
               <div class="col-md-3">
                 <mat-form-field appearance="outline">
                   <mat-label>E-mail</mat-label>
-                  <input
-                    matInput
-                    placeholder=""
-                    type="email"
-                    [(ngModel)]="model.email"
-                    [disabled]="isReadOnly"
-                  />
+                  <input matInput type="email" [(ngModel)]="model.email" [disabled]="isReadOnly" />
                 </mat-form-field>
-              </div>
-              <div class="col-md-3">
-                <mat-checkbox [(ngModel)]="model.ativo">
-                  Usuário Ativo
-                </mat-checkbox>
               </div>
             </div>
 
-            <div class="row">
+            <!-- Linha 2: Departamento + Ativo | Funções -->
+            <div class="row align-items-start">
               <div class="col-md-4">
-                <mat-form-field class="example-full-width" appearance="outline">
-                  <mat-select
-                    placeholder="Departamento"
-                    [(ngModel)]="model.idDepartamento"
-                  >
-                    <mat-option *ngFor="let dept of departmentList" [value]="dept.idDepartamento">{{dept.nome}}</mat-option>
+                <mat-form-field appearance="outline">
+                  <mat-label>Departamento</mat-label>
+                  <mat-select [(ngModel)]="model.idDepartamento">
+                    <mat-option *ngFor="let dept of departmentList" [value]="dept.idDepartamento">
+                      {{ dept.nome }}
+                    </mat-option>
                   </mat-select>
                 </mat-form-field>
+                <div class="ativo-check">
+                  <mat-checkbox [(ngModel)]="model.ativo">Usuário Ativo</mat-checkbox>
+                </div>
               </div>
-              <div class="col-md-8">
-                <p>Funções</p>
-                <div class="row">
-                  <div class="col-md-2">
-                    <mat-checkbox [(ngModel)]="isAdmin">
-                      Administrador
-                    </mat-checkbox>
-                  </div>
-                  <div class="col-md-2">
-                    <mat-checkbox [(ngModel)]="isRequester">
-                      Solicitante
-                    </mat-checkbox>
-                  </div>
-                  <div class="col-md-2">
-                    <mat-checkbox [(ngModel)]="isManager">
-                      Gestor
-                    </mat-checkbox>
-                  </div>
-                  <div class="col-md-2">
-                    <mat-checkbox [(ngModel)]="isFinancial">
-                      Financeiro
-                    </mat-checkbox>
-                  </div>
-                  <div class="col-md-4">
-                    <mat-checkbox [(ngModel)]="isAccounting">
-                      Contabilidade
-                    </mat-checkbox>
-                  </div>
+
+              <div class="col-md-5">
+                <p class="funcoes-label">Funções</p>
+                <div class="funcoes-grid">
+                  <mat-checkbox [(ngModel)]="isAdmin">Administrador</mat-checkbox>
+                  <mat-checkbox [(ngModel)]="isRequester">Solicitante</mat-checkbox>
+                  <mat-checkbox [(ngModel)]="isManager">Gestor</mat-checkbox>
+                  <mat-checkbox [(ngModel)]="isFinancial">Financeiro</mat-checkbox>
+                  <mat-checkbox [(ngModel)]="isAccounting">Contabilidade</mat-checkbox>
                 </div>
               </div>
             </div>
 
+            <!-- Linha 3: Senha -->
             <div class="row">
               <div class="col-md-3">
                 <mat-form-field appearance="outline">
                   <mat-label>Senha</mat-label>
-                  <input
-                    matInput
-                    placeholder=""
-                    type="password"
-                    [(ngModel)]="password"
-                    [disabled]="isReadOnly"
-                  />
+                  <input matInput type="password" [(ngModel)]="password" [disabled]="isReadOnly" />
                 </mat-form-field>
               </div>
               <div class="col-md-3">
                 <mat-form-field appearance="outline">
                   <mat-label>Confirmação da Senha</mat-label>
-                  <input
-                    matInput
-                    placeholder=""
-                    type="password"
-                    [(ngModel)]="passwordConfirmation"
-                    [disabled]="isReadOnly"
-                  />
+                  <input matInput type="password" [(ngModel)]="passwordConfirmation" [disabled]="isReadOnly" />
                 </mat-form-field>
-              </div>
-              <div class="col-md-4">
-                
               </div>
             </div>
 
             <div class="pull-right">
-              <!--<button mat-raised-button type="button" class="btn btn-danger">
-                Salvar e cadastrar novo
-              </button>-->
               <button
                 mat-raised-button
                 type="button"

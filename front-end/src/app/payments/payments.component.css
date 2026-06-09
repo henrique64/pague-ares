@@ -1,0 +1,35 @@
+.row {
+  align-items: flex-start;
+}
+
+.row > [class*="col-"] {
+  margin-bottom: 0;
+}
+
+/* Linha de botões */
+.row .pull-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.row .col-md-6:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mais respiro dentro do card de filtros */
+mat-card.container-fluid {
+  padding: 24px 28px !important;
+  margin-bottom: 16px;
+}
+
+/* Campos de pesquisa menores */
+mat-form-field {
+  --mat-form-field-container-height: 44px;
+  --mat-form-field-outlined-label-text-populated-size: 12px;
+  font-size: 0.875rem;
+}
+

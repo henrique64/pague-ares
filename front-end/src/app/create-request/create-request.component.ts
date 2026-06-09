@@ -102,8 +102,8 @@ export class CreateRequestComponent implements OnInit, OnDestroy {
         this.getUserList();
         this.getManagerList();
         this.initForm();
-      })
-    })
+      }))
+    }))
   }
 
   async getUserList() {

@@ -26,7 +26,7 @@ import { DepartmentService } from "app/services/department.service";
 import { DepartamentoModel } from "app/models/department/departamento.model";
 import { UtilsService } from "app/services/utils.service";
 
-import * as moment from "moment";
+import moment from "moment";
 
 @Component({
     selector: "create-rddv",
@@ -171,8 +171,8 @@ export class CreateRddvComponent implements OnInit, OnDestroy {
         this.getTravelTypes();
         this.getDepartmentList();
         this.initForm();
-      });
-    });
+      }));
+    }));
   }
 
   async getUserList() {

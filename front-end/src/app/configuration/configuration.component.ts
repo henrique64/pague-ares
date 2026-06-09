@@ -85,7 +85,7 @@ export class ConfigurationComponent implements OnInit {
       if (res.success) {
         //this.configuration = res.data;
 
-        this.snack.open("Configurações salvas com sucesso.");
+        this.snack.open("Configurações salvas com sucesso.", "OK", { duration: 3000 });
       }
     } catch (ex) {
       console.log(ex);

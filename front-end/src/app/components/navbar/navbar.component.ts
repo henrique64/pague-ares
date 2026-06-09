@@ -48,7 +48,9 @@ export class NavbarComponent implements OnInit {
     };
     sidebarClose() {
         const body = document.getElementsByTagName('body')[0];
-        this.toggleButton.classList.remove('toggled');
+        if (this.toggleButton) {
+            this.toggleButton.classList.remove('toggled');
+        }
         this.sidebarVisible = false;
         body.classList.remove('nav-open');
     };

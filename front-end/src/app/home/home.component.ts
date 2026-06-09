@@ -13,7 +13,7 @@ import { AuthService } from "app/services/auth.service";
 import { PaymentService } from "app/services/payment.service";
 import { RddvService } from "app/services/rddv.service";
 import { UsersService } from "app/services/users.service";
-import * as moment from "moment";
+import moment from "moment";
 
 @Component({
     selector: "app-dashboard",

@@ -1,11 +1,11 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { waitForAsync, ComponentFixture, TestBed } from '@angular/core/testing';
 import { RddvComponent } from './rddv.component';
 
 describe('RddvComponent', () => {
   let component: RddvComponent;
   let fixture: ComponentFixture<RddvComponent>;
 
-  beforeEach(async(() => {
+  beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [ RddvComponent ]
     })

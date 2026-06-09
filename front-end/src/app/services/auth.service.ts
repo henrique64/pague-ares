@@ -8,7 +8,7 @@ import { UsuarioDto } from "app/models/authentication/UserDto.model";
 import { TokenModel } from "app/models/authentication/TokenModel";
 import { GenericResponse } from "app/models/GenericResponse";
 import * as jwt_decode from 'jwt-decode'
-import * as moment from 'moment';
+import moment from 'moment';
 import { FuncaoDto } from "app/models/authentication/FuncaoDto.model";
 
 const AuthTokenCacheKey: string = "Token";

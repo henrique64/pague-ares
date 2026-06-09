@@ -263,6 +263,7 @@ namespace Ares.PagueAres.API.Controllers
 
             try
             {
+                var currentUser = this.GetUserFromToken();
                 Solicitacao? requestData = null;
 
                 bool sendNewRequestEmail = false;
@@ -312,6 +313,20 @@ namespace Ares.PagueAres.API.Controllers
                             Records = 0
                         });
                     }
+
+                    if (requestData.IdUsuario != currentUser?.IdUsuario &&
+                        !this.CurrentUserIsInRole("ADM", "GES", "FIN", "CON"))
+                    {
+                        return Ok(new GenericResponse<object>()
+                        {
+                            Success = false,
+                            Message = "Você não tem permissão para editar esta solicitação.",
+                            Data = null,
+                            Page = 1,
+                            Pages = 1,
+                            Records = 0
+                        });
+                    }
                 }
 
                 if (!solicitacao.Rascunho && requestData.Rascunho)
@@ -333,6 +348,9 @@ namespace Ares.PagueAres.API.Controllers
                 {
                     if (solicitacao.AprovadoGestor != requestData.AprovadoGestor)
                     {
+                        if (!this.CurrentUserIsInRole("ADM", "GES"))
+                            return Ok(new GenericResponse<object>() { Success = false, Message = "Apenas o gestor ou administrador pode aprovar/reprovar.", Data = null, Page = 1, Pages = 1, Records = 0 });
+
                         requestData.StatusGestor = (solicitacao.AprovadoGestor ?? false) ? 2 : 3;
 
                         if ((solicitacao.AprovadoGestor ?? false))
@@ -346,6 +364,9 @@ namespace Ares.PagueAres.API.Controllers
 
                     if (solicitacao.AprovadoSetor != requestData.AprovadoSetor)
                     {
+                        if (!this.CurrentUserIsInRole("ADM", "FIN"))
+                            return Ok(new GenericResponse<object>() { Success = false, Message = "Apenas o financeiro ou administrador pode autorizar pagamentos.", Data = null, Page = 1, Pages = 1, Records = 0 });
+
                         requestData.StatusFinanceiro = (solicitacao.AprovadoSetor ?? false) ? 2 : 3;
 
                         if ((solicitacao.AprovadoSetor ?? false))
@@ -364,6 +385,9 @@ namespace Ares.PagueAres.API.Controllers
 
                     if (solicitacao.StatusContabilidade != requestData.StatusContabilidade)
                     {
+                        if (!this.CurrentUserIsInRole("ADM", "FIN", "CON"))
+                            return Ok(new GenericResponse<object>() { Success = false, Message = "Apenas financeiro, contabilidade ou administrador pode lançar/recusar.", Data = null, Page = 1, Pages = 1, Records = 0 });
+
                         if ((solicitacao.StatusContabilidade ?? 0) == 2)
                         {
                             requestData.DataAprovacaoContabil = DateTime.Now;
