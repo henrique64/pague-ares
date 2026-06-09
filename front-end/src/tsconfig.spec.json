@@ -5,6 +5,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "baseUrl": "",
+    "esModuleInterop": true,
     "types": [
       "jasmine"
     ]
