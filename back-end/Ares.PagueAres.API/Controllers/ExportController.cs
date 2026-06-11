@@ -136,17 +136,17 @@ namespace Ares.PagueAres.API.Controllers
 
                 if ((filter.ManagerStatus ?? 0) > 0)
                 {
-                    requests = requests.Where(d => d.StatusGestor == filter.ManagerStatus);
+                    requests = requests.Where(d => (d.StatusGestor ?? 1) == filter.ManagerStatus);
                 }
 
                 if ((filter.FinanceStatus ?? 0) > 0)
                 {
-                    requests = requests.Where(d => d.StatusFinanceiro == filter.FinanceStatus);
+                    requests = requests.Where(d => (d.StatusFinanceiro ?? 1) == filter.FinanceStatus);
                 }
 
                 if ((filter.AccountingStatus ?? 0) > 0)
                 {
-                    requests = requests.Where(d => d.StatusContabilidade == filter.AccountingStatus);
+                    requests = requests.Where(d => (d.StatusContabilidade ?? 1) == filter.AccountingStatus);
                 }
 
                 if (!string.IsNullOrEmpty(filter.PartnerName))
@@ -215,17 +215,17 @@ namespace Ares.PagueAres.API.Controllers
 
                 if ((filter.ManagerStatus ?? 0) > 0)
                 {
-                    rddv = rddv.Where(d => d.StatusGestor == filter.ManagerStatus);
+                    rddv = rddv.Where(d => (d.StatusGestor ?? 1) == filter.ManagerStatus);
                 }
 
                 if ((filter.FinanceStatus ?? 0) > 0)
                 {
-                    rddv = rddv.Where(d => d.StatusFinanceiro == filter.FinanceStatus);
+                    rddv = rddv.Where(d => (d.StatusFinanceiro ?? 1) == filter.FinanceStatus);
                 }
 
                 if ((filter.AccountingStatus ?? 0) > 0)
                 {
-                    rddv = rddv.Where(d => d.StatusContabilidade == filter.AccountingStatus);
+                    rddv = rddv.Where(d => (d.StatusContabilidade ?? 1) == filter.AccountingStatus);
                 }
 
                 if (filter.DocumentId.HasValue)

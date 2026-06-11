@@ -82,28 +82,8 @@ namespace Ares.PagueAres.API.Controllers
 
         private IQueryable<ViewListagemSolicitacoes> BuildQuery(ListingFilterDto filter)
         {
-            DateTime startDate;
-            DateTime endDate;
-
-            if (filter.RequestStart is null)
-            {
-                startDate = new DateTime(1753, 1, 1);
-                endDate = DateTime.Now.Date.AddDays(7);
-            }
-            else
-            {
-                startDate = filter.RequestStart.Value;
-            }
-
-            if (filter.RequestEnd is null)
-            {
-                startDate = new DateTime(1753, 1, 1);
-                endDate = DateTime.Now.Date.AddDays(7);
-            }
-            else
-            {
-                endDate = filter.RequestEnd.Value;
-            }
+            DateTime startDate = filter.RequestStart?.Date ?? new DateTime(1753, 1, 1);
+            DateTime endDate = filter.RequestEnd?.Date ?? DateTime.Now.Date.AddDays(7);
 
             var query = (from r in dbContext.ViewListagemSolicitacoes
                          where r.DataSolicitacao.Date >= startDate &&
@@ -112,8 +92,8 @@ namespace Ares.PagueAres.API.Controllers
 
             if(!string.IsNullOrEmpty(filter.DocumentNumber))
             {
-                query = query.Where(r => r.NumeroDocumento != null && 
-                    r.NumeroDocumento.Equals(filter.DocumentNumber, StringComparison.CurrentCultureIgnoreCase));
+                query = query.Where(r => r.NumeroDocumento != null &&
+                    r.NumeroDocumento == filter.DocumentNumber);
             }
 
             if ((filter.DocumentId ?? 0) > 0)
@@ -149,17 +129,17 @@ namespace Ares.PagueAres.API.Controllers
 
             if ((filter.ManagerStatus ?? 0) > 0)
             {
-                query = query.Where(r => r.IdStatusGestor == filter.ManagerStatus);
+                query = query.Where(r => (r.IdStatusGestor ?? 1) == filter.ManagerStatus);
             }
 
             if ((filter.FinanceStatus ?? 0) > 0)
             {
-                query = query.Where(r => r.IdStatusFinanceiro == filter.FinanceStatus);
+                query = query.Where(r => (r.IdStatusFinanceiro ?? 1) == filter.FinanceStatus);
             }
 
             if ((filter.AccountingStatus ?? 0) > 0)
             {
-                query = query.Where(r => r.IdStatusContabilidade == filter.AccountingStatus);
+                query = query.Where(r => (r.IdStatusContabilidade ?? 1) == filter.AccountingStatus);
             }
 
             if(filter.IsAssigned.HasValue)
