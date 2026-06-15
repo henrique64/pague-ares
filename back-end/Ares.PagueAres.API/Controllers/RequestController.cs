@@ -26,106 +26,6 @@ namespace Ares.PagueAres.API.Controllers
             _email = email;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<GenericResponse<IEnumerable<SolicitacaoDto>>>> GetAllAsync([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] string? number, [FromQuery] int? type, [FromQuery] int? status, [FromQuery] int pageSize = int.MaxValue, [FromQuery] int page = 1)
-        {
-            try
-            {
-                if (startDate == null)
-                {
-                    startDate = new DateTime(1753, 1, 1);
-                    endDate = DateTime.Now.Date.AddDays(7);
-                }
-
-                if (endDate == null)
-                {
-                    startDate = new DateTime(1753, 1, 1);
-                    endDate = DateTime.Now.Date.AddDays(7);
-                }
-
-                var query = (from r in _dbContext.Solicitacaos
-                             from u in _dbContext.Usuarios.Where(x => x.IdUsuario == r.IdUsuario)
-                             from g in _dbContext.Usuarios.Where(k => k.IdUsuario == r.IdGestor).DefaultIfEmpty()
-                             where r.DataSolicitacao.Date >= startDate &&
-                                     r.DataSolicitacao.Date <= endDate
-                             select new SolicitacaoDto()
-                             {
-                                 IdSolicitacao = r.IdSolicitacao,
-                                 StatusGestor = r.StatusGestor,
-                                 StatusContabilidade = r.StatusContabilidade,
-                                 StatusFinanceiro = r.StatusFinanceiro,
-                                 IdUsuario = r.IdUsuario,
-                                 NomeUsuario = u.Nome,
-                                 IdDepartamento = r.IdDepartamento,
-                                 IdUsuarioAtribuido = r.IdUsuarioAtribuido,
-                                 DataAtribuicao = r.DataAtribuicao,
-                                 IdUsuarioAtribuidor = r.IdUsuarioAtribuidor,
-                                 DataSolicitacao = r.DataSolicitacao,
-                                 TipoSolicitacao = r.TipoSolicitacao,
-                                 TipoPagamento = r.TipoPagamento,
-                                 DataDocumento = r.DataDocumento,
-                                 DataVencimento = r.DataVencimento,
-                                 NumeroDocumento = r.NumeroDocumento,
-                                 Descricao = r.Descricao,
-                                 Valor = r.Valor,
-                                 Parcelado = r.Parcelado,
-                                 Parcelas = r.Parcelas,
-                                 FormaPagamento = r.FormaPagamento,
-                                 CentroCusto = r.CentroCusto,
-                                 Projeto = r.Projeto,
-                                 Pca = r.Pca,
-                                 NumDocParceiro = r.NumDocParceiro,
-                                 CodigoParceiro = r.CodigoParceiro,
-                                 NomeParceiro = r.NomeParceiro,
-                                 BancoParceiro = r.BancoParceiro,
-                                 AgenciaParceiro = r.AgenciaParceiro,
-                                 ContaParceiro = r.ContaParceiro,
-                                 Observacao = r.Observacao,
-                                 TipoAutorizacao = r.TipoAutorizacao,
-                                 IdGestor = r.IdGestor,
-                                 NomeGestor = g == null ? "" : g.Nome,
-                                 AprovadoGestor = r.AprovadoGestor,
-                                 ObservacaoGestor = r.ObservacaoGestor,
-                                 AprovadoSetor = r.AprovadoSetor,
-                                 ObservacaoSetor = r.ObservacaoSetor,
-                                 DataAprovacaoGestor = r.DataAprovacaoGestor,
-                                 DataAprovacaoFinanceiro = r.DataAprovacaoFinanceiro,
-                                 DataAprovacaoContabil = r.DataAprovacaoContabil,
-                                 Cancelado = r.Cancelado,
-                                 Rascunho = r.Rascunho
-                             });
-
-                var records = await query.CountAsync();
-
-                var requests = await query
-                                    .Skip(pageSize * (page - 1))
-                                    .Take(pageSize)
-                                    .ToListAsync();
-
-                return Ok(new GenericResponse<IEnumerable<SolicitacaoDto>>()
-                {
-                    Success = true,
-                    Message = "Registros obtidos com sucesso.",
-                    Data = requests,
-                    Page = page,
-                    Pages = records / pageSize,
-                    Records = records
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new GenericResponse<object>()
-                {
-                    Success = false,
-                    Message = ex.Message,
-                    Data = null,
-                    Page = 1,
-                    Pages = 1,
-                    Records = 0
-                });
-            }
-        }
-
         [HttpGet("{id}")]
         public async Task<ActionResult<GenericResponse<SolicitacaoDto>>> GetRequest([FromRoute] int id)
         {
@@ -329,7 +229,7 @@ namespace Ares.PagueAres.API.Controllers
                     }
                 }
 
-                if (!solicitacao.Rascunho && requestData.Rascunho)
+                if (!solicitacao.Rascunho && requestData.Rascunho && !solicitacao.Cancelado)
                 {
                     sendNewRequestEmail = true;
 

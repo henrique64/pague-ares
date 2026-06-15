@@ -57,11 +57,16 @@ export class LoginComponent implements OnInit {
     try {
       let result = await this.authService.Authenticate(this.user.name, this.user.password);
 
+      if(!result) {
+        this.displayError("Erro de conexão. Verifique sua rede e tente novamente.");
+        return;
+      }
+
       if(result.success) {
         this.router.navigate(['/payments']);
       }
       else {
-        this.displayError("Usuário ou senha inválidos.");
+        this.displayError(result.message || "Usuário ou senha inválidos.");
       }
     }
     catch {

@@ -111,7 +111,7 @@ export class CreateRddvComponent implements OnInit, OnDestroy {
 
 
   labelTipoDespesa(tipo: number) {
-    return this.tiposDespesa.find((x) => x.id === tipo).name;
+    return this.tiposDespesa.find((x) => x.id === tipo)?.name ?? "";
   }
 
   userList: UserListModel[] = [];
@@ -250,10 +250,19 @@ export class CreateRddvComponent implements OnInit, OnDestroy {
       } else {
         this.isUserView =
           this.model.idUsuario === this.auth.CurrentUser.idUsuario;
-        this.isReadOnly = !(this.model.statusGestor === null || this.model.statusGestor === 1) || (!this.model.rascunho && this.model.cancelado) || !this.isUserView;
-        this.isManagerReadOnly = !this.auth.IsInRole(EnumFuncao.Gestor); // || this.model.statusGestor !== 1;
-        this.isFinanceReadOnly = !this.auth.IsInRole(EnumFuncao.Financeiro); // || this.model.statusFinanceiro !== 1;
-        this.isAccountingReadOnly = !this.auth.IsInRole(EnumFuncao.Contabilidade); // || this.model.statusContabilidade !== 1;
+        this.isReadOnly =
+          !this.isUserView ||
+          this.model.cancelado ||
+          !(this.model.rascunho || this.model.statusGestor === null || this.model.statusGestor === 1);
+        // Cada etapa só é editável enquanto NÃO decidida (status null ou 1). Uma vez
+        // decidida (aprovada/negada = 2/3), trava — uma etapa anterior não pode ser
+        // alterada depois que a seguinte já agiu.
+        this.isManagerReadOnly = !this.auth.IsInRole(EnumFuncao.Gestor) ||
+          !(this.model.statusGestor === null || this.model.statusGestor === 1);
+        this.isFinanceReadOnly = !this.auth.IsInRole(EnumFuncao.Financeiro) ||
+          !(this.model.statusFinanceiro === null || this.model.statusFinanceiro === 1);
+        this.isAccountingReadOnly = !this.auth.IsInRole(EnumFuncao.Contabilidade) ||
+          !(this.model.statusContabilidade === null || this.model.statusContabilidade === 1);
         this.isFinal = this.model.statusGestor === 3 || this.model.statusFinanceiro === 3 || this.model.statusContabilidade === 3 || this.model.statusContabilidade === 2;
         this.isAccounting = this.auth.IsInRole(EnumFuncao.Contabilidade);
       }
@@ -425,24 +434,26 @@ export class CreateRddvComponent implements OnInit, OnDestroy {
   }
 
   async save(isDraft: boolean, cancel: boolean = false) {
-    let errors = this.validate();
+    if (!isDraft && !cancel) {
+      let errors = this.validate();
 
-    if (errors.length > 0) {
-      this.alert(errors.join("\r\n"));
-      return false;
+      if (errors.length > 0) {
+        this.alert(errors.join("\r\n"));
+        return false;
+      }
     }
 
     if (this.isBusy) return;
 
     this.isBusy = true;
 
-    // Definir valores de Km e Diária
-    this.model.valorKm = this.rddvConfig.ValorKm;
+    // Definir valores de Km e Diária (protegido: config/tipos de viagem podem não ter carregado)
+    this.model.valorKm = this.rddvConfig?.ValorKm ?? 0;
     this.model.valorDiaria = this.travelTypes.find(
       (t) => t.idTipoViagem == this.model.tipoViagem
-    ).valorDiaria;
+    )?.valorDiaria ?? 0;
 
-    if(this.model.rascunho && !isDraft) {
+    if(this.model.rascunho && !isDraft && !cancel) {
       this.model.rascunho = false;
     }
 
@@ -812,6 +823,6 @@ export class CreateRddvComponent implements OnInit, OnDestroy {
       return;
     }
 
-    await this.save(false, true);
+    await this.save(this.model.rascunho, true);
   }
 }

@@ -46,6 +46,7 @@ export class PaymentsComponent implements OnInit {
   totalPages: number = 1;
   totalRecords: number = 0;
   isLoadingRequests = false;
+  private loadToken = 0;
 
   documentTypes: any = {
     1: "Adiantamento",
@@ -78,16 +79,24 @@ export class PaymentsComponent implements OnInit {
   userList: UserListModel[] = [];
 
   ngOnInit() {
-    this.loadFilter();
-
-    if(!this.myFilter)
-      this.myFilter = new PaymentListFilter();
-
     this.isAdmin = this.auth.IsInRole(EnumFuncao.Administrador);
     this.isManager = this.auth.IsInRole(EnumFuncao.Gestor);
     this.isRequester = this.auth.IsInRole(EnumFuncao.Solicitante);
     this.isFinancial = this.auth.IsInRole(EnumFuncao.Financeiro);
     this.isAccounting = this.auth.IsInRole(EnumFuncao.Contabilidade);
+
+    this.loadFilter();
+
+    if(!this.myFilter)
+      this.myFilter = new PaymentListFilter();
+
+    // Garante que o modo de visão restaurado seja permitido para o perfil atual.
+    // Um filtro salvo por outra conta no mesmo navegador não pode jogar um solicitante
+    // numa visão de Gestor/Financeiro — isso faria o backend retornar lista vazia.
+    if(!this.isViewModeAllowed(this.viewMode)) {
+      this.viewMode = EnumPaymentListViewMode.MyView;
+      this.currentTab = 0;
+    }
 
     this.getUserList();
 
@@ -95,19 +104,36 @@ export class PaymentsComponent implements OnInit {
       let view = queryParams.get("view");
 
       if(view) {
-        this.currentTab = parseInt(view);
+        let tab = parseInt(view);
+        let requested = <EnumPaymentListViewMode>(tab + 1);
 
-        if((this.currentTab < 0 && this.currentTab > 2) || isNaN(this.currentTab))
+        if(!isNaN(tab) && tab >= 0 && this.isViewModeAllowed(requested)) {
+          this.currentTab = tab;
+          this.viewMode = requested;
+        }
+        else {
           this.currentTab = 0;
+          this.viewMode = EnumPaymentListViewMode.MyView;
+        }
 
-        this.viewMode = <EnumPaymentListViewMode>(this.currentTab + 1);
-        
         this.change.detectChanges();
       }
 
       this.loadPayments();
     });
-    
+  }
+
+  isViewModeAllowed(viewMode: EnumPaymentListViewMode): boolean {
+    switch(viewMode) {
+      case EnumPaymentListViewMode.MyView:
+        return true;
+      case EnumPaymentListViewMode.ManagerView:
+        return this.isManager || this.isAdmin;
+      case EnumPaymentListViewMode.FinancialView:
+        return this.isFinancial || this.isAccounting || this.isAdmin;
+      default:
+        return false;
+    }
   }
 
   async getUserList() {
@@ -123,7 +149,9 @@ export class PaymentsComponent implements OnInit {
   }
 
   async loadPayments() {
-    if(this.isLoadingRequests) return;
+    // "Último vence": evita que uma resposta antiga sobrescreva a atual e que um
+    // recarregamento corretivo (ex.: troca de aba) seja descartado por estar em andamento.
+    const token = ++this.loadToken;
 
     this.requests = [];
     this.isLoadingRequests = true;
@@ -134,18 +162,23 @@ export class PaymentsComponent implements OnInit {
     try {
       let res = await this.payment.GetFilteredList(this.myFilter).toPromise();
 
+      if (token !== this.loadToken) return; // superado por um carregamento mais recente
+
       if (res.success) {
         this.requests = res.data;
         this.totalPages = res.pages;
         this.totalRecords = res.records;
       }
     } catch (ex) {
+      if (token !== this.loadToken) return;
       console.log(ex);
       this.snackbar.open("Erro ao carregar as solicitações. Tente novamente.", "OK", { duration: 4000 });
     }
     finally {
-      this.isLoadingRequests = false;
-      this.change.detectChanges();
+      if (token === this.loadToken) {
+        this.isLoadingRequests = false;
+        this.change.detectChanges();
+      }
     }
   }
 
@@ -160,8 +193,12 @@ export class PaymentsComponent implements OnInit {
     this.saveFilter();
   }
 
+  private get filterStorageKey(): string {
+    return "PaymentsFilter_" + (this.auth.CurrentUser?.idUsuario ?? "anon");
+  }
+
   loadFilter() {
-    let data: any = localStorage.getItem("PaymentsFilter");
+    let data: any = localStorage.getItem(this.filterStorageKey);
 
     if(data) {
       this.myFilter = JSON.parse(data) as PaymentListFilter;
@@ -174,12 +211,12 @@ export class PaymentsComponent implements OnInit {
   }
 
   saveFilter() {
-    localStorage.setItem("PaymentsFilter", JSON.stringify(this.myFilter));
+    localStorage.setItem(this.filterStorageKey, JSON.stringify(this.myFilter));
   }
 
   clearFilters() {
     this.myFilter = new PaymentListFilter();
-    localStorage.removeItem("PaymentsFilter");
+    localStorage.removeItem(this.filterStorageKey);
   }
 
   resetPage() {

@@ -92,6 +92,9 @@ namespace Ares.PagueAres.API.Controllers
             {
                 var requests = dbContext.Solicitacaos.AsQueryable();
 
+                // Rascunhos e cancelados nunca entram na exportação do fluxo de aprovação
+                requests = requests.Where(d => !d.Rascunho && !d.Cancelado);
+
                 var roles = await (from u in dbContext.UsuarioFuncaos
                                    from f in dbContext.Funcaos.Where(x => x.IdFuncao == u.IdFuncao)
                                    where u.IdUsuario == userId
@@ -183,6 +186,9 @@ namespace Ares.PagueAres.API.Controllers
                                      });
 
                 var rddv = dbContext.Rddv.AsQueryable();
+
+                // Rascunhos e cancelados nunca entram na exportação do fluxo de aprovação
+                rddv = rddv.Where(d => !d.Rascunho && !d.Cancelado);
 
                 if (isFinancial)
                 {

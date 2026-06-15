@@ -16,6 +16,11 @@ describe('AuthService', () => {
   let localStorage: LocalStorageService;
 
   beforeEach(() => {
+    // Limpa antes de instanciar: o construtor do AuthService chama LoadData(),
+    // que lê o token do localStorage. Limpar depois deixaria CurrentUser populado
+    // por um teste anterior (dependência de ordem entre testes).
+    window.localStorage.clear();
+
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [AuthService, LocalStorageService, BaseUrlService]
@@ -24,7 +29,6 @@ describe('AuthService', () => {
     service = TestBed.inject(AuthService);
     http = TestBed.inject(HttpTestingController);
     localStorage = TestBed.inject(LocalStorageService);
-    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -43,6 +47,34 @@ describe('AuthService', () => {
     const result = await promise;
     expect(result?.success).toBeTrue();
     expect(window.localStorage.getItem('Token')).not.toBeNull();
+  });
+
+  it('decodeToken converte nameid (string do JWT) para número', async () => {
+    const promise = service.Authenticate('usuario', 'senha');
+
+    const req = http.expectOne(r => r.url.includes('/api/auth') || r.url.includes('/api/Auth'));
+    req.flush({
+      success: true,
+      data: { token: FAKE_TOKEN, expires: new Date(Date.now() + 3600000).toISOString() }
+    });
+
+    await promise;
+
+    expect(typeof service.CurrentUser!.idUsuario).toBe('number');
+    expect(service.CurrentUser!.idUsuario).toBe(1);
+  });
+
+  it('Authenticate com credenciais inválidas resolve com success=false (não lança)', async () => {
+    const promise = service.Authenticate('usuario', 'senha-errada');
+
+    const req = http.expectOne(r => r.url.includes('/api/auth') || r.url.includes('/api/Auth'));
+    req.flush({ success: false, message: 'Usuário ou senha inválidos.', data: null, records: 0, pages: 0, page: 1 });
+
+    const result = await promise;
+    expect(result?.success).toBeFalse();
+    expect(result?.message).toContain('inválid');
+    expect(service.CurrentUser).toBeNull();
+    expect(window.localStorage.getItem('Token')).toBeNull();
   });
 
   it('Authenticate com falha na rede retorna null', async () => {

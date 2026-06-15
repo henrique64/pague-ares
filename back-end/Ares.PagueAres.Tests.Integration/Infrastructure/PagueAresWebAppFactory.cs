@@ -175,7 +175,9 @@ namespace Ares.PagueAres.Tests.Integration.Infrastructure
                 MakeSolicitacao(id: 105, userId: 3, rascunho: false, statusGestor: 2, statusFinanceiro: 2, statusContabilidade: 1, aprovadoGestor: true, aprovadoSetor: true), // contabilidade lança
                 MakeSolicitacao(id: 106, userId: 3, rascunho: false, statusGestor: 2, statusFinanceiro: 2, statusContabilidade: 1, aprovadoGestor: true, aprovadoSetor: true), // contabilidade recusa
                 // ID 20: Pertence a usuário "outro" (id=6) — para teste de segregação
-                MakeSolicitacao(id: 20, userId: 6, rascunho: false, statusGestor: 1)
+                MakeSolicitacao(id: 20, userId: 6, rascunho: false, statusGestor: 1),
+                // ID 107: Rascunho — para teste de cancelamento não disparar fluxo
+                MakeSolicitacao(id: 107, userId: 3, rascunho: true, statusGestor: 1)
             );
             ctx.SaveChanges();
         }
@@ -228,7 +230,9 @@ namespace Ares.PagueAres.Tests.Integration.Infrastructure
                 MakeRddv(id: 52, userId: 3, rascunho: false, statusGestor: 1),
                 // Aprovado pelo gestor, aprovado pelo financeiro — para dashboard
                 MakeRddv(id: 53, userId: 3, rascunho: false, statusGestor: 2, statusFinanceiro: 2, aprovadoGestor: true, aprovadoSetor: true),
-                MakeRddv(id: 54, userId: 3, rascunho: false, statusGestor: 2, statusFinanceiro: 2, aprovadoGestor: true, aprovadoSetor: true)
+                MakeRddv(id: 54, userId: 3, rascunho: false, statusGestor: 2, statusFinanceiro: 2, aprovadoGestor: true, aprovadoSetor: true),
+                // ID 55: Rascunho — para teste de cancelamento não disparar fluxo
+                MakeRddv(id: 55, userId: 3, rascunho: true, statusGestor: 1)
             );
             ctx.SaveChanges();
         }

@@ -26,110 +26,6 @@ namespace Ares.PagueAres.API.Controllers
             _email = email;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<GenericResponse<IEnumerable<RddvDto>>>> GetAllAsync([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] string? number, [FromQuery] int? type, [FromQuery] int? status, [FromQuery] int pageSize = int.MaxValue, [FromQuery] int page = 1)
-        {
-            try
-            {
-                if (startDate == null)
-                {
-                    startDate = new DateTime(1753, 1, 1);
-                    endDate = DateTime.Now.Date.AddDays(7);
-                }
-
-                if (endDate == null)
-                {
-                    startDate = new DateTime(1753, 1, 1);
-                    endDate = DateTime.Now.Date.AddDays(7);
-                }
-
-                var query = (from r in _dbContext.Rddv
-                             from u in _dbContext.Usuarios.Where(x => x.IdUsuario == r.IdUsuario)
-                             from g in _dbContext.Usuarios.Where(k => k.IdUsuario == r.IdGestor).DefaultIfEmpty()
-                             from d in _dbContext.vDespesasRddv.Where(k => k.IdRelatorio == r.IdRelatorio).DefaultIfEmpty()
-                             where r.DataCadastro.Date >= startDate &&
-                                     r.DataCadastro.Date <= endDate
-                             select new RddvDto()
-                             {
-                                 IdRelatorio = r.IdRelatorio,
-                                 IdUsuario = r.IdUsuario,
-                                 DataCadastro = r.DataCadastro,
-                                 NomeFuncionario = r.NomeFuncionario,
-                                 IdUsuarioAtribuido = r.IdUsuarioAtribuido,
-                                 DataAtribuicao = r.DataAtribuicao,
-                                 IdUsuarioAtribuidor = r.IdUsuarioAtribuidor,
-                                 CPF = r.CPF,
-                                 IdDepartamento = r.IdDepartamento,
-                                 Finalidade = r.Finalidade,
-                                 TipoRelatorio = r.TipoRelatorio,
-                                 Moeda = r.Moeda,
-                                 TipoViagem = r.TipoViagem,
-                                 DataInicio = r.DataInicio,
-                                 DataFim = r.DataFim,
-                                 LocalViagem = r.LocalViagem,
-                                 CentroCusto = r.CentroCusto,
-                                 Projeto = r.Projeto,
-                                 PCA = r.PCA,
-                                 DiariaViagem = r.DiariaViagem,
-                                 Adiantamento = r.Adiantamento,
-                                 ValorAdiantamento = r.ValorAdiantamento,
-                                 SaldoCartaoVtm = r.SaldoCartaoVtm,
-                                 Observacao = r.Observacao,
-                                 TipoAutorizacao = r.TipoAutorizacao,
-                                 IdGestor = r.IdGestor,
-                                 NomeGestor = g == null ? "" : g.Nome,
-                                 AprovadoGestor = r.AprovadoGestor,
-                                 ObservacaoGestor = r.ObservacaoGestor,
-                                 AprovadoSetor = r.AprovadoSetor,
-                                 ObservacaoSetor = r.ObservacaoSetor,
-                                 StatusGestor = r.StatusGestor ?? 1,
-                                 StatusContabilidade = r.StatusContabilidade ?? 1,
-                                 StatusFinanceiro = r.StatusFinanceiro ?? 1,
-                                 ValorTotal = d.Valor,
-                                 Banco = r.Banco,
-                                 Agencia = r.Agencia,
-                                 Conta = r.Conta,
-                                 ValorDiaria = r.ValorDiaria,
-                                 ValorKm = r.ValorKm,
-                                 DataAprovacaoGestor = r.DataAprovacaoGestor,
-                                 DataAprovacaoFinanceiro = r.DataAprovacaoFinanceiro,
-                                 DataAprovacaoContabil = r.DataAprovacaoContabil,
-                                 Cancelado = r.Cancelado,
-                                 Rascunho = r.Rascunho,
-                                 DataVencimento = r.DataVencimento
-                             });
-
-                var records = await query.CountAsync();
-
-                var requests = await query
-                                    .Skip(pageSize * (page - 1))
-                                    .Take(pageSize)
-                                    .ToListAsync();
-
-                return Ok(new GenericResponse<IEnumerable<RddvDto>>()
-                {
-                    Success = true,
-                    Message = "Registros obtidos com sucesso.",
-                    Data = requests,
-                    Page = page,
-                    Pages = records / pageSize,
-                    Records = records
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new GenericResponse<object>()
-                {
-                    Success = false,
-                    Message = ex.Message,
-                    Data = null,
-                    Page = 1,
-                    Pages = 1,
-                    Records = 0
-                });
-            }
-        }
-
         [HttpGet("{id}")]
         public async Task<ActionResult<GenericResponse<RddvDto>>> GetRequest([FromRoute] int id)
         {
@@ -338,7 +234,7 @@ namespace Ares.PagueAres.API.Controllers
                     }
                 }
 
-                if (!rddv.Rascunho && requestData.Rascunho)
+                if (!rddv.Rascunho && requestData.Rascunho && !rddv.Cancelado)
                 {
                     sendNewRequestEmail = true;
 

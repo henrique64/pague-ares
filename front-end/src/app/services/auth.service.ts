@@ -52,10 +52,15 @@ export class AuthService {
       return null;
     }
 
-    this.ApiAuthToken = loginResponse.data;
-    this.CurrentUser = this.decodeToken(this.ApiAuthToken.token);
-    
-    this.local.set(AuthTokenCacheKey, this.ApiAuthToken);
+    // Só armazena/decodifica o token quando o login realmente teve sucesso.
+    // Em falha (ex.: senha inválida) a API responde 200 com success=false e data=null;
+    // tentar ler data.token aqui lançava erro e mascarava a mensagem real.
+    if (loginResponse?.success && loginResponse.data?.token) {
+      this.ApiAuthToken = loginResponse.data;
+      this.CurrentUser = this.decodeToken(this.ApiAuthToken.token);
+
+      this.local.set(AuthTokenCacheKey, this.ApiAuthToken);
+    }
 
     return loginResponse;
   }
@@ -108,7 +113,7 @@ export class AuthService {
     if (!jwtData) return null;
 
     return {
-        idUsuario: jwtData.nameid,
+        idUsuario: Number(jwtData.nameid),
         email: "",
         nome: jwtData.sub,
         origem: 0,

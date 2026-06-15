@@ -16,21 +16,6 @@ const USER_VAR: string = "User";
 export class PaymentService {
   constructor(private http: HttpClient, private url: BaseUrlService) {}
 
-  public GetAll(
-    startDate: Date | null,
-    endDate: Date | null,
-    type: number | null,
-    number: number | null,
-    pageSize: number = 50,
-    page = 1
-  ): Observable<GenericResponse<PaymentRequestModel[]>> {
-    let params: string[] = [];
-
-    let url = this.url.Payment.Get + "?" + params.join("&");
-
-    return this.http.get<GenericResponse<PaymentRequestModel[]>>(url);
-  }
-
   public GetRequest(
     requestId: number
   ): Observable<GenericResponse<PaymentRequestModel>> {

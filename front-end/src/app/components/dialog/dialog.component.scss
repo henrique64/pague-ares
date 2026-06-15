@@ -153,7 +153,9 @@ $dialog-background : #f6f6f6 !default;
   }
 
 .dialog {
-    padding: 0;
+    padding: 24px;
+    min-width: 320px;
+    box-sizing: border-box;
     position: relative;
 
     >header {
@@ -301,6 +303,10 @@ $dialog-background : #f6f6f6 !default;
     }
 
     .buttons {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+
         button {
             margin-left: 6px;
         }
@@ -316,7 +322,29 @@ $dialog-background : #f6f6f6 !default;
 }
 
 /* /////////////////////////////////////////////////////////////////// */
-/* skeleton */
+/* skeleton (Angular Material MDC) */
+/* Regras restritas ao painel do nosso diálogo (panelClass app-dialog-pane),
+   para não afetar outros overlays do Material (datepickers, selects, menus). */
+
+.app-dialog-pane {
+    max-width: 95vw !important;
+
+    /* Deixa o diálogo crescer conforme o conteúdo (evita scrollbar com altura fixa) */
+    .mat-mdc-dialog-container,
+    .mdc-dialog__container,
+    .mat-mdc-dialog-surface {
+        height: auto !important;
+        max-height: 95vh;
+    }
+
+    /* MDC removeu o padding padrão do container; o padding agora vem do .dialog */
+    .mat-mdc-dialog-surface {
+        padding: 0;
+        overflow: auto;
+        background: $dialog-background;
+        @include border-radius(4px);
+    }
+}
 
 .dialog-full-screen {
     width: calc(100% - #{$sidenav-fixed-size-w});
@@ -330,35 +358,7 @@ $dialog-background : #f6f6f6 !default;
         height: 100%;
     }
 
-    .mat-dialog-container {
+    .mat-mdc-dialog-surface {
         @include border-radius(0 !important);
     }
-}
-
-.mat-dialog-container {
-    padding: 0 !important;
-    overflow: hidden !important;
-    background: none !important;
-    display: -webkit-flex !important;
-    display: -webkit-box !important;
-    display: -ms-flexbox !important;
-    display: -moz-box !important;
-    display: flex !important;
-    @include border-radius(2px !important);
-    @include flex-align-items(center);
-    @include flex-justify-content(center);
-
-    >.ng-star-inserted {
-        width: calc(100% - #{$dialog-padding * 2});
-        height: calc(100% - #{$dialog-padding * 2});
-        padding: $dialog-padding;
-        background: $dialog-background;
-        @include flexbox();
-        @include flex-align-items(center);
-        @include flex-justify-content(center);
-    }
-}
-
-.cdk-overlay-pane {
-    max-width: 95vw !important;
 }

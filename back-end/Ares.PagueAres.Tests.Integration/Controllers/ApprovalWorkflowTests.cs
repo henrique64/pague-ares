@@ -94,6 +94,80 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         }
 
         [Fact]
+        public async Task Post_CancelarRascunho_NaoAprovaGestor()
+        {
+            // Simula o pior caso de um cliente antigo: cancela enviando Rascunho=false + Cancelado=true.
+            // O guard do backend deve impedir que isso dispare o fluxo / auto-aprove o gestor.
+            var client = _factory.GetAuthenticatedClient(3, "Solicitante", "USR");
+            var dto = GetSolicitacao(107); // rascunho pendente, exclusivo deste teste
+            dto.TipoAutorizacao = 1;       // ramo que auto-aprovava o gestor no envio
+            dto.Rascunho = false;
+            dto.Cancelado = true;
+
+            var response = await client.PostAsync("/api/request", ToJson(dto));
+            var body = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<GenericResponse<SolicitacaoDto>>(body, JsonOpts);
+
+            result!.Success.Should().BeTrue($"API retornou: {result.Message}");
+            var dbState = GetSolicitacaoDb(107);
+            dbState.Cancelado.Should().BeTrue();
+            dbState.StatusGestor.Should().Be(1, "cancelamento não pode auto-aprovar o gestor");
+            dbState.AprovadoGestor.Should().NotBe(true);
+        }
+
+        [Fact]
+        public async Task PostRddv_CancelarRascunho_NaoAprovaGestor()
+        {
+            var client = _factory.GetAuthenticatedClient(3, "Solicitante", "USR");
+
+            RddvDto dto;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var ctx = scope.ServiceProvider.GetRequiredService<PagueAresContext>();
+                var r = ctx.Rddv.AsNoTracking().First(x => x.IdRelatorio == 55); // rascunho exclusivo deste teste
+                dto = new RddvDto
+                {
+                    IdRelatorio = r.IdRelatorio,
+                    IdUsuario = r.IdUsuario,
+                    IdDepartamento = r.IdDepartamento,
+                    NomeFuncionario = r.NomeFuncionario,
+                    CPF = r.CPF,
+                    Finalidade = r.Finalidade,
+                    TipoRelatorio = r.TipoRelatorio,
+                    Moeda = r.Moeda,
+                    TipoViagem = r.TipoViagem,
+                    LocalViagem = r.LocalViagem,
+                    CentroCusto = r.CentroCusto,
+                    Projeto = r.Projeto,
+                    PCA = r.PCA,
+                    Observacao = r.Observacao,
+                    ObservacaoGestor = r.ObservacaoGestor,
+                    ObservacaoSetor = r.ObservacaoSetor,
+                    TipoAutorizacao = 1, // ramo que auto-aprovava o gestor no envio
+                    Banco = r.Banco, Agencia = r.Agencia, Conta = r.Conta,
+                    DataCadastro = r.DataCadastro,
+                    StatusGestor = r.StatusGestor,
+                    Rascunho = false,
+                    Cancelado = true,
+                    Documentos = []
+                };
+            }
+
+            var response = await client.PostAsync("/api/rddv", ToJson(dto));
+            var body = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<GenericResponse<RddvDto>>(body, JsonOpts);
+
+            result!.Success.Should().BeTrue($"API retornou: {result.Message}");
+
+            using var verifyScope = _factory.Services.CreateScope();
+            var verifyCtx = verifyScope.ServiceProvider.GetRequiredService<PagueAresContext>();
+            var dbState = verifyCtx.Rddv.AsNoTracking().First(x => x.IdRelatorio == 55);
+            dbState.Cancelado.Should().BeTrue();
+            dbState.StatusGestor.Should().Be(1, "cancelamento não pode auto-aprovar o gestor");
+            dbState.AprovadoGestor.Should().NotBe(true);
+        }
+
+        [Fact]
         public async Task Post_NovaSolicitacao_CriaCorretamente()
         {
             var client = _factory.GetAuthenticatedClient(3, "Solicitante", "USR");
