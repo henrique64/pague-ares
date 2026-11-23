@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Overrides de desenvolvimento local
 # Este arquivo é carregado automaticamente pelo docker compose junto com docker-compose.yml
 
@@ -14,8 +12,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_RUN_MIGRATIONS: "true"
-    # Swagger fica disponível em desenvolvimento
-    # Acesse: http://localhost:5000/swagger
+    # Scalar (UI da API) fica disponível em desenvolvimento
+    # Acesse: http://localhost:5000/scalar/v1  (OpenAPI: /openapi/v1.json)
 
   frontend:
     # Para usar a URL da API explicitamente em vez de proxy relativo:
