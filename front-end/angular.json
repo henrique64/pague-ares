@@ -39,7 +39,12 @@
             "allowedCommonJsDependencies": [
               "jquery",
               "chartist"
-            ]
+            ],
+            "stylePreprocessorOptions": {
+              "sass": {
+                "silenceDeprecations": ["import", "global-builtin", "color-functions", "abs-percent", "mixed-decls"]
+              }
+            }
           },
           "configurations": {
             "production": {

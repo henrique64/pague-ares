@@ -1,4 +1,5 @@
-﻿using Ares.PagueAres.Domain;
+﻿using Ares.PagueAres.API.Extensions;
+using Ares.PagueAres.Domain;
 using Ares.PagueAres.Infrastructure;
 using Ares.PagueAres.Infrastructure.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -56,6 +57,9 @@ namespace Ares.PagueAres.API.Controllers
         {
             try
             {
+                if (!this.CurrentUserIsInRole("ADM"))
+                    return Ok(new GenericResponse<IEnumerable<Configuracao>>() { Success = false, Message = "Apenas administradores podem alterar configurações.", Data = null, Page = 1, Pages = 1, Records = 0 });
+
                 foreach (var config in configuracaos)
                 {
                     var cfg = await _dbContext

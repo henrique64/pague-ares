@@ -1,3 +1,21 @@
+.funcoes-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 8px;
+}
+
+.funcoes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.ativo-check {
+  margin-top: -4px;
+  margin-bottom: 16px;
+}
+
 .separator {
     height: 1px;
     background-color: silver;

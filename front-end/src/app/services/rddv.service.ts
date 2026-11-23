@@ -14,21 +14,6 @@ const USER_VAR: string = "User";
 export class RddvService {
   constructor(private http: HttpClient, private url: BaseUrlService) {}
 
-  public GetAll(
-    startDate: Date | null,
-    endDate: Date | null,
-    type: number | null,
-    number: number | null,
-    pageSize: number = 50,
-    page = 1
-  ): Observable<GenericResponse<RddvModel[]>> {
-    let params: string[] = [];
-
-    let url = this.url.Rddv.Get + "?" + params.join("&");
-
-    return this.http.get<GenericResponse<RddvModel[]>>(url);
-  }
-
   public GetRddv(
     requestId: number
   ): Observable<GenericResponse<RddvModel>> {

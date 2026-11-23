@@ -2,6 +2,7 @@
 using Ares.PagueAres.Domain;
 using Ares.PagueAres.Domain.Dtos;
 using Ares.PagueAres.Domain.Dtos.Listing;
+using Ares.PagueAres.Domain.Enums;
 using Ares.PagueAres.Infrastructure;
 using Ares.PagueAres.Infrastructure.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -52,7 +53,9 @@ namespace Ares.PagueAres.API.Controllers
                                         StatusContabilidade = r.StatusContabilidade,
                                         IdGestor = r.IdGestor,
                                         AprovadoSetor = r.AprovadoSetor,
-                                        AprovadoGestor = r.AprovadoGestor
+                                        AprovadoGestor = r.AprovadoGestor,
+                                        Rascunho = r.Rascunho,
+                                        Cancelado = r.Cancelado
                                     })
                                     .ToListAsync();
 
@@ -82,28 +85,8 @@ namespace Ares.PagueAres.API.Controllers
 
         private IQueryable<ViewListagemSolicitacoes> BuildQuery(ListingFilterDto filter)
         {
-            DateTime startDate;
-            DateTime endDate;
-
-            if (filter.RequestStart is null)
-            {
-                startDate = new DateTime(1753, 1, 1);
-                endDate = DateTime.Now.Date.AddDays(7);
-            }
-            else
-            {
-                startDate = filter.RequestStart.Value;
-            }
-
-            if (filter.RequestEnd is null)
-            {
-                startDate = new DateTime(1753, 1, 1);
-                endDate = DateTime.Now.Date.AddDays(7);
-            }
-            else
-            {
-                endDate = filter.RequestEnd.Value;
-            }
+            DateTime startDate = filter.RequestStart?.Date ?? new DateTime(1753, 1, 1);
+            DateTime endDate = filter.RequestEnd?.Date ?? DateTime.Now.Date.AddDays(7);
 
             var query = (from r in dbContext.ViewListagemSolicitacoes
                          where r.DataSolicitacao.Date >= startDate &&
@@ -112,8 +95,8 @@ namespace Ares.PagueAres.API.Controllers
 
             if(!string.IsNullOrEmpty(filter.DocumentNumber))
             {
-                query = query.Where(r => r.NumeroDocumento != null && 
-                    r.NumeroDocumento.Equals(filter.DocumentNumber, StringComparison.CurrentCultureIgnoreCase));
+                query = query.Where(r => r.NumeroDocumento != null &&
+                    r.NumeroDocumento == filter.DocumentNumber);
             }
 
             if ((filter.DocumentId ?? 0) > 0)
@@ -149,17 +132,17 @@ namespace Ares.PagueAres.API.Controllers
 
             if ((filter.ManagerStatus ?? 0) > 0)
             {
-                query = query.Where(r => r.IdStatusGestor == filter.ManagerStatus);
+                query = query.Where(r => (r.IdStatusGestor ?? 1) == filter.ManagerStatus);
             }
 
             if ((filter.FinanceStatus ?? 0) > 0)
             {
-                query = query.Where(r => r.IdStatusFinanceiro == filter.FinanceStatus);
+                query = query.Where(r => (r.IdStatusFinanceiro ?? 1) == filter.FinanceStatus);
             }
 
             if ((filter.AccountingStatus ?? 0) > 0)
             {
-                query = query.Where(r => r.IdStatusContabilidade == filter.AccountingStatus);
+                query = query.Where(r => (r.IdStatusContabilidade ?? 1) == filter.AccountingStatus);
             }
 
             if(filter.IsAssigned.HasValue)
@@ -168,38 +151,16 @@ namespace Ares.PagueAres.API.Controllers
                     (r.IdUsuarioAtribuido != null && filter.IsAssigned == true));
             }
 
-            if (filter.ViewMode is not null && filter.ViewMode != Domain.Enums.PaymentListView.Undefined)
+            if (filter.ViewMode is not null && filter.ViewMode != PaymentListView.Undefined)
             {
-                var currentUser = this.GetUserFromToken() 
+                var currentUser = this.GetUserFromToken()
                     ?? throw new Exception("Usuário não autenticado.");
 
-                if (filter.ViewMode == Domain.Enums.PaymentListView.MyView)
-                {
-                    query = query.Where(r => r.IdSolicitante == currentUser.IdUsuario);
-                }
-                else if (filter.ViewMode == Domain.Enums.PaymentListView.ManagerView)
-                {
-                    query = query.Where(r => r.IdGestor == currentUser.IdUsuario);
-                }
-                else if (filter.ViewMode == Domain.Enums.PaymentListView.FinancialView)
-                {
-                    if (this.CurrentUserIsInRole(Funcoes.Financeiro))
-                    {
-                        query = query.Where(r => r.AprovadoGestor == true);
-                    }
-                    else
-                    {
-                        query = query.Where(r => r.AprovadoGestor == true && r.IdUsuarioAtribuido == currentUser.IdUsuario);
-                    }
-                }
-                else if (filter.ViewMode == Domain.Enums.PaymentListView.Dashboard)
-                {
-                    query = query.Where(r =>
-                        r.IdUsuarioAtribuido == null &&
-                        r.IdStatusGestor == 2 &&
-                        r.IdStatusFinanceiro != 3 &&
-                        r.IdStatusContabilidade != 3);                        
-                }
+                query = ApplyViewModeFilter(
+                    query,
+                    filter.ViewMode.Value,
+                    currentUser.IdUsuario,
+                    this.CurrentUserIsInRole(Funcoes.Financeiro));
             }
 
             var sortField = string.IsNullOrEmpty(filter.SortField) ?
@@ -217,6 +178,46 @@ namespace Ares.PagueAres.API.Controllers
             }
 
             return query;
+        }
+
+        /// <summary>
+        /// Aplica o filtro de visão (aba) à listagem. Rascunhos e cancelados NUNCA aparecem
+        /// no fluxo de aprovação (Gestor / Financeiro / Dashboard); apenas a visão
+        /// "Minhas Solicitações" exibe os próprios registros do usuário, inclusive rascunhos.
+        /// </summary>
+        public static IQueryable<ViewListagemSolicitacoes> ApplyViewModeFilter(
+            IQueryable<ViewListagemSolicitacoes> query,
+            PaymentListView viewMode,
+            int currentUserId,
+            bool isFinanceRole)
+        {
+            switch (viewMode)
+            {
+                case PaymentListView.MyView:
+                    return query.Where(r => r.IdSolicitante == currentUserId);
+
+                case PaymentListView.ManagerView:
+                    return query.Where(r => r.IdGestor == currentUserId &&
+                        r.Rascunho != true && r.Cancelado != true);
+
+                case PaymentListView.FinancialView:
+                    return isFinanceRole
+                        ? query.Where(r => r.AprovadoGestor == true &&
+                            r.Rascunho != true && r.Cancelado != true)
+                        : query.Where(r => r.AprovadoGestor == true && r.IdUsuarioAtribuido == currentUserId &&
+                            r.Rascunho != true && r.Cancelado != true);
+
+                case PaymentListView.Dashboard:
+                    return query.Where(r =>
+                        r.IdUsuarioAtribuido == null &&
+                        r.IdStatusGestor == 2 &&
+                        r.IdStatusFinanceiro != 3 &&
+                        r.IdStatusContabilidade != 3 &&
+                        r.Rascunho != true && r.Cancelado != true);
+
+                default:
+                    return query;
+            }
         }
 
     }

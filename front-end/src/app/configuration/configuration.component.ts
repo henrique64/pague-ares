@@ -1,7 +1,6 @@
 ﻿import { Component, OnInit } from "@angular/core";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { Router } from "@angular/router";
-import { toHash } from "ajv/dist/compile/util";
 import { EnumFuncao } from "app/models/authentication/EnumFuncao.model";
 import { UsuarioDto } from "app/models/authentication/UserDto.model";
 import { UserListModel } from "app/models/authentication/UserList.model";
@@ -86,10 +85,11 @@ export class ConfigurationComponent implements OnInit {
       if (res.success) {
         //this.configuration = res.data;
 
-        this.snack.open("Configurações salvas com sucesso.");
+        this.snack.open("Configurações salvas com sucesso.", "OK", { duration: 3000 });
       }
     } catch (ex) {
       console.log(ex);
+      this.snack.open("Ocorreu um erro ao salvar as configurações. Tente novamente.", "OK", { duration: 4000 });
     }
   }
 }

@@ -27,7 +27,7 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
                 {
-                    if (previewKey?.EntityId != id &&
+                    if (previewKey?.EntityId != id ||
                         previewKey?.RequestType != EnumRequestType.Solicitacao)
                     {
                         return Unauthorized("Chave de visualização não autorizada para esta solicitação.");
@@ -73,7 +73,7 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
                 {
-                    if (previewKey?.EntityId != id &&
+                    if (previewKey?.EntityId != id ||
                         previewKey?.RequestType != EnumRequestType.Rddv)
                     {
                         return Unauthorized("Chave de visualização não autorizada para esta solicitação.");

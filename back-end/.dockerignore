@@ -5,3 +5,5 @@
 *.user
 *.md
 !README.md
+Ares.PagueAres.Tests.Unit/
+Ares.PagueAres.Tests.Integration/

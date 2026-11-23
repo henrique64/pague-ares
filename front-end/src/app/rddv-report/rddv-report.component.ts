@@ -189,7 +189,7 @@ export class RddvReportComponent implements OnInit {
   }
 
   labelTipoDespesa(tipo: number) {
-    return this.tiposDespesa.find(x => x.id === tipo).name;
+    return this.tiposDespesa.find(x => x.id === tipo)?.name ?? "";
   }
 
   /* ================= Totalizadores ================= */
@@ -257,7 +257,7 @@ export class RddvReportComponent implements OnInit {
     
     let user = this.userList.find(u => u.idUsuario === this.model.idGestor);
 
-    if(user === null)
+    if(!user)
       return "";
 
     return user.nome;

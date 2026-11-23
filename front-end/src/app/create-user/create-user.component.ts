@@ -1,14 +1,14 @@
-﻿import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnDestroy, OnInit } from "@angular/core";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
-import { toHash } from "ajv/dist/compile/util";
 import { FuncaoDto } from "app/models/authentication/FuncaoDto.model";
 import { UsuarioDto } from "app/models/authentication/UserDto.model";
 import { AuthService } from "app/services/auth.service";
-import { PaymentService } from "app/services/payment.service";
 import { UsersService } from "app/services/users.service";
 import { GenericResponse } from "app/models/GenericResponse";
-import { UserListModel } from "app/models/authentication/UserList.model";
+import { DepartmentService } from "app/services/department.service";
+import { DepartamentoModel } from "app/models/department/departamento.model";
+import { Subscription } from "rxjs";
 
 @Component({
     selector: "create-user",
@@ -16,7 +16,7 @@ import { UserListModel } from "app/models/authentication/UserList.model";
     styleUrls: ["./create-user.component.css"],
     standalone: false
 })
-export class CreateUserComponent implements OnInit {
+export class CreateUserComponent implements OnInit, OnDestroy {
   showAdm: boolean = false;
 
   userId: number = 0;
@@ -34,48 +34,48 @@ export class CreateUserComponent implements OnInit {
   password: string = "";
   passwordConfirmation: string = "";
 
+  private subs = new Subscription();
+
   get isReadOnly(): boolean {
     return this.model.origem > 0;
   }
 
-  departmentList: any[] = [
-    { idDepartamento: 1 , nome: 'TI', codigoLancamento: 'TIN' },
-    { idDepartamento: 2 , nome: 'Almoxarifado', codigoLancamento: 'ALM' },
-    { idDepartamento: 3 , nome: 'Compras', codigoLancamento: 'CPS' },
-    { idDepartamento: 4 , nome: 'Contabilidade', codigoLancamento: 'CTB' },
-    { idDepartamento: 5 , nome: 'Diretoria', codigoLancamento: 'DIR' },
-    { idDepartamento: 6 , nome: 'Engenharia', codigoLancamento: 'ENG' },
-    { idDepartamento: 7 , nome: 'Financeiro', codigoLancamento: 'FIN' },
-    { idDepartamento: 8 , nome: 'ILS', codigoLancamento: 'ILS' },
-    { idDepartamento: 9 , nome: 'Infraestrutura', codigoLancamento: 'INF' },
-    { idDepartamento: 10, nome: 'Marketing', codigoLancamento: 'MKT' },
-    { idDepartamento: 11, nome: 'Montagem', codigoLancamento: 'MTG' },
-    { idDepartamento: 12, nome: 'Produção', codigoLancamento: 'PRD' },
-    { idDepartamento: 13, nome: 'Projetos', codigoLancamento: 'PJT' },
-    { idDepartamento: 14, nome: 'Qualidade', codigoLancamento: 'QLD' },
-    { idDepartamento: 15, nome: 'RH', codigoLancamento: 'RHU' }
-  ];
+  departmentList: DepartamentoModel[] = [];
 
   constructor(
     private auth: AuthService,
     private router: Router,
     private thisRoute: ActivatedRoute,
-    private payment: PaymentService,
     private snack: MatSnackBar,
-    private users: UsersService
+    private users: UsersService,
+    private departmentService: DepartmentService
   ) {}
 
   ngOnInit() {
-    this.thisRoute.params.subscribe((p) => {
+    this.getDepartmentList();
+    this.subs.add(this.thisRoute.params.subscribe((p) => {
       if (p["id"]) {
         this.userId = p["id"];
         this.isEdit = true;
-
-        console.log(this.userId);
       }
 
       this.initForm();
-    });
+    }));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
+  async getDepartmentList() {
+    try {
+      const res = await this.departmentService.GetAll().toPromise();
+      if (res.success) {
+        this.departmentList = res.data;
+      }
+    } catch (ex) {
+      console.log(ex);
+    }
   }
 
 

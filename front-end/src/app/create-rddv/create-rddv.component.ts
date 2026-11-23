@@ -1,4 +1,5 @@
-﻿import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Subscription } from "rxjs";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
 import { DialogService } from "app/components/dialog/dialog.service";
@@ -21,9 +22,11 @@ import { PreviewTokenService } from "app/services/preview-token.service";
 import { RddvService } from "app/services/rddv.service";
 import { TravelTypeService } from "app/services/travel-type.service";
 import { UsersService } from "app/services/users.service";
+import { DepartmentService } from "app/services/department.service";
+import { DepartamentoModel } from "app/models/department/departamento.model";
 import { UtilsService } from "app/services/utils.service";
 
-import * as moment from "moment";
+import moment from "moment";
 
 @Component({
     selector: "create-rddv",
@@ -31,7 +34,7 @@ import * as moment from "moment";
     styleUrls: ["./create-rddv.component.css"],
     standalone: false
 })
-export class CreateRddvComponent implements OnInit {
+export class CreateRddvComponent implements OnInit, OnDestroy {
   showAdm: boolean = false;
 
   reportId: number = 0;
@@ -50,6 +53,8 @@ export class CreateRddvComponent implements OnInit {
   imageError: string = "";
 
   isBusy: boolean = false;
+
+  private subs = new Subscription();
 
   isEditingExpense: boolean = false;
   isNewExpense: boolean = false;
@@ -104,31 +109,15 @@ export class CreateRddvComponent implements OnInit {
     { id: 12, name: "Outros" },
   ];
 
-  departmentList: any[] = [
-    { idDepartamento: 1, nome: "TI", codigoLancamento: "TIN" },
-    { idDepartamento: 2, nome: "Almoxarifado", codigoLancamento: "ALM" },
-    { idDepartamento: 3, nome: "Compras", codigoLancamento: "CPS" },
-    { idDepartamento: 4, nome: "Contabilidade", codigoLancamento: "CTB" },
-    { idDepartamento: 5, nome: "Diretoria", codigoLancamento: "DIR" },
-    { idDepartamento: 6, nome: "Engenharia", codigoLancamento: "ENG" },
-    { idDepartamento: 7, nome: "Financeiro", codigoLancamento: "FIN" },
-    { idDepartamento: 8, nome: "ILS", codigoLancamento: "ILS" },
-    { idDepartamento: 9, nome: "Infraestrutura", codigoLancamento: "INF" },
-    { idDepartamento: 10, nome: "Marketing", codigoLancamento: "MKT" },
-    { idDepartamento: 11, nome: "Montagem", codigoLancamento: "MTG" },
-    { idDepartamento: 12, nome: "Produção", codigoLancamento: "PRD" },
-    { idDepartamento: 13, nome: "Projetos", codigoLancamento: "PJT" },
-    { idDepartamento: 14, nome: "Qualidade", codigoLancamento: "QLD" },
-    { idDepartamento: 15, nome: "RH", codigoLancamento: "RHU" },
-  ];
 
   labelTipoDespesa(tipo: number) {
-    return this.tiposDespesa.find((x) => x.id === tipo).name;
+    return this.tiposDespesa.find((x) => x.id === tipo)?.name ?? "";
   }
 
   userList: UserListModel[] = [];
   managersList: UserListModel[] = [];
   travelTypes: TipoViagemModel[] = [];
+  departmentList: DepartamentoModel[] = [];
 
   /* Parâmetros de Configuração */
 
@@ -151,12 +140,17 @@ export class CreateRddvComponent implements OnInit {
     private config: ConfigService,
     private exportService: ExportService,
     private dialog: DialogService,
-    private previewTokenService: PreviewTokenService
+    private previewTokenService: PreviewTokenService,
+    private departmentService: DepartmentService
   ) {}
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   ngOnInit() {
-    this.thisRoute.params.subscribe((routeParams) => {
-      this.thisRoute.queryParamMap.subscribe((queryParams) => {
+    this.subs.add(this.thisRoute.params.subscribe((routeParams) => {
+      this.subs.add(this.thisRoute.queryParamMap.subscribe((queryParams) => {
         if (routeParams["id"]) {
           this.reportId = routeParams["id"];
           this.isEdit = true;
@@ -175,9 +169,10 @@ export class CreateRddvComponent implements OnInit {
         this.getUserList();
         this.getManagersList();
         this.getTravelTypes();
+        this.getDepartmentList();
         this.initForm();
-      });
-    });
+      }));
+    }));
   }
 
   async getUserList() {
@@ -216,6 +211,18 @@ export class CreateRddvComponent implements OnInit {
     }
   }
 
+  async getDepartmentList() {
+    try {
+      let res = await this.departmentService.GetAll().toPromise();
+
+      if (res.success) {
+        this.departmentList = res.data;
+      }
+    } catch (ex) {
+      console.log(ex);
+    }
+  }
+
   async initForm() {
     if (!this.isEdit && !this.isClone) {
       this.model = new RddvModel();
@@ -243,10 +250,19 @@ export class CreateRddvComponent implements OnInit {
       } else {
         this.isUserView =
           this.model.idUsuario === this.auth.CurrentUser.idUsuario;
-        this.isReadOnly = !(this.model.statusGestor === null || this.model.statusGestor === 1) || (!this.model.rascunho && this.model.cancelado) || !this.isUserView;
-        this.isManagerReadOnly = !this.auth.IsInRole(EnumFuncao.Gestor); // || this.model.statusGestor !== 1;
-        this.isFinanceReadOnly = !this.auth.IsInRole(EnumFuncao.Financeiro); // || this.model.statusFinanceiro !== 1;
-        this.isAccountingReadOnly = !this.auth.IsInRole(EnumFuncao.Contabilidade); // || this.model.statusContabilidade !== 1;
+        this.isReadOnly =
+          !this.isUserView ||
+          this.model.cancelado ||
+          !(this.model.rascunho || this.model.statusGestor === null || this.model.statusGestor === 1);
+        // Cada etapa só é editável enquanto NÃO decidida (status null ou 1). Uma vez
+        // decidida (aprovada/negada = 2/3), trava — uma etapa anterior não pode ser
+        // alterada depois que a seguinte já agiu.
+        this.isManagerReadOnly = !this.auth.IsInRole(EnumFuncao.Gestor) ||
+          !(this.model.statusGestor === null || this.model.statusGestor === 1);
+        this.isFinanceReadOnly = !this.auth.IsInRole(EnumFuncao.Financeiro) ||
+          !(this.model.statusFinanceiro === null || this.model.statusFinanceiro === 1);
+        this.isAccountingReadOnly = !this.auth.IsInRole(EnumFuncao.Contabilidade) ||
+          !(this.model.statusContabilidade === null || this.model.statusContabilidade === 1);
         this.isFinal = this.model.statusGestor === 3 || this.model.statusFinanceiro === 3 || this.model.statusContabilidade === 3 || this.model.statusContabilidade === 2;
         this.isAccounting = this.auth.IsInRole(EnumFuncao.Contabilidade);
       }
@@ -418,24 +434,26 @@ export class CreateRddvComponent implements OnInit {
   }
 
   async save(isDraft: boolean, cancel: boolean = false) {
-    let errors = this.validate();
+    if (!isDraft && !cancel) {
+      let errors = this.validate();
 
-    if (errors.length > 0) {
-      this.alert(errors.join("\r\n"));
-      return false;
+      if (errors.length > 0) {
+        this.alert(errors.join("\r\n"));
+        return false;
+      }
     }
 
     if (this.isBusy) return;
 
     this.isBusy = true;
 
-    // Definir valores de Km e Diária
-    this.model.valorKm = this.rddvConfig.ValorKm;
+    // Definir valores de Km e Diária (protegido: config/tipos de viagem podem não ter carregado)
+    this.model.valorKm = this.rddvConfig?.ValorKm ?? 0;
     this.model.valorDiaria = this.travelTypes.find(
       (t) => t.idTipoViagem == this.model.tipoViagem
-    ).valorDiaria;
+    )?.valorDiaria ?? 0;
 
-    if(this.model.rascunho && !isDraft) {
+    if(this.model.rascunho && !isDraft && !cancel) {
       this.model.rascunho = false;
     }
 
@@ -444,16 +462,19 @@ export class CreateRddvComponent implements OnInit {
     }
 
     try {
-      await this.rddv.UpsertRddv(this.model).toPromise();
+      const res = await this.rddv.UpsertRddv(this.model).toPromise();
+
+      if (!res.success) {
+        this.snack.open(res.message || "Ocorreu um erro ao salvar este relatório.", "OK");
+        return;
+      }
+
+      this.router.navigateByUrl("/payments?view=" + this.returnTo);
     } catch (ex) {
-      this.isBusy = false;
-
       this.snack.open("Ocorreu um erro ao salvar este relatório.", "OK");
-
-      return;
+    } finally {
+      this.isBusy = false;
     }
-
-    this.router.navigateByUrl("/payments?view=" + this.returnTo);
   }
 
   /*///////////////////////////////////////////////////////////////////*/
@@ -802,6 +823,6 @@ export class CreateRddvComponent implements OnInit {
       return;
     }
 
-    await this.save(false, true);
+    await this.save(this.model.rascunho, true);
   }
 }

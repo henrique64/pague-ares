@@ -9,7 +9,7 @@ COPY Ares.PagueAres.Application/Ares.PagueAres.Application.csproj               
 COPY Ares.PagueAres.Domain/Ares.PagueAres.Domain.csproj                         Ares.PagueAres.Domain/
 COPY Ares.PagueAres.Infrastructure/Ares.PagueAres.Infrastructure.csproj         Ares.PagueAres.Infrastructure/
 
-RUN dotnet restore
+RUN dotnet restore Ares.PagueAres.API/Ares.PagueAres.API.csproj
 
 COPY . .
 

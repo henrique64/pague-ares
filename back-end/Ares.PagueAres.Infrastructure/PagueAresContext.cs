@@ -43,7 +43,6 @@ namespace Ares.PagueAres.Infrastructure
 
                 optionsBuilder.UseSqlServer(connectionString);
                 optionsBuilder.EnableDetailedErrors(true);
-                optionsBuilder.EnableSensitiveDataLogging(true);
 
                 var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
                 optionsBuilder.UseLoggerFactory(loggerFactory);
@@ -330,16 +329,16 @@ namespace Ares.PagueAres.Infrastructure
                 entity.Property(e => e.Projeto).IsRequired().HasDefaultValueSql("('')");
                 entity.Property(e => e.PCA).IsRequired().HasDefaultValueSql("('')");
                 entity.Property(e => e.DiariaViagem);
-                entity.Property(e => e.Diarias);
+                entity.Property(e => e.Diarias).HasPrecision(5, 2);
                 entity.Property(e => e.Adiantamento);
-                entity.Property(e => e.ValorAdiantamento).IsRequired().HasColumnType("decimal");
-                entity.Property(e => e.SaldoCartaoVtm).IsRequired().HasColumnType("decimal");
+                entity.Property(e => e.ValorAdiantamento).IsRequired().HasPrecision(18, 2);
+                entity.Property(e => e.SaldoCartaoVtm).IsRequired().HasPrecision(18, 2);
                 entity.Property(e => e.Observacao).IsRequired().HasDefaultValueSql("('')");
                 entity.Property(e => e.Banco).IsRequired().HasDefaultValue(string.Empty);
                 entity.Property(e => e.Agencia).IsRequired().HasDefaultValue(string.Empty);
                 entity.Property(e => e.Conta).IsRequired().HasDefaultValue(string.Empty);
-                entity.Property(e => e.ValorDiaria).IsRequired().HasDefaultValue(0m);
-                entity.Property(e => e.ValorKm).IsRequired().HasDefaultValue(0m);
+                entity.Property(e => e.ValorDiaria).IsRequired().HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(e => e.ValorKm).IsRequired().HasPrecision(18, 2).HasDefaultValue(0m);
                 entity.Property(e => e.DataAprovacaoGestor).HasColumnType("datetime");
                 entity.Property(e => e.DataAprovacaoFinanceiro).HasColumnType("datetime");
                 entity.Property(e => e.DataAprovacaoContabil).HasColumnType("datetime");
@@ -359,8 +358,8 @@ namespace Ares.PagueAres.Infrastructure
                 entity.Property(e => e.DataDespesa).HasColumnType("datetime");
                 entity.Property(e => e.TipoDespesa).IsRequired();
                 entity.Property(e => e.Moeda);
-                entity.Property(e => e.Valor).HasColumnType("decimal");
-                entity.Property(e => e.Quantidade).HasColumnType("decimal");
+                entity.Property(e => e.Valor).HasPrecision(18, 2);
+                entity.Property(e => e.Quantidade).HasPrecision(18, 4);
             });
 
             modelBuilder.Entity<DocumentoRddv>(entity =>
@@ -389,7 +388,7 @@ namespace Ares.PagueAres.Infrastructure
                 entity.HasNoKey().ToView("vDespesasRddv");
 
                 entity.Property(e => e.IdRelatorio);
-                entity.Property(e => e.Valor);
+                entity.Property(e => e.Valor).HasColumnType("decimal(18,2)");
             });
 
             modelBuilder.Entity<Fornecedor>(entity =>
@@ -417,6 +416,7 @@ namespace Ares.PagueAres.Infrastructure
             modelBuilder.Entity<ViewListagemSolicitacoes>(entity =>
             {
                 entity.HasNoKey().ToView("vListagemSolicitacoes");
+                entity.Property(e => e.Valor).HasColumnType("decimal(18,2)");
             });
 
             OnModelCreatingPartial(modelBuilder);

@@ -1,4 +1,5 @@
-﻿using Ares.PagueAres.Application.Configuration;
+﻿using Ares.PagueAres.API.Extensions;
+using Ares.PagueAres.Application.Configuration;
 using Ares.PagueAres.Application.External.ActiveDirectory;
 using Ares.PagueAres.Application.External.ActiveDirectory.Dtos;
 using Ares.PagueAres.Domain;
@@ -37,6 +38,9 @@ namespace Ares.PagueAres.API.Controllers
         {
             try
             {
+                if (!this.CurrentUserIsInRole("ADM"))
+                    return Ok(new GenericResponse<object>() { Success = false, Message = "Acesso restrito a administradores.", Data = null, Page = 1, Pages = 1, Records = 0 });
+
                 var users = await _dbContext
                                     .Usuarios
                                     .Select(dbUser =>
@@ -78,6 +82,10 @@ namespace Ares.PagueAres.API.Controllers
         {
             try
             {
+                var currentUser = this.GetUserFromToken();
+                if (id != currentUser?.IdUsuario && !this.CurrentUserIsInRole("ADM"))
+                    return Ok(new GenericResponse<object>() { Success = false, Message = "Você pode consultar apenas seu próprio perfil.", Data = null, Page = 1, Pages = 1, Records = 0 });
+
                 var dbUser = await _dbContext.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == id);
 
                 if (dbUser == null)
@@ -160,6 +168,9 @@ namespace Ares.PagueAres.API.Controllers
 
             try
             {
+                if (!this.CurrentUserIsInRole("ADM"))
+                    return Ok(new GenericResponse<object>() { Success = false, Message = "Você não tem permissão para criar ou editar usuários.", Data = null, Page = 1, Pages = 1, Records = 0 });
+
                 Usuario? userData = null;
 
                 if (user.IdUsuario == 0)

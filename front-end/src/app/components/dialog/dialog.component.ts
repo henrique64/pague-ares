@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
+﻿import { Component, OnInit, OnDestroy, Inject, ViewEncapsulation } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 import { EnumDialogButtons } from './dialogbuttons.enum';
@@ -9,7 +9,8 @@ import { EnumDialogResult } from './dialogresult.enum';
     selector: 'app-dialog',
     templateUrl: './dialog.component.html',
     styleUrls: ["./dialog.component.scss"],
-    standalone: false
+    standalone: false,
+    encapsulation: ViewEncapsulation.None
 })
 export class DialogComponent implements OnInit, OnDestroy {
 

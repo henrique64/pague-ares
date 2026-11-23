@@ -13,7 +13,7 @@ import { AuthService } from "app/services/auth.service";
 import { PaymentService } from "app/services/payment.service";
 import { RddvService } from "app/services/rddv.service";
 import { UsersService } from "app/services/users.service";
-import * as moment from "moment";
+import moment from "moment";
 
 @Component({
     selector: "app-dashboard",
@@ -71,6 +71,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.intervalHandle) clearInterval(this.intervalHandle);
+    if (this.timerHandle) clearInterval(this.timerHandle);
   }
 
   ngOnInit() {

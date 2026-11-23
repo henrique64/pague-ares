@@ -23,7 +23,8 @@ export class DialogService {
       data: opt,
       disableClose: !options.allowClose,
       width: options.width?.toString() || undefined,
-      height: options.height?.toString() || undefined
+      height: options.height?.toString() || undefined,
+      panelClass: 'app-dialog-pane'
     } as MatDialogConfig
 
     const dialogRef = this.dialog.open(DialogComponent, config);

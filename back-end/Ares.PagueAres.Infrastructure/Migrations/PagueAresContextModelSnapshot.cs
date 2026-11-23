@@ -17,7 +17,7 @@ namespace Ares.PagueAres.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -107,13 +107,15 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("Quantidade")
-                        .HasColumnType("decimal");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("TipoDespesa")
                         .HasColumnType("int");
 
                     b.Property<decimal>("Valor")
-                        .HasColumnType("decimal");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("IdDespesaRddv");
 
@@ -377,7 +379,8 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal?>("Diarias")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("Finalidade")
                         .IsRequired()
@@ -450,7 +453,8 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<decimal>("SaldoCartaoVtm")
-                        .HasColumnType("decimal");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("StatusContabilidade")
                         .HasColumnType("int");
@@ -471,15 +475,18 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("ValorAdiantamento")
-                        .HasColumnType("decimal");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ValorDiaria")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasDefaultValue(0m);
 
                     b.Property<decimal>("ValorKm")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasDefaultValue(0m);
 

@@ -1,4 +1,5 @@
-﻿import { Component, OnInit } from "@angular/core";
+﻿import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Subscription } from "rxjs";
 import { MatSnackBar, MatSnackBarConfig } from "@angular/material/snack-bar";
 import { ActivatedRoute, Router } from "@angular/router";
 import { DialogService } from "app/components/dialog/dialog.service";
@@ -24,7 +25,7 @@ import { UtilsService } from "app/services/utils.service";
     styleUrls: ["./create-request.component.css"],
     standalone: false
 })
-export class CreateRequestComponent implements OnInit {
+export class CreateRequestComponent implements OnInit, OnDestroy {
   showAdm: boolean = false;
 
   requestId: number = 0;
@@ -42,6 +43,8 @@ export class CreateRequestComponent implements OnInit {
   imageError: string = "";
 
   isBusy: boolean = false;
+
+  private subs = new Subscription();
 
   attachmentTypes: any[] = [
     { id: 1, name: "Nota Fiscal" },
@@ -75,9 +78,13 @@ export class CreateRequestComponent implements OnInit {
     private previewTokenService: PreviewTokenService
   ) {}
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   ngOnInit() {
-    this.thisRoute.params.subscribe(routeParams => {
-      this.thisRoute.queryParamMap.subscribe(queryParams => {
+    this.subs.add(this.thisRoute.params.subscribe(routeParams => {
+      this.subs.add(this.thisRoute.queryParamMap.subscribe(queryParams => {
         if (routeParams["id"]) {
           this.requestId = routeParams["id"];
           this.isEdit = true;
@@ -95,8 +102,8 @@ export class CreateRequestComponent implements OnInit {
         this.getUserList();
         this.getManagerList();
         this.initForm();
-      })
-    })
+      }))
+    }))
   }
 
   async getUserList() {
@@ -148,16 +155,22 @@ export class CreateRequestComponent implements OnInit {
       } else {
         this.isUserView =
           this.model.idUsuario === this.auth.CurrentUser.idUsuario;
-        this.isReadOnly = !(this.model.statusGestor === null || this.model.statusGestor === 1) || (!this.model.rascunho && this.model.cancelado) || !this.isUserView;
+        this.isReadOnly =
+          !this.isUserView ||
+          this.model.cancelado ||
+          !(this.model.rascunho || this.model.statusGestor === null || this.model.statusGestor === 1);
+        // Cada etapa só é editável enquanto NÃO decidida (status null ou 1). Uma vez
+        // decidida (aprovada/negada = 2/3), trava — uma etapa anterior não pode ser
+        // alterada depois que a seguinte já agiu.
         this.isManagerReadOnly =
           !this.auth.IsInRole(EnumFuncao.Gestor) ||
-          this.model.statusGestor !== 1;
+          !(this.model.statusGestor === null || this.model.statusGestor === 1);
         this.isFinanceReadOnly =
           !this.auth.IsInRole(EnumFuncao.Financeiro) ||
-          this.model.statusFinanceiro !== 1;
+          !(this.model.statusFinanceiro === null || this.model.statusFinanceiro === 1);
         this.isAccountingReadOnly =
           !this.auth.IsInRole(EnumFuncao.Contabilidade) ||
-          this.model.statusContabilidade !== 1;
+          !(this.model.statusContabilidade === null || this.model.statusContabilidade === 1);
         this.isAccounting = this.auth.IsInRole(EnumFuncao.Contabilidade);
       }
     }
@@ -274,11 +287,13 @@ export class CreateRequestComponent implements OnInit {
   }
 
   async save(isDraft: boolean, cancel: boolean = false) {
-    let errors = this.validate();
+    if (!isDraft && !cancel) {
+      let errors = this.validate();
 
-    if (errors.length > 0) {
-      this.alert(errors.join("\r\n"));
-      return false;
+      if (errors.length > 0) {
+        this.alert(errors.join("\r\n"));
+        return false;
+      }
     }
 
     if (this.isBusy) return;
@@ -290,10 +305,11 @@ export class CreateRequestComponent implements OnInit {
         (u) => u.idUsuario == this.model.idGestor
       );
 
-      this.model.nomeGestor = gestor.nome;
+      if (gestor)
+        this.model.nomeGestor = gestor.nome;
     }
 
-    if(this.model.rascunho && !isDraft) {
+    if(this.model.rascunho && !isDraft && !cancel) {
       this.model.rascunho = false;
     }
 
@@ -302,16 +318,19 @@ export class CreateRequestComponent implements OnInit {
     }
 
     try {
-      await this.payment.UpsertRequest(this.model).toPromise();
+      const res = await this.payment.UpsertRequest(this.model).toPromise();
+
+      if (!res.success) {
+        this.snack.open(res.message || "Ocorreu um erro ao salvar esta solicitação.", "OK");
+        return;
+      }
+
+      this.router.navigateByUrl("/payments?view=" + this.returnTo);
     } catch (ex) {
-      this.isBusy = false;
-
       this.snack.open("Ocorreu um erro ao salvar esta solicitação.", "OK");
-
-      return;
+    } finally {
+      this.isBusy = false;
     }
-
-    this.router.navigateByUrl("/payments?view=" + this.returnTo);
   }
 
   /*///////////////////////////////////////////////////////////////////*/
@@ -472,6 +491,13 @@ export class CreateRequestComponent implements OnInit {
       return;
     }
 
-    await this.save(false, true);
+    await this.save(this.model.rascunho, true);
+  }
+
+  get isFinal(): boolean {
+    return this.model?.statusGestor === 3 ||
+           this.model?.statusFinanceiro === 3 ||
+           this.model?.statusContabilidade === 3 ||
+           this.model?.statusContabilidade === 2;
   }
 }
