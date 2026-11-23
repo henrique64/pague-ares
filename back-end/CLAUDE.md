@@ -1,7 +1,7 @@
 # CLAUDE.md — PagueAres Backend
 
 Sistema de gestão de reembolsos e despesas corporativas da Ares.
-Este repositório contém o backend. O frontend Angular está em repositório separado.
+Este diretório (`back-end/`) é a parte .NET do monorepo `pague-ares`. O frontend Angular fica em `../front-end/` e a orquestração Docker (compose, `.env.example`) na raiz do repositório.
 
 ## Visão Geral do Sistema
 
@@ -20,83 +20,158 @@ Ambos seguem um **fluxo de aprovação em três estágios**: Gestor → Financei
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Framework | ASP.NET Core 10.0 |
-| Linguagem | C# 13+ |
-| ORM | Entity Framework Core 10.0 |
-| Banco | SQL Server 2019+ |
-| Autenticação | JWT HS256 + Active Directory (LDAP) |
-| E-mail | SMTP |
+| Framework | ASP.NET Core 10.0 (`net10.0`) |
+| ORM | Entity Framework Core 10.0.8 (SQL Server) |
+| Banco | SQL Server (a imagem Docker usa `mssql/server:2022-latest`) |
+| Autenticação | JWT HS256 (`Microsoft.AspNetCore.Authentication.JwtBearer`) + Active Directory (LDAP) |
+| Senhas locais | BCrypt (`BCrypt.Net-Next` 4.0.3); hashes SHA256 legados são migrados no login |
+| E-mail | SMTP (`System.Net.Mail`) |
 | Excel | FreeSpire.XLS 16.4.0 |
 | ZIP | SharpZipLib 1.4.2 |
-| Docs API | Microsoft.AspNetCore.OpenApi 10.0 + Scalar UI |
+| JSON | Newtonsoft.Json 13.0.4 (usado em `ExportController`) |
+| Docs da API | `Microsoft.AspNetCore.OpenApi` 10.0.8 + Scalar UI (`Scalar.AspNetCore` 2.14.14) — **não há Swagger** |
+| Testes | xUnit 2.9.2, FluentAssertions 6.12.2, Moq 4.20.72, EF Core InMemory, `Microsoft.AspNetCore.Mvc.Testing` |
 
 ---
 
-## Arquitetura — Clean Architecture em 4 Projetos
+## Arquitetura — Clean Architecture em 4 Projetos + 2 de Teste
 
 ```
-Ares.PagueAres.sln
-├── Ares.PagueAres.API          # Entrada HTTP: controllers, middleware JWT, roteamento
-├── Ares.PagueAres.Application  # Lógica de negócio: auth, e-mail, Active Directory
-├── Ares.PagueAres.Domain       # Contratos compartilhados: DTOs, enums, GenericResponse<T>
-└── Ares.PagueAres.Infrastructure  # Acesso a dados: PagueAresContext (EF Core)
+back-end/
+├── Ares.PagueAres.sln
+├── Ares.PagueAres.API              # Entrada HTTP: controllers, JwtMiddleware, Program.cs, appsettings
+├── Ares.PagueAres.Application      # Auth (JWT/BCrypt), EmailService, Active Directory, Settings
+├── Ares.PagueAres.Domain           # DTOs, enums, Funcoes (constantes), GenericResponse<T>
+├── Ares.PagueAres.Infrastructure   # PagueAresContext (EF Core), entidades (Models/), Migrations/
+├── Ares.PagueAres.Tests.Unit       # xUnit: AuthenticationService, AuthController, filtro de listagem, preview key
+└── Ares.PagueAres.Tests.Integration# xUnit + WebApplicationFactory: workflow de aprovação, segurança, segregação de dados
 ```
 
-**Regra de dependência:** API → Application → Infrastructure → Domain (Domain não depende de ninguém).
+**Referências de projeto (conforme os `.csproj`):**
+- `API` → `Application`, `Domain`, `Infrastructure`
+- `Application` → `Domain`, `Infrastructure`
+- `Infrastructure` e `Domain` não referenciam nenhum outro projeto
+- `Tests.Unit` → `API`, `Application`, `Domain`, `Infrastructure`
+- `Tests.Integration` → `API`, `Domain`, `Infrastructure`
+
+Arquivos relevantes: `Ares.PagueAres.Infrastructure/PagueAresContext.cs` (não existe pasta `Context/`), `Ares.PagueAres.Application/Services/EmailService.cs`, `Ares.PagueAres.Application/External/ActiveDirectory/ActiveDirectoryService.cs`, `Ares.PagueAres.Domain/GenericResponse.cs`.
 
 ---
 
 ## Como Executar
 
+Todos os comandos abaixo partem de `back-end/` (ou usam o caminho da solução).
+
 ```bash
 # Restaurar dependências
-dotnet restore
+dotnet restore Ares.PagueAres.sln
 
-# Executar em modo desenvolvimento
+# Executar em modo desenvolvimento (perfil "Ares.PagueAres.API" do launchSettings.json)
 dotnet run --project Ares.PagueAres.API
 
-# Build de produção
-dotnet publish -c Release -r win-x64 --self-contained true
+# Publicar (a imagem Docker usa: dotnet publish -c Release, sem --self-contained)
+dotnet publish Ares.PagueAres.API/Ares.PagueAres.API.csproj -c Release -o ./publish
 ```
 
-A API sobe em `https://localhost:7219` por padrão.
-Swagger disponível em `https://localhost:7219/swagger`.
+**URLs em desenvolvimento** (`launchSettings.json`): `https://localhost:7219` e `http://localhost:5219`.
+No perfil de desenvolvimento (`ASPNETCORE_ENVIRONMENT=Development`) a API publica:
+- OpenAPI JSON: `/openapi/v1.json`
+- Scalar UI: `/scalar/v1`
+
+Os perfis do `launchSettings.json` abrem o navegador direto em `/scalar/v1`.
+
+**Versionamento:** a versão da API é a propriedade `<Version>` do `Ares.PagueAres.API.csproj` (hoje `26.6.1.2`). O documento OpenAPI declara `Info.Version = "v1"`, mas **as rotas não são versionadas** (não há `/api/v1/...` nem `Asp.Versioning`); todas ficam em `/api/<controller>`.
+
+### Banco de dados em desenvolvimento
+
+`appsettings.json` traz `ConnectionStrings:ConexaoPadrao` vazio. Em `Development`, `appsettings.Development.json` aponta para o SQL Server em `localhost,14330` (porta publicada pelo `docker-compose.override.yml`, variável `DB_PORT`, padrão `14330`) e liga `RunMigrations`. Fluxo típico:
+
+```bash
+# na raiz do monorepo
+cp .env.example .env        # defina SA_PASSWORD e JWT_SECRET
+docker compose up -d db      # sobe só o SQL Server (porta 14330 no host)
+
+# em back-end/
+dotnet run --project Ares.PagueAres.API   # aplica migrations no startup (RunMigrations=true)
+```
+
+A senha do usuário `sa` configurada em `appsettings.Development.json` precisa coincidir com a `SA_PASSWORD` usada pelo contêiner `db`.
 
 ---
 
-## Configuração (`appsettings.json`)
+## Configuração
+
+A connection string é lida em `Program.cs` por `builder.Configuration.GetConnectionString("ConexaoPadrao")`, ou seja, da chave `ConnectionStrings:ConexaoPadrao`. Em Docker ela é injetada pelo compose como variável de ambiente `ConnectionStrings__ConexaoPadrao` (apontando para `db,1433`). **Não há connection string hardcoded no fluxo de execução.** (`PagueAresContext.OnConfiguring` tem apenas um fallback de *design-time* para `dotnet ef`, usando a variável `PAGUEARES_CONNECTION_STRING`, usado somente quando o contexto não é configurado por DI.)
+
+Seções de configuração reconhecidas (nomes exatos usados em `Program.cs` e nas classes de `Application/Configuration`):
 
 ```json
 {
+  "ConnectionStrings": { "ConexaoPadrao": "<connection string do SQL Server>" },
   "JwtSettings": {
-    "Secret": "<trocar em produção — usar variável de ambiente>",
+    "Secret": "<segredo do JWT — defina por variável de ambiente (JwtSettings__Secret)>",
     "Issuer": "pagueares.local",
     "Audience": "pagueares.local",
     "ExpiryMinutes": 720
   },
-  "ActiveDirectorySettings": {
+  "ActiveDirectory": {
     "EnableDomainAuthentication": false,
-    "DomainServers": []
+    "Servers": [
+      { "Host": "<servidor>", "Domain": "<domínio>", "Username": "<conta de serviço>", "Password": "<senha>" }
+    ]
   },
-  "SmtpSettings": {
-    "Host": "",
-    "Port": 587,
-    "User": "",
-    "Password": "",
-    "EnableSSL": true,
-    "DefaultSender": ""
-  }
+  "Smtp": {
+    "EnableEmailService": false,
+    "SmtpHost": "<servidor SMTP>",
+    "SmtpPort": 587,
+    "SmtpUser": "<usuário>",
+    "SmtpPassword": "<senha>",
+    "EnableSsl": "true",
+    "DefaultSender": "<remetente>"
+  },
+  "RunMigrations": "false",
+  "AllowedOrigins": ""
 }
 ```
 
-> **Atenção:** a string de conexão está atualmente hardcoded em `Ares.PagueAres.Infrastructure/Context/PagueAresContext.cs`. Em produção, mover para `appsettings.json` e injetar via `IConfiguration`.
+Pontos importantes:
+- **`RunMigrations`** (ou a variável `ASPNETCORE_RUN_MIGRATIONS=true`) faz `Database.Migrate()` no startup. O compose liga isso por padrão.
+- **`AllowedOrigins`**: lista de origens separadas por vírgula. Vazio = CORS aberto (`AllowAnyOrigin`); preenchido = restrito às origens listadas. Em Docker o Nginx do frontend faz proxy de `/api/`, então CORS não é necessário.
+- **`Smtp`**: o e-mail só é enviado se `SmtpHost`, `SmtpUser`, `SmtpPassword` e `EnableSsl` estiverem preenchidos (checagem em `EmailService.SendEmail`). O campo `EnableEmailService` existe na classe `SmtpSettings`, mas **nenhum código o consulta** hoje.
+- **`ActiveDirectory`** usa `System.DirectoryServices.AccountManagement`, API específica do Windows; a imagem Docker da API é Linux.
+- **Docker**: `ASPNETCORE_ENVIRONMENT=Docker` desliga o redirecionamento HTTPS (`Program.cs`); a API em contêiner escuta em `http://+:8080`.
+- Segredos (JWT, SMTP, AD, senha do banco) não devem ser commitados; use variáveis de ambiente/`.env`. O `appsettings.json` atual traz um `JwtSettings:Secret` de exemplo que deve ser sobrescrito em qualquer ambiente real (compose: `JwtSettings__Secret` ← `JWT_SECRET`).
+
+---
+
+## Testes
+
+Dois projetos xUnit, ambos na solução:
+
+```bash
+# todos os testes (a partir de back-end/)
+dotnet test Ares.PagueAres.sln
+
+# só um projeto
+dotnet test Ares.PagueAres.Tests.Unit
+dotnet test Ares.PagueAres.Tests.Integration
+
+# filtrar por nome
+dotnet test Ares.PagueAres.sln --filter "FullyQualifiedName~SecurityTests"
+```
+
+| Projeto | Conteúdo |
+|---------|----------|
+| `Ares.PagueAres.Tests.Unit` | `Authentication/AuthenticationServiceTests` (BCrypt, SHA256 legado, migração), `Authentication/AuthControllerUnitTests` (lockout), `Controllers/ListingControllerFilterTests` (filtros de visão), `Preview/PreviewTokenValidationTests` |
+| `Ares.PagueAres.Tests.Integration` | `ApprovalWorkflowTests`, `AuthControllerTests`, `DataSegregationTests`, `DepartmentControllerTests`, `EndpointExposureTests`, `SecurityTests` — sobem a API inteira via `PagueAresWebAppFactory` (`WebApplicationFactory<Program>`) com EF Core **InMemory**, ambiente `Test`, `RunMigrations=false`, e geram JWTs de teste |
+
+Os testes de integração **não precisam de SQL Server nem de Docker**. `Program` é exposto com `public partial class Program { }` para essa finalidade. Resultados e contagens atuais: ver `../RELATORIO_TESTES.md`.
 
 ---
 
 ## Banco de Dados
 
-Banco: `PagueAres` no SQL Server.
-Script de criação: `PagueAres.sql` na raiz do repositório.
+Banco: `PagueAres` no SQL Server. O esquema é criado pelas **migrations do EF Core** (`Ares.PagueAres.Infrastructure/Migrations`: `InitialCreate`, que também cria as views e semeia dados base, e `DecimalPrecision_Indexes`, que ajusta a precisão dos campos monetários — em geral `decimal(18,2)` — e cria os índices `IX_Solicitacao_Status/Usuario` e `IX_Rddv_Status/Usuario`). O script `PagueAres.sql` (em `back-end/`) é uma alternativa manual para criação do banco.
 
 ### Entidades Principais
 
@@ -108,12 +183,15 @@ Script de criação: `PagueAres.sql` na raiz do repositório.
 | `DespesaRddv` | Linhas de despesa do RDDV |
 | `DocumentoSolicitacao` | Anexos de solicitações (base64) |
 | `DocumentoRddv` | Anexos de relatórios (base64) |
-| `Funcao` | Papéis: ADM, GES, FIN, CON, USR |
+| `Funcao` | Papéis: ADM, SOL, GES, FIN, CON (seed: `PagueAres.sql` / `InitialCreate`) |
 | `UsuarioFuncao` | Relacionamento N:N usuário ↔ papel |
 | `Departamento` | Departamentos com código de lançamento |
+| `TipoDocumento` | Tipos de documento aceitos como anexo |
 | `TipoViagem` | Tipos de viagem com valor de diária |
 | `Fornecedor` | Fornecedores (CPF/CNPJ) |
 | `Configuracao` | Parâmetros do sistema (chave-valor) |
+| `vListagemSolicitacoes` (view) | Listagem unificada de Solicitações e RDDVs (entidade `ViewListagemSolicitacoes`) |
+| `vDespesasRddv` (view) | Total de despesas por relatório |
 
 ### Valores de Status (Solicitacao e Rddv)
 
@@ -127,20 +205,26 @@ Script de criação: `PagueAres.sql` na raiz do repositório.
 
 ## Controllers e Endpoints
 
-Todos os endpoints exigem `Authorization: Bearer <token>` exceto `POST /api/auth`.
+Todos os controllers usam `[Route("api/[controller]")]` e `[Authorize]` (JWT Bearer), exceto `AuthController` (`[AllowAnonymous]`). Algumas rotas de `Export` e `Preview` são `[AllowAnonymous]` e exigem a *preview key* na query string (ver Segurança).
 
-| Controller | Rota Base | Responsabilidade |
-|-----------|-----------|-----------------|
-| `AuthController` | `/api/auth` | Login, geração de JWT |
-| `RequestController` | `/api/request` | CRUD de Solicitações + dashboard + atribuição |
-| `RddvController` | `/api/rddv` | CRUD de RDDVs + dashboard + atribuição |
-| `ListingController` | `/api/listing` | Listagem unificada com filtros e ViewModes |
-| `UsersController` | `/api/users` | CRUD de usuários + busca no AD |
-| `ExportController` | `/api/export` | Exportação Excel e ZIP de anexos |
-| `ConfigController` | `/api/config` | Parâmetros do sistema |
-| `ProviderController` | `/api/provider` | Consulta de fornecedores |
-| `TravelTypeController` | `/api/traveltype` | CRUD de tipos de viagem |
-| `PreviewController` | `/api/preview` | Tokens temporários para links públicos |
+| Controller | Rota Base | Endpoints |
+|-----------|-----------|-----------|
+| `AuthController` | `/api/auth` | `POST /` — login e geração de JWT |
+| `RequestController` | `/api/request` | `GET /{id}`, `POST /` (cria/atualiza, rascunho, aprovação), `GET /dashboard` (consolidado: Solicitações + RDDVs), `GET /{id}/user?userId=` (atribuição) |
+| `RddvController` | `/api/rddv` | `GET /{id}`, `POST /`, `GET /dashboard` (só RDDVs), `GET /{id}/user?userId=` |
+| `ListingController` | `/api/listing` | `GET /` — listagem unificada com filtros, ordenação, paginação e `ViewMode` |
+| `UsersController` | `/api/users` | `GET /` (ADM), `GET /{id}` (próprio perfil ou ADM), `POST /` (ADM), `GET /directory?userName=` (busca no AD), `GET /list?roles=` |
+| `ExportController` | `/api/export` | `GET /payments` (Excel), `GET /rddv/attachment/{id}` e `GET /request/attachment/{id}` (ZIP) — todos com `?key=` |
+| `ConfigController` | `/api/config` | `GET /`, `POST /` (somente ADM) |
+| `ProviderController` | `/api/provider` | `GET /`, `GET /{id}`, `GET /find/{numDoc}` |
+| `TravelTypeController` | `/api/traveltype` | `GET /`, `GET /{id}`, `POST /` |
+| `DepartmentController` | `/api/department` | `GET /` — lista de departamentos (substitui listas fixas no frontend) |
+| `PreviewController` | `/api/preview` | `POST /generate-preview-key?entityId=&requestType=`, `GET /payment/{id}/{attachmentId}?key=`, `GET /rddv/{id}/{attachmentId}?key=` |
+
+Observações:
+- **Não existem** mais `GET /api/request` nem `GET /api/rddv` (listagem crua sem escopo de usuário foi removida; use `/api/listing`).
+- Quase todas as respostas de negócio (inclusive falhas) voltam com HTTP 200 e `success=false`; HTTP 401 vem do JWT ausente/inválido/expirado e das preview keys inválidas. `GET /{id}/user` usa `BadRequest` para erros.
+- `Listing`: `PageSize` padrão 100, `Page` padrão 1; filtros: `DocumentNumber`, `DocumentId`, `RequestStart/End`, `DueStart/End`, `PartnerName`, `RequesterId`, `AssigneeId`, `IsAssigned`, `ManagerStatus`, `FinanceStatus`, `AccountingStatus`, `ViewMode`, `SortField`, `SortOrder`.
 
 ---
 
@@ -154,36 +238,50 @@ Criação (Rascunho=true)
                     └─► Contabilidade: Lançado (2) ou Recusado (3)
 ```
 
-- `TipoAutorizacao = 1`: pula o estágio do Gestor se o anexo de autorização for enviado.
-- Cada transição dispara e-mail para o solicitante via `EmailService`.
+- `TipoAutorizacao = 1`: no envio (saída do rascunho) o estágio do Gestor é aprovado automaticamente ("Autorização por anexo").
+- Rascunhos e registros cancelados **não** aparecem nas visões de fluxo de aprovação (Gestor, Financeiro, Dashboard) nem na exportação; só a visão "Minhas Solicitações" mostra os próprios rascunhos.
+- Registro cancelado não pode mais ser alterado. Cancelar não dispara e-mail nem auto-aprovação.
+- Se o Financeiro nega, `StatusContabilidade` passa a 3 automaticamente.
+- Cada transição dispara e-mail via `EmailService` (ver Serviços).
 
 ---
 
 ## Segurança
 
 ### Autenticação
-- **Local:** hash SHA256 da senha comparado com o campo `Senha` da tabela `Usuario`
-- **Active Directory:** bind LDAP; usuários AD são criados automaticamente no primeiro login com `Origem = 1`
+- **Local:** senha verificada com BCrypt. Hashes SHA256 legados (64 caracteres hex) ainda são aceitos e **re-hasheados com BCrypt no próximo login bem-sucedido**. Observação: `UsersController.SaveUser` ainda grava novas senhas como SHA256, que são migradas no primeiro login.
+- **Active Directory:** bind LDAP; o usuário AD é criado automaticamente no primeiro login (`Origem = 1`). Só funciona com `ActiveDirectory:EnableDomainAuthentication=true`.
+- **Lockout de login:** `AuthController` conta falhas por IP em `IMemoryCache`; a partir de **10 falhas** (janela de 5 minutos, renovada a cada nova falha) o login retorna `success=false` com "Muitas tentativas de login...". Um login bem-sucedido zera o contador. Usuário inativo recebe "Usuário inativo.".
 
 ### JWT
-- Algoritmo: HS256
-- Expiração: 12 horas (`ExpiryMinutes: 720`)
-- Claims: `sub` (nome), `nameid` (ID), `Roles` (aliases separados por vírgula), `jti`
+- Algoritmo HS256; `Issuer`/`Audience` `pagueares.local`; expiração `ExpiryMinutes` (720 = 12 h).
+- Claims: `sub` (nome), `nameid` (ID), `Roles` (aliases separados por vírgula), `jti`.
+- A autenticação/`[Authorize]` é feita pelo esquema `JwtBearer` registrado em `Program.cs` (valida assinatura, issuer, audience e expiração; token adulterado ou expirado → 401). O `JwtMiddleware` também decodifica o token e coloca um `UsuarioDto` em `HttpContext.Items["User"]`; é daí que os controllers lêem o usuário e os papéis (`GetUserFromToken`, `CurrentUserIsInRole`).
 
-### Papéis
-| Alias | Papel | Acesso |
-|-------|-------|--------|
-| ADM | Administrador | Total |
-| GES | Gestor | Aprova solicitações da equipe |
-| FIN | Financeiro | Autoriza pagamentos |
-| CON | Contabilidade | Lança e finaliza |
-| USR | Usuário | Cria e acompanha as próprias solicitações |
+### Papéis (RBAC)
+| Alias | Papel | Observação |
+|-------|-------|-----------|
+| ADM | Administrador | Total; único que gerencia usuários (`/api/users` GET lista, `{id}` de terceiros, POST) e grava `/api/config` |
+| SOL | Solicitante | Cria e acompanha as próprias solicitações (a constante é `Funcoes.Solicitante = "SOL"`) |
+| GES | Gestor | Aprova/reprova como gestor |
+| FIN | Financeiro | Autoriza/nega pagamentos; vê todas as aprovadas pelo gestor |
+| CON | Contabilidade | Lança/recusa |
+
+Regras aplicadas em `RequestController` (Solicitação):
+- ler (`GET /{id}`) ou editar solicitação de terceiros exige ADM, GES, FIN ou CON; senão só o dono;
+- mudar `AprovadoGestor` exige ADM ou GES; mudar `AprovadoSetor` exige ADM ou FIN; mudar `StatusContabilidade` exige ADM, FIN ou CON;
+- registro cancelado não pode ser editado.
+
+> Atenção: `RddvController.POST` **não** aplica as checagens de papel/propriedade para edição nem para as transições de aprovação (só `GET /{id}` verifica propriedade). `SetUser` (`GET /{id}/user`) em Solicitação e RDDV também não verifica papel. `TravelTypeController.POST`, `ProviderController`, `Users/list` e `Users/directory` não têm checagem de papel além de estar autenticado. Ver pendências abaixo.
+
+### Preview key (links temporários)
+`POST /api/preview/generate-preview-key` (autenticado; exige ser dono do registro ou ADM/GES/FIN/CON) devolve uma chave GUID guardada em `IMemoryCache` com validade de **1 minuto**, associada a `(entityId, requestType)`. `RequestType` ∈ `Solicitacao`, `Rddv`, `Exportacao`. As rotas anônimas de download (`/api/preview/...`, `/api/export/...`) só respondem com `?key=` válida; caso contrário 401. Nos previews a chave precisa ser do mesmo tipo **e** do mesmo `entityId`; nos ZIPs de `/api/export/*/attachment/{id}` a comparação usa `&&` (só recusa quando ambos divergem), portanto é mais fraca — ver pendências.
 
 ### ViewModes (ListingController)
-- `MyView` — Próprias solicitações
-- `ManagerView` — Solicitações onde é gestor
-- `FinancialView` — Aprovadas pelo gestor (todas se FIN, somente atribuídas caso contrário)
-- `Dashboard` — Visão consolidada (ADM)
+- `MyView` — próprias solicitações (inclui rascunhos)
+- `ManagerView` — onde o usuário é gestor (sem rascunhos/cancelados)
+- `FinancialView` — aprovadas pelo gestor (todas se FIN, somente atribuídas ao usuário caso contrário; sem rascunhos/cancelados)
+- `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados)
 
 ---
 
@@ -200,7 +298,7 @@ Criação (Rascunho=true)
 }
 ```
 
-Definido em `Ares.PagueAres.Domain/Models/GenericResponse.cs`.
+Definido em `Ares.PagueAres.Domain/GenericResponse.cs`.
 
 ---
 
@@ -208,16 +306,21 @@ Definido em `Ares.PagueAres.Domain/Models/GenericResponse.cs`.
 
 | Serviço | Localização | Responsabilidade |
 |---------|-------------|-----------------|
-| `AuthenticationService` | Application/Authentication | Login, geração de JWT, busca de usuário |
-| `EmailService` | Application/Email | Disparo assíncrono de e-mails por evento |
-| `ActiveDirectoryService` | Application/ActiveDirectory | Busca e autenticação LDAP |
+| `AuthenticationService` | `Application/Authentication` | Login (BCrypt/SHA256 legado/AD), geração de JWT, busca de usuário |
+| `EmailService` | `Application/Services` | Envio de e-mails por evento (nova, atribuída, aprovada, negada, paga, pagamento negado, lançada, recusada) |
+| `ActiveDirectoryService` | `Application/External/ActiveDirectory` | Busca e autenticação LDAP |
+
+Os serviços são registrados em `Application/Extensions/ApplicationServiceExtensions.cs` (`RegisterApplicationServices`).
 
 ---
 
 ## Pontos de Atenção para Produção
 
-1. **String de conexão** hardcoded em `PagueAresContext.cs` — mover para `appsettings.json`
-2. **CORS** configurado com `AllowAnyOrigin` em `Program.cs` — restringir para a origem do frontend
-3. **JWT Secret** em `appsettings.json` — usar variável de ambiente (`ASPNETCORE_`)
-4. **HTTPS** obrigatório — `UseHttpsRedirection()` já está configurado
-5. **Arquivos em base64** armazenados direto no banco — avaliar armazenamento externo (blob storage) para escala
+1. **JWT Secret**: sobrescrever `JwtSettings:Secret` por variável de ambiente (`JwtSettings__Secret`); o valor de exemplo em `appsettings.json` não serve para produção.
+2. **CORS**: definir `AllowedOrigins` com as origens do frontend (vazio = qualquer origem). Atrás do Nginx do compose não é necessário.
+3. **Ambiente**: `docker compose up` carrega automaticamente `docker-compose.override.yml`, que força `ASPNETCORE_ENVIRONMENT=Development` (expõe OpenAPI/Scalar e publica o SQL na porta 14330). Em produção rode apenas com `docker-compose.yml` (`docker compose -f docker-compose.yml up`).
+4. **HTTPS**: `UseHttpsRedirection()` está ativo, exceto no ambiente `Docker`.
+5. **RBAC do RDDV e atribuição**: replicar em `RddvController.POST`, `SetUser` e `TravelTypeController.POST` as checagens de papel/propriedade já existentes em `RequestController`.
+   **Preview key nos ZIPs**: trocar `&&` por `||` na validação de `ExportController` (`rddv/attachment/{id}` e `request/attachment/{id}`), como já é feito em `PreviewController`.
+6. **Arquivos em base64** armazenados direto no banco — avaliar armazenamento externo (blob storage) para escala.
+7. **Cache em memória**: lockout de login e preview keys vivem em `IMemoryCache` do processo; com mais de uma instância da API os contadores/chaves não são compartilhados.

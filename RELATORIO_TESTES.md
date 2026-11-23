@@ -1,6 +1,6 @@
 # Relatório de Execução de Testes — PagueAres
-**Data:** 09/06/2026  
-**Branch:** `feature/general-improvements`  
+**Data:** 23/11/2026 (última execução; o detalhamento por teste abaixo é da execução de 09/06/2026)  
+**Branch:** `main` (após o merge de `feature/general-improvements`, commit `4a0c32a`)  
 **Responsável:** Alexandre Henrique Moreira
 
 ---
@@ -9,21 +9,25 @@
 
 | Suite | Total | Aprovados | Reprovados | Duração |
 |-------|-------|-----------|------------|---------|
-| Backend — Integração | 43 | **43** | 0 | 4,4s |
-| Backend — Unitários | 15 | **15** | 0 | 1,9s |
-| Frontend — Unitários (Karma) | 49 | **49** | 0 | ~2s |
+| Backend — Integração | 47 | **47** | 0 | 5s |
+| Backend — Unitários | 20 | **20** | 0 | 2s |
+| Frontend — Unitários (Karma, Edge headless) | 73 | **73** | 0 | ~0,7s |
 | E2E (Cypress) | — | — | — | *não executado* |
-| **TOTAL** | **107** | **107** | **0** | |
+| **TOTAL** | **140** | **140** | **0** | |
 
-> **Cypress:** o binário Electron do Cypress requer ambiente gráfico (desktop). Os testes E2E foram escritos e estão prontos para execução em ambiente com browser disponível (`ng serve` + `npx cypress open` ou pipeline CI).
+Smoke test em Docker (`docker compose up -d --build`, 23/11/2026): banco saudável com migrations aplicadas (16 tabelas), OpenAPI e Scalar respondendo 200, frontend em Nginx respondendo 200, login `admin@local` via proxy `/api/Auth` devolvendo JWT, endpoints protegidos com 200 com token e 401 sem token.
+
+> **Cypress:** o binário Electron do Cypress requer ambiente gráfico (desktop). Os testes E2E foram escritos e estão prontos para execução em ambiente com browser disponível (`npx ng serve` + `npx cypress open` ou pipeline CI).
 
 ---
 
-## Backend — Testes de Integração (43/43)
+> As tabelas por teste abaixo são da execução de 09/06/2026 e não listam os testes adicionados depois (por exemplo `DepartmentControllerTests` e `EndpointExposureTests`). Os totais por suíte são os da execução de 23/11/2026.
+
+## Backend — Testes de Integração (47/47)
 
 **Projeto:** `Ares.PagueAres.Tests.Integration`  
-**Resultado:** `Aprovados: 43 | Com falha: 0`  
-**Runtime:** .NET 10, xUnit 2.8.2, EF Core In-Memory, FluentAssertions
+**Resultado:** `Aprovados: 47 | Com falha: 0`  
+**Runtime:** .NET 10, xUnit 2.9.2, EF Core In-Memory, FluentAssertions
 
 ### ApprovalWorkflowTests (16 testes)
 
@@ -115,10 +119,10 @@ Testes de segurança cobrindo autenticação, escalada de privilégios vertical 
 
 ---
 
-## Backend — Testes Unitários (15/15)
+## Backend — Testes Unitários (20/20)
 
 **Projeto:** `Ares.PagueAres.Tests.Unit`  
-**Resultado:** `Aprovados: 15 | Com falha: 0`
+**Resultado:** `Aprovados: 20 | Com falha: 0`
 
 ### AuthenticationServiceTests (6 testes)
 
@@ -152,11 +156,11 @@ Testes de segurança cobrindo autenticação, escalada de privilégios vertical 
 
 ---
 
-## Frontend — Testes Unitários (49/49)
+## Frontend — Testes Unitários (73/73)
 
 **Framework:** Karma 6.3.4 + Jasmine 3.8 + Angular 20  
 **Browser:** Microsoft Edge 148 (Headless)  
-**Resultado:** `TOTAL: 49 SUCCESS`
+**Resultado:** `TOTAL: 73 SUCCESS`
 
 Componentes cobertos: AppComponent, FooterComponent, IconsComponent, HomeComponent, LoginComponent, CreateRequestComponent, CreateRddvComponent, CreateUserComponent, RddvComponent, RefundsComponent, AuthService, LocalStorageService, UtilsService.
 
@@ -168,21 +172,21 @@ Componentes cobertos: AppComponent, FooterComponent, IconsComponent, HomeCompone
 **Status:** Testes escritos e prontos. Execução requer ambiente gráfico.
 
 **Specs criados:**
-- `cypress/e2e/auth.cy.ts` — Login, logout, sessão expirada
-- `cypress/e2e/solicitacao.cy.ts` — Criar, editar, cancelar solicitações
-- `cypress/e2e/rddv.cy.ts` — Criar, editar RDDVs
-- `cypress/e2e/approval.cy.ts` — Fluxo completo de aprovação
-- `cypress/e2e/security.cy.ts` — Controle de acesso por papel
+- `cypress/e2e/auth/login.cy.ts` — Login
+- `cypress/e2e/payments/create-request.cy.ts` — Criação de solicitações
+- `cypress/e2e/rddv/create-rddv.cy.ts` — Criação de RDDVs
+- `cypress/e2e/workflow/approval-flow.cy.ts` — Fluxo de aprovação
+- `cypress/e2e/security/data-segregation.cy.ts` — Segregação de dados por papel
 
 **Como executar:**
 ```bash
 # Iniciar backend
 dotnet run --project back-end/Ares.PagueAres.API
 
-# Iniciar frontend
-cd front-end && ng serve
+# Iniciar frontend (usar o CLI local, não o ng global)
+cd front-end && npx ng serve
 
-# Executar testes E2E
+# Executar testes E2E (em outro terminal, também em front-end/)
 npx cypress run
 ```
 
