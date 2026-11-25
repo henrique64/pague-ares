@@ -85,3 +85,65 @@ Observação: o nome sugerido do download usa a hora local do servidor (`2026112
 ## 8. Estado final
 
 Stack no ar (`pagueares-db`, `pagueares-api`, `pagueares-frontend`), com os dados da semente (500 títulos exportáveis, mais rascunhos e cancelados) e os jobs 1 a 4 no banco. Usuários fictícios `@exemplo.invalid` (`adm.semente`, `fin.semente`, `con.semente`, `ges.semente`, `sol01` a `sol05.semente`).
+
+## 9. Reverificação pós-revisão
+
+Data: 25/11/2026, entre 20:14 e 20:23 (relógio local; os contêineres estão em UTC, 3 horas à frente). Commit verificado: `c786890` (correções F1, F2 e F3 da revisão). Mesma stack e mesma semente da E14 (a semente não foi rodada de novo). Sem segredos: a senha dos usuários fictícios foi derivada do `.env` só na sessão. Resultado geral: **parcial**. Os passos 1, 3 (com filtro alternativo), 4 e 5 passaram; o passo 2 (medição de 113 títulos) **falhou por um dado da semente corrompido no banco local**, descrito abaixo.
+
+### 9.1 Reconstrução da stack
+
+`docker compose up -d --build` (20:14). Os três contêineres subiram; `pagueares-api` em `Development`, com `Exportacao__Pasta=/var/pagueares/exportacao`, e os serviços em segundo plano ativos (o log mostra o worker consultando `ExportacaoJob` Pendente e a limpeza consultando os Concluídos). `GET http://localhost:8080/` e `GET http://localhost:5000/scalar/v1` responderam 200.
+
+### 9.2 Medição de 100 títulos: falhou por dado corrompido
+
+Comando: o mesmo da E14 (`node tools/exportacao/medir/medir.ts --login fin.semente@exemplo.invalid --api http://localhost:5000 --filtro <json> --saida docs/evidencias/dados/medicao-100-pos-revisao.json --zip <zip>`, filtro `{"tipoTitulo":0,"dataSolicitacaoInicio":"2025-11-01","dataSolicitacaoFim":"2026-01-10"}`, 20:14:38).
+
+Resultado: a exportação 5 terminou como Falhou com a mensagem "O anexo boleto março.pdf do título SOL-000172 está corrompido e não pôde ser exportado." O arquivo `medicao-100-pos-revisao.json` não foi gerado.
+
+Causa investigada (consultas só de leitura no SQL local do Docker): o anexo 333 de SOL-000172 tem base64 inválido no banco, com dois caracteres diferentes do original na posição 2.645.845 e 2.645.849 (`a` virou `á` e `3` virou `³`, ou seja, o bit 0x80 ligado em dois bytes). O original é conhecido: o pacote de 500 títulos da E14 (`SOL-000172/Comprovantes - boleto março.pdf`, 2.592.330 bytes) foi gerado com esse anexo, então o dado estava íntegro na E14 e mudou depois, por causa desconhecida (nenhum código do repositório grava essa coluna; a semente não produz esse padrão). É o único anexo inválido entre os 629 de solicitações e os 447 de RDDVs. O código de exportação se comportou como projetado: recusou o anexo corrompido com a mensagem amigável e apagou o `.parcial`. O reparo (UPDATETEXT de dois caracteres no banco local) não foi feito por esta etapa por falta de permissão; fica como decisão do orquestrador.
+
+Medição alternativa, só para exercitar a stack reconstruída: filtro `{"tipoTitulo":0,"dataSolicitacaoInicio":"2025-11-01","dataSolicitacaoFim":"2025-12-11"}` (exclui SOL-000172, de 12/12/2025), saída `medicao-parcial-pos-revisao.json`, início 20:19:37. 69 títulos, 147 anexos, 361.758.657 bytes de anexos, ZIP de 381.649.468 bytes, concluída em 14,1 s, download em 2 s, memória da API de 198 MiB antes para 203,5 MiB no pico. `verificar.cs` sobre esse ZIP: `RESULTADO: APROVADO`, código 0, as 16 regras ok. Esta medição não é a de 113 títulos pedida e não substitui `medicao-100-pos-revisao.json`.
+
+### 9.3 Reinício com job em Processando
+
+Script da E14 (`recuperacao.ts`), com a nova exportação limitada ao filtro sem SOL-000172 (mesma razão acima).
+
+| Hora | Evento |
+|---|---|
+| 20:20:10 | Exportação 7 (cheia, 500 títulos) criada, HTTP 202 |
+| 20:20:12 | Status Processando, 10/500 títulos; `docker restart pagueares-api` |
+| 20:20:20 | Job 7: status 3 (Falhou), mensagem "A exportação foi interrompida por um reinício do servidor. Gere a exportação de novo." |
+| 20:20:21 | `ls /var/pagueares/exportacao`: só `exportacao-1.zip`, `-2.zip`, `-4.zip` e `-6.zip` (pacotes concluídos); nenhum `.parcial` |
+| 20:20:21 | Nova exportação 8 criada, HTTP 202 |
+| 20:20:35 | Exportação 8 concluída (status 2): 69 títulos, 381.649.480 bytes |
+
+Resultado esperado atendido. A exportação 5, que falhou no passo 2, também não deixou `.parcial`.
+
+### 9.4 Segurança na stack real
+
+Mesmas chamadas do passo 7 da E14 (job 6 do FIN no lugar do 4), às 20:21: `POST api/exportacao` sem token 401, como CON 403, como SOL 403; `GET api/exportacao` e `GET api/exportacao/6` como CON 403; `GET api/exportacao/6` e `POST api/exportacao/6/link-download` como ADM (job do FIN) 404; chave de preview de Exportação como CON, SOL e GES 403 sem chave, como FIN e ADM 200 com chave; download pelo front (Nginx) 200, `application/zip`, `Content-Disposition: attachment`, 381.649.468 bytes em 2,1 s; segundo download com o mesmo token pelo front 401, terceiro direto na API 401; download sem token 401.
+
+Casos novos da F1 contra a API real (20:21:25):
+
+| Chamada | Esperado | Obtido |
+|---|---|---|
+| `GET api/Preview/payment/173/332?key=<chave da SOL-000173>` (anexo 332 é da SOL-000172) | 404 | 404 |
+| `GET api/Preview/rddv/1/5?key=<chave do RDDV-000001>` (anexo 5 é do RDDV-000002) | 404 | 404 |
+| ZIP legado `api/Export/request/attachment/3` (anexo `../x.pdf`) | nenhuma entrada com `..` | 1 entrada, `.x.pdf`; 0 entradas com `..`, barra ou `:` |
+| ZIP legado `api/Export/request/attachment/10` (anexo `../../etc/passwd`) | idem | `fatura janeiro.pdf`, `FATURA JANEIRO (2).PDF`, `.etcpasswd`; 0 com `..` |
+| ZIP legado `api/Export/rddv/attachment/77` (anexo `../../etc/passwd`) | idem | `.etcpasswd`; 0 com `..` |
+| ZIP legado `api/Export/rddv/attachment/1` (anexo `C:\Windows\x.exe`) | idem | `ordem de compra.jpg`, `CWindowsx.exe`, `contrato assinado.jpg`; 0 com `..`, barra ou `:` |
+
+Observação sobre o controle positivo do preview: a chamada com o anexo do próprio título (`payment/173/335` e `rddv/1/3`) devolve 500, não 200. A consulta com `IdSolicitacao = @id` encontra o registro (aparece no log SQL), e o erro vem depois, em `File(...)`: a semente grava em `CaminhoArquivo` um valor que não é tipo de mídia (`semente/DocumentoSolicitacao/173/0`) e o ASP.NET recusa o cabeçalho. É um defeito dos dados da semente (E12), não da correção da F1; no sistema real essa coluna guarda o tipo de mídia enviado pelo navegador.
+
+### 9.5 Download pelo front em navegador real
+
+Playwright (`playwright-core`, instalado só numa pasta temporária fora do repositório) com o Edge do sistema (`channel: 'msedge'`, headless), às 20:22. Login como `fin.semente@exemplo.invalid` em `http://localhost:8080` (redirecionou para `#/payments`), abertura de `#/exportacoes`, filtro Tipo Solicitação e Código 173, clique em Gerar exportação.
+
+- A exportação (job 9) concluiu e o clique em Baixar disparou o evento `download` do navegador: arquivo `exportacao-titulos-9-20261125-2322.zip`, 5.544.277 bytes, salvo. O verificador aprovou esse ZIP (código 0).
+- A URL antes e depois do clique é a mesma (`http://localhost:8080/#/exportacoes`), o título "Exportar títulos com anexos" continua visível e a URL do quadro principal não mudou (o contador de navegações do quadro, só de hash do login e do roteador, ficou em 6 depois do download e continuou em 6 depois do segundo clique). Há um iframe oculto na página durante o download.
+- Token inválido: no segundo clique em Baixar a resposta de `link-download` foi trocada pelo token já consumido do primeiro clique. Resultado: nenhum download, a URL e a tela permanecem, nenhum JSON no corpo da página, o iframe é removido, e aparece o aviso "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar."
+
+### 9.6 Estado final
+
+Stack no ar (`pagueares-db`, `pagueares-api`, `pagueares-frontend`) com a semente intacta, exceto o anexo 333 de SOL-000172, que continua com os dois caracteres corrompidos. Jobs 1 a 9 no banco (5 e 7 em Falhou, os demais Concluídos).
