@@ -23,3 +23,6 @@ front-end/dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Worktrees de agentes
+.claude/worktrees/
