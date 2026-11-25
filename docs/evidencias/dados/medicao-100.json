@@ -1,0 +1,28 @@
+{
+  "titulos": 113,
+  "anexos": 239,
+  "bytesAnexos": 592445339,
+  "tamanhoZipBytes": 625009408,
+  "segundosAteConcluir": 24.4,
+  "segundosDownload": 4.6,
+  "memoriaApiMiBAntes": 84.4,
+  "memoriaApiMiBPico": 229.8,
+  "amostras": [
+    {
+      "t": 7.4,
+      "mib": 182.1
+    },
+    {
+      "t": 13.5,
+      "mib": 188.8
+    },
+    {
+      "t": 19.6,
+      "mib": 200
+    },
+    {
+      "t": 25.7,
+      "mib": 229.8
+    }
+  ]
+}
