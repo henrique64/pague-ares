@@ -397,6 +397,99 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
             IndiceExportacao.CampoCsv(null).Should().BeEmpty();
         }
 
+        [Theory]
+        [InlineData("=1+1", "'=1+1")]
+        [InlineData("+55 11", "'+55 11")]
+        [InlineData("-2", "'-2")]
+        [InlineData("@SOMA(A1)", "'@SOMA(A1)")]
+        [InlineData("\tcom tab", "'\tcom tab")]
+        [InlineData("normal", "normal")]
+        [InlineData("meio=igual", "meio=igual")]
+        public void CampoCsv_ProtegeContraInjecaoDeFormula(string valor, string esperado)
+        {
+            IndiceExportacao.CampoCsv(valor).Should().Be(esperado);
+        }
+
+        [Fact]
+        public void CampoCsv_ValorComCrNoInicioRecebePrefixoEFicaEntreAspas()
+        {
+            IndiceExportacao.CampoCsv("\rabc").Should().Be("\"'\rabc\"");
+        }
+
+        [Fact]
+        public void CampoCsv_PrefixoVemAntesDasAspasQuandoOValorTemSeparador()
+        {
+            IndiceExportacao.CampoCsv("=a;b").Should().Be("\"'=a;b\"");
+        }
+
+        [Fact]
+        public async Task Gerar_IndiceCsv_ProtegeNomeETipoQueComecamComCaractereDeFormula_EOJsonFicaIntacto()
+        {
+            var fonte = new FonteExportacaoFalsa();
+            fonte.Solicitacoes.Add(FonteExportacaoFalsa.Solicitacao(1));
+            fonte.AdicionarAnexo(TipoTituloExportacao.Solicitacao, 1, 1, "=Tipo", "=HYPERLINK(\"http://exemplo.invalid\").pdf", Bytes(5, 1));
+            fonte.AdicionarAnexo(TipoTituloExportacao.Solicitacao, 1, 2, "Nota Fiscal", "+1.pdf", Bytes(6, 2));
+            fonte.AdicionarAnexo(TipoTituloExportacao.Solicitacao, 1, 3, "Nota Fiscal", "-2.pdf", Bytes(7, 3));
+            fonte.AdicionarAnexo(TipoTituloExportacao.Solicitacao, 1, 4, "Nota Fiscal", "@a.pdf", Bytes(8, 4));
+            fonte.AdicionarAnexo(TipoTituloExportacao.Solicitacao, 1, 5, "Nota Fiscal", "\tcom tab.pdf", Bytes(9, 5));
+            fonte.AdicionarAnexo(TipoTituloExportacao.Solicitacao, 1, 6, "Nota Fiscal", "normal.pdf", Bytes(10, 6));
+
+            using var pacote = await GerarAsync(fonte);
+
+            var registros = LinhasCsv(pacote.Ler("indice.csv")).Skip(1).Select(DividirCsv).ToList();
+            registros.Should().HaveCount(6);
+
+            registros.Select(r => r[3]).Should().BeEquivalentTo(
+                "'=HYPERLINK(\"http://exemplo.invalid\").pdf", "'+1.pdf", "'-2.pdf", "'@a.pdf", "'\tcom tab.pdf", "normal.pdf");
+            registros.Single(r => r[3] == "normal.pdf")[2].Should().Be("Nota Fiscal");
+            registros.Single(r => r[3].EndsWith("HYPERLINK(\"http://exemplo.invalid\").pdf"))[2].Should().Be("'=Tipo");
+            registros.SelectMany(r => r).Should().OnlyContain(c => c.Length == 0 || !"=+-@\t\r".Contains(c[0]),
+                "nenhuma célula do CSV pode começar com caractere que o Excel interpreta como fórmula");
+
+            using var json = JsonDocument.Parse(pacote.Ler("indice.json"));
+            json.RootElement.GetProperty("arquivos").EnumerateArray().Select(a => a.GetProperty("nomeOriginal").GetString())
+                .Should().BeEquivalentTo("=HYPERLINK(\"http://exemplo.invalid\").pdf", "+1.pdf", "-2.pdf", "@a.pdf", "\tcom tab.pdf", "normal.pdf");
+        }
+
+        [Fact]
+        public async Task Gerar_LeiaMe_MostraRotulosNosFiltrosDeStatusETipos()
+        {
+            var filtro = new FiltroExportacaoDto
+            {
+                StatusGestor = 2,
+                StatusFinanceiro = 3,
+                StatusContabil = 2,
+                TipoSolicitacao = 2,
+                TipoPagamento = 1,
+                FormaPagamento = 2,
+                TipoRelatorio = 3
+            };
+
+            using var pacote = await GerarAsync(FonteCompleta(), filtro);
+
+            var texto = Encoding.UTF8.GetString(pacote.Ler("LEIA-ME.txt"));
+            texto.Should().Contain("Status gestor: Autorizado");
+            texto.Should().Contain("Status financeiro: Negado");
+            texto.Should().Contain("Status contábil: Lançado");
+            texto.Should().Contain("Tipo de solicitação: Pagamento");
+            texto.Should().Contain("Tipo de pagamento: Nacional");
+            texto.Should().Contain("Forma de pagamento: Transferência Bancária");
+            texto.Should().Contain("Tipo de relatório do RDDV: Reembolso");
+            texto.Should().NotContain("(código)");
+        }
+
+        [Fact]
+        public async Task Gerar_LeiaMe_CodigoSemRotuloConhecidoSaiComoCodigoN()
+        {
+            var filtro = new FiltroExportacaoDto { StatusGestor = 9, TipoPagamento = 7 };
+
+            using var pacote = await GerarAsync(FonteCompleta(), filtro);
+
+            var texto = Encoding.UTF8.GetString(pacote.Ler("LEIA-ME.txt"));
+            texto.Should().Contain("Status gestor: Código 9");
+            texto.Should().Contain("Tipo de pagamento: Código 7");
+        }
+
         [Fact]
         public async Task Gerar_IndiceJson_TemOFormatoDoContrato()
         {

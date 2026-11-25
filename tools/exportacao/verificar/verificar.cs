@@ -639,13 +639,30 @@ sealed class Verificador(Resultado res, string caminhoZip)
             if (linha.Count != 8) { res.Falhar("csv-json", $"Linha {i + 2} do CSV tem {linha.Count} colunas (esperado 8)."); continue; }
             for (int c = 0; c < 8; c++)
             {
-                if (!string.Equals(linha[c], esperado[c], StringComparison.Ordinal))
+                if (linha[c].Length > 0 && linha[c][0] is '=' or '+' or '-' or '@' or '\t' or '\r')
+                {
+                    res.Falhar("csv-json", $"Linha {i + 2}, coluna {c + 1} ({CabCsv.Split(';')[c]}): '{Exibir(linha[c])}' começa com caractere de fórmula sem o prefixo ' (injeção de fórmula no Excel).");
+                    break;
+                }
+                if (!string.Equals(SemPrefixoDeFormula(linha[c], esperado[c]), esperado[c], StringComparison.Ordinal))
                 {
                     res.Falhar("csv-json", $"Linha {i + 2}, coluna {c + 1} ({CabCsv.Split(';')[c]}): CSV '{Exibir(linha[c])}' x JSON '{Exibir(esperado[c])}'.");
                     break;
                 }
             }
         }
+    }
+
+    // O gerador protege o CSV contra injeção de fórmula: texto que começa com = + - @ tab ou CR recebe o prefixo '.
+    // Na comparação com o JSON (que guarda o valor original) o prefixo é ignorado. Um valor do CSV que ainda comece
+    // com caractere de fórmula, sem o prefixo, volta como está e portanto difere do esperado.
+    static string SemPrefixoDeFormula(string valorCsv, string valorJson)
+    {
+        static bool Formula(char c) => c is '=' or '+' or '-' or '@' or '\t' or '\r';
+
+        if (valorJson.Length > 0 && Formula(valorJson[0]) && valorCsv.Length == valorJson.Length + 1 && valorCsv[0] == '\'')
+            return valorCsv[1..];
+        return valorCsv;
     }
 
     // Leitor CSV mínimo (separador ';', aspas duplas, "" como aspas literais, quebras CRLF ou LF dentro de campos entre aspas).

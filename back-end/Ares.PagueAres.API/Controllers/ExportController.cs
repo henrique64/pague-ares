@@ -1,14 +1,15 @@
 ﻿using Ares.PagueAres.API.Dtos;
+using Ares.PagueAres.Application.Exportacao;
 using Ares.PagueAres.Domain.Dtos.Authentication;
 using Ares.PagueAres.Infrastructure;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
-using Spire.Xls;
 using System.Collections.Concurrent;
 
 namespace Ares.PagueAres.API.Controllers
@@ -23,39 +24,6 @@ namespace Ares.PagueAres.API.Controllers
 
         // Garante que a leitura e a remoção da chave de exportação aconteçam juntas (uso único).
         private static readonly Lock TravaChaveExportacao = new();
-
-        private Dictionary<int, string> StatusGestor = new Dictionary<int, string>() {
-            {0, "Aguardando Autorização"},
-            {1, "Aguardando Autorização"},
-            {2, "Autorizado"},
-            {3, "Negado"}
-        };
-
-        private Dictionary<int, string> StatusContabil = new Dictionary<int, string>() {
-            {0, "Aguardando Lançamento"},
-            {1, "Aguardando Lançamento"},
-            {2, "Lançado"},
-            {3, "Negado"}
-        };
-
-        private Dictionary<int, string> StatusFinanceiro = new Dictionary<int, string>() {
-            {0, "Aguardando Autorização"},
-            {1, "Aguardando Autorização"},
-            {2, "Autorizado"},
-            {3, "Negado" }
-        };
-
-        private Dictionary<int, string> DocumentTypes = new Dictionary<int, string>() {
-            {1, "Adiantamento"},
-            {2, "Pagamento"},
-            {3, "Movimento Almoxarifado"}
-        };
-
-        private Dictionary<int, string> RddvReportType = new Dictionary<int, string>() {
-            {1, "Adiantamento" },
-            {2, "Prestação de Contas" },
-            {3, "Reembolso"}
-        };
 
         /// <summary>
         /// Valida a chave de exportação e a remove do cache na mesma operação, para que ela só
@@ -169,12 +137,12 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (!string.IsNullOrEmpty(filter.PartnerName))
                 {
-                    requests = requests.Where(d => d.NomeParceiro.ToLower().Contains(filter.PartnerName));
+                    requests = requests.Where(d => d.NomeParceiro.ToLower().Contains(filter.PartnerName.ToLower()));
                 }
 
                 if (!string.IsNullOrEmpty(filter.PartnerDocument))
                 {
-                    requests = requests.Where(d => d.NumDocParceiro.ToLower().Contains(filter.PartnerDocument));
+                    requests = requests.Where(d => d.NumDocParceiro.ToLower().Contains(filter.PartnerDocument.ToLower()));
                 }
 
                 if (filter.DocumentId.HasValue)
@@ -189,15 +157,15 @@ namespace Ares.PagueAres.API.Controllers
                                      {
                                          Codigo = r.IdSolicitacao.ToString(),
                                          Tipo = "Pagamento",
-                                         DataInclusao = r.DataSolicitacao.ToString("dd/MM/yyyy"),
-                                         DataVencimento = r.DataVencimento.HasValue ? r.DataVencimento.Value.ToString("dd/MM/yyyy") : "",
+                                         DataInclusao = r.DataSolicitacao,
+                                         DataVencimento = r.DataVencimento,
                                          DocNumero = r.NumeroDocumento ?? "",
                                          Solicitante = u.Nome,
                                          Parceiro = r.NomeParceiro,
-                                         Valor = r.Valor.ToString("0.00"),
-                                         StatusGestor = StatusGestor[r.StatusGestor ?? 0],
-                                         StatusContabil = StatusContabil[r.StatusContabilidade ?? 0],
-                                         StatusFinanceiro = StatusFinanceiro[r.StatusFinanceiro ?? 0]
+                                         Valor = r.Valor,
+                                         StatusGestor = RotulosExportacao.StatusGestor(r.StatusGestor),
+                                         StatusContabil = RotulosExportacao.StatusContabil(r.StatusContabilidade),
+                                         StatusFinanceiro = RotulosExportacao.StatusFinanceiro(r.StatusFinanceiro)
                                      });
 
                 var rddv = dbContext.Rddv.AsQueryable();
@@ -253,16 +221,16 @@ namespace Ares.PagueAres.API.Controllers
                                  select new PaymentListItem()
                                  {
                                      Codigo = r.IdRelatorio.ToString(),
-                                     Tipo = "RDDV - " + RddvReportType[r.TipoRelatorio],
-                                     DataInclusao = r.DataCadastro.ToString("dd/MM/yyyy"),
-                                     DataVencimento = r.DataVencimento.HasValue ? r.DataVencimento.Value.ToString("dd/MM/yyyy") : "",
+                                     Tipo = "RDDV - " + RotulosExportacao.TipoRelatorio(r.TipoRelatorio),
+                                     DataInclusao = r.DataCadastro,
+                                     DataVencimento = r.DataVencimento,
                                      DocNumero = "#",
                                      Solicitante = u.Nome ?? "",
                                      Parceiro = u.Nome ?? "",
-                                     Valor = d.Valor.ToString("0.00"),
-                                     StatusGestor = StatusGestor[r.StatusGestor ?? 0],
-                                     StatusContabil = StatusContabil[r.StatusContabilidade ?? 0],
-                                     StatusFinanceiro = StatusFinanceiro[r.StatusFinanceiro ?? 0]
+                                     Valor = (decimal?)d.Valor ?? 0m,
+                                     StatusGestor = RotulosExportacao.StatusGestor(r.StatusGestor),
+                                     StatusContabil = RotulosExportacao.StatusContabil(r.StatusContabilidade),
+                                     StatusFinanceiro = RotulosExportacao.StatusFinanceiro(r.StatusFinanceiro)
                                  });
 
                 ConcurrentBag<IEnumerable<PaymentListItem>> items = new();
@@ -275,53 +243,53 @@ namespace Ares.PagueAres.API.Controllers
 
                 var dataset = items.SelectMany(x => x.ToList());
 
-                var book = new Workbook();
-                book.Worksheets.Clear();
-
+                using var book = new XLWorkbook();
                 var sheet = book.Worksheets.Add("Pagamentos");
 
-                var row = 1;
+                string[] cabecalho =
+                [
+                    "Codigo", "Tipo", "Data de Inclusao", "Data de Vencimento", "Doc. Número", "Solicitante",
+                    "Parceiro", "Valor", "Status Gestor", "Status Contábil", "Status Financeiro"
+                ];
 
-                sheet[row, 1].Value = "Codigo";
-                sheet[row, 2].Value = "Tipo";
-                sheet[row, 3].Value = "Data de Inclusao";
-                sheet[row, 4].Value = "Data de Vencimento";
-                sheet[row, 5].Value = "Doc. Número";
-                sheet[row, 6].Value = "Solicitante";
-                sheet[row, 7].Value = "Parceiro";
-                sheet[row, 8].Value = "Valor";
-                sheet[row, 9].Value = "Status Gestor";
-                sheet[row, 10].Value = "Status Contábil";
-                sheet[row, 11].Value = "Status Financeiro";
+                for (var coluna = 0; coluna < cabecalho.Length; coluna++)
+                {
+                    sheet.Cell(1, coluna + 1).Value = cabecalho[coluna];
+                }
 
-                row++;
+                var row = 2;
 
                 foreach (var item in dataset)
                 {
-                    sheet[row, 1].Value = item.Codigo;
-                    sheet[row, 2].Value = item.Tipo;
-                    sheet[row, 3].Value = item.DataInclusao;
-                    sheet[row, 4].Value = item.DataVencimento;
-                    sheet[row, 5].Value = item.DocNumero;
-                    sheet[row, 6].Value = item.Solicitante;
-                    sheet[row, 7].Value = item.Parceiro;
-                    sheet[row, 8].Value = item.Valor;
-                    sheet[row, 9].Value = item.StatusGestor;
-                    sheet[row, 10].Value = item.StatusContabil;
-                    sheet[row, 11].Value = item.StatusFinanceiro;
+                    sheet.Cell(row, 1).Value = item.Codigo;
+                    sheet.Cell(row, 2).Value = item.Tipo;
+                    sheet.Cell(row, 3).Value = item.DataInclusao;
+                    sheet.Cell(row, 4).Value = item.DataVencimento.HasValue ? item.DataVencimento.Value : Blank.Value;
+                    sheet.Cell(row, 5).Value = item.DocNumero;
+                    sheet.Cell(row, 6).Value = item.Solicitante;
+                    sheet.Cell(row, 7).Value = item.Parceiro;
+                    sheet.Cell(row, 8).Value = item.Valor;
+                    sheet.Cell(row, 9).Value = item.StatusGestor;
+                    sheet.Cell(row, 10).Value = item.StatusContabil;
+                    sheet.Cell(row, 11).Value = item.StatusFinanceiro;
 
                     row++;
                 }
 
-                sheet.Range[1, 1, dataset.Count() + 1, 11].BorderAround();
-                sheet.Range[1, 1, dataset.Count() + 1, 11].BorderInside();
-                sheet.Range[1, 1, dataset.Count() + 1, 11].AutoFitColumns();
+                var ultimaLinha = row - 1;
 
-                sheet.Range[1, 1, 1, 11].Style.Font.IsBold = true;
+                sheet.Range(2, 3, ultimaLinha, 4).Style.DateFormat.Format = "dd/mm/yyyy";
+                sheet.Range(2, 8, ultimaLinha, 8).Style.NumberFormat.Format = "#,##0.00";
+
+                var tabela = sheet.Range(1, 1, ultimaLinha, 11);
+                tabela.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                tabela.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                sheet.Range(1, 1, 1, 11).Style.Font.Bold = true;
+                sheet.Columns(1, 11).AdjustToContents();
 
                 var ms = new MemoryStream();
 
-                book.SaveToStream(ms, FileFormat.Version2016);
+                book.SaveAs(ms);
 
                 ms.Position = 0;
 
