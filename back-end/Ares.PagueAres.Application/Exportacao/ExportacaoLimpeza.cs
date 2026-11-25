@@ -13,7 +13,7 @@ namespace Ares.PagueAres.Application.Exportacao
     /// Serviço em segundo plano que, ao subir e depois a cada <c>IntervaloLimpezaMinutos</c>, apaga os pacotes vencidos
     /// (contrato C9): jobs Concluido com <c>DataExpiracao</c> vencida viram Expirado e perdem o arquivo; arquivos
     /// <c>exportacao-*.zip</c> sem job Concluido correspondente e mais velhos que <c>RetencaoHoras</c> são apagados.
-    /// Sem <c>Exportacao:Pasta</c> fora de Development e Test ela não sobe, para nunca varrer uma pasta temporária que
+    /// Sem <c>Exportacao:Pasta</c> fora de Development ela não sobe, para nunca varrer uma pasta temporária que
     /// outra instância da API pode usar (veja <see cref="ArquivosExportacao.PastaObrigatoriaAusente"/>).
     /// </summary>
     public sealed class ExportacaoLimpeza : BackgroundService

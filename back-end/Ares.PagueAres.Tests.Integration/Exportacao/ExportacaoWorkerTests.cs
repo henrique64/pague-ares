@@ -11,6 +11,7 @@ using Ares.PagueAres.Domain.Enums;
 using Ares.PagueAres.Infrastructure;
 using Ares.PagueAres.Infrastructure.Models;
 using Ares.PagueAres.Tests.Integration.Infrastructure;
+using FluentAssertions.Execution;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Ares.PagueAres.Tests.Integration.Exportacao
@@ -49,15 +51,16 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
 
         /// <summary>
         /// Tempos curtos da reconciliação periódica, lidos da seção <c>Exportacao</c> como no appsettings: uma volta a
-        /// cada 0,2 s, e um job Processando sem sinal de vida por <see cref="LimiteSemSinalCurto"/> é tido como órfão.
+        /// cada 1 s, e um job Processando sem sinal de vida por <see cref="LimiteSemSinalCurto"/> é tido como órfão. São
+        /// os menores valores que o worker aceita.
         /// </summary>
         private static readonly Dictionary<string, string?> TemposCurtos = new()
         {
-            ["Exportacao:IntervaloReconciliacaoSegundos"] = "0.2",
-            ["Exportacao:LimiteSemSinalDeVidaSegundos"] = "3",
+            ["Exportacao:IntervaloReconciliacaoSegundos"] = "1",
+            ["Exportacao:LimiteSemSinalDeVidaSegundos"] = "10",
         };
 
-        private static readonly TimeSpan LimiteSemSinalCurto = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan LimiteSemSinalCurto = TimeSpan.FromSeconds(10);
 
         private readonly InMemoryDatabaseRoot _raiz = new();
         private readonly string _nomeBanco = "ExportacaoWorker_" + Guid.NewGuid();
@@ -163,12 +166,30 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
             falhou.MensagemErro.Should().Be(MensagemInterrupcao);
             File.Exists(Parcial(interrompido)).Should().BeFalse("o .parcial do job interrompido é apagado no início");
             File.Exists(sobra).Should().BeFalse("todo .parcial da pasta é apagado no início");
-            File.Exists(outroArquivo).Should().BeTrue("o início do worker só apaga .parcial");
+            File.Exists(outroArquivo).Should().BeTrue("o início do worker não apaga o pacote de um job que ele não encerrou");
 
             await AguardarStatusAsync(pendenteAntigo, StatusExportacao.Concluido);
             await AguardarStatusAsync(pendenteRecente, StatusExportacao.Concluido);
             _gerador.Chamadas(interrompido).Should().Be(0);
             _gerador.Ordem.Should().Equal([pendenteAntigo, pendenteRecente], "os Pendente voltam à fila por DataCriacao");
+        }
+
+        [Fact]
+        public async Task Inicio_ProcessandoComPacoteJaPublicado_ViraFalhouEApagaOPacote()
+        {
+            // O executor publicou o .zip, mas a gravação da conclusão ficou sem resposta e o processo parou: o job
+            // continuou Processando com o pacote na pasta. A recuperação do início o encerra e apaga o pacote, que
+            // nunca vale para um job Falhou.
+            var interrompido = CriarJob(StatusExportacao.Processando, j => j.DataInicio = DateTime.UtcNow.AddMinutes(-5));
+            Directory.CreateDirectory(_pasta);
+            File.WriteAllText(Final(interrompido), "pacote publicado antes da parada");
+
+            await IniciarProcessoAsync();
+
+            var job = LerJob(interrompido);
+            Status(job).Should().Be(StatusExportacao.Falhou);
+            job.MensagemErro.Should().Be(MensagemInterrupcao);
+            File.Exists(Final(interrompido)).Should().BeFalse("o pacote do job encerrado no início é apagado");
         }
 
         // -----------------------------------------------------------------------------------------------------
@@ -497,16 +518,24 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
         [Fact]
         public async Task JobEmExecucaoNesteProcesso_NaoEReconciliadoMesmoPassandoOLimite()
         {
+            // O executor não consegue dar sinal de vida (toda gravação que não muda o Status falha), então a Versao do
+            // job fica parada por mais que o limite: só a guarda "em execução neste processo" impede a reconciliação
+            // deste mesmo processo de tomá-lo por órfão.
             _gerador.Segurar = true;
-            var processo = await IniciarProcessoAsync(configuracao: TemposCurtos);
+            var semSinalDeVida = new FalhaNoSinalDeVida();
+            var processo = await IniciarProcessoAsync(configuracao: TemposCurtos, interceptor: semSinalDeVida);
             var id = CriarJob();
             processo.Fila.Enfileirar(id);
             await _gerador.Iniciou(id).WaitAsync(Prazo);
+            var versao = LerJob(id).Versao;
 
             // Várias voltas da reconciliação, passando do limite sem sinal de vida.
             await Task.Delay(LimiteSemSinalCurto * 1.5);
 
-            Status(LerJob(id)).Should().Be(StatusExportacao.Processando, "o job está em execução neste processo");
+            semSinalDeVida.Disparadas.Should().BeGreaterThan(0, "o executor tentou dar sinal de vida e a gravação falhou");
+            var job = LerJob(id);
+            Status(job).Should().Be(StatusExportacao.Processando, "o job está em execução neste processo");
+            job.Versao.Should().Be(versao, "sem sinal de vida a Versao do job não muda durante a geração");
             _gerador.Liberar(id);
             await AguardarStatusAsync(id, StatusExportacao.Concluido);
         }
@@ -525,7 +554,7 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
             executor.Fila.Enfileirar(id);
             await _gerador.Iniciou(id).WaitAsync(Prazo);
 
-            await Task.Delay(LimiteSemSinalCurto * 2);
+            await Task.Delay(LimiteSemSinalCurto * 1.5);
 
             Status(LerJob(id)).Should().Be(StatusExportacao.Processando, "o executor do outro processo continua vivo");
             _gerador.Liberar(id);
@@ -561,17 +590,158 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
         }
 
         // -----------------------------------------------------------------------------------------------------
-        // Revisão, achado 5: pasta obrigatória fora de Development e Test
+        // Reconferência da F2, achado 1: configuração da reconciliação fora da faixa aceita
+        // -----------------------------------------------------------------------------------------------------
+
+        [Theory]
+        [InlineData("5000000", "NaN", true, true)]
+        [InlineData("NaN", "5000000", true, true)]
+        [InlineData("60", "NaN", false, true)]
+        public async Task ConfiguracaoDaReconciliacaoForaDaFaixa_WorkerProcessaNormalmente_EParaRapido(
+            string intervalo, string limite, bool ajustaIntervalo, bool ajustaLimite)
+        {
+            // 5000000 s passa do maior intervalo que o Task.Delay aceita (cerca de 49,7 dias) e NaN não é um tempo.
+            var logs = new ColetorDeAvisos();
+            var processo = await IniciarProcessoAsync(configuracao: new Dictionary<string, string?>
+            {
+                ["Exportacao:IntervaloReconciliacaoSegundos"] = intervalo,
+                ["Exportacao:LimiteSemSinalDeVidaSegundos"] = limite,
+            }, logs: logs);
+            var id = CriarJob();
+            processo.Fila.Enfileirar(id);
+
+            await AguardarStatusAsync(id, StatusExportacao.Concluido);
+
+            await processo.Worker.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            processo.Worker.ExecuteTask.Should().NotBeNull();
+            processo.Worker.ExecuteTask!.IsCompleted.Should().BeTrue("a parada do host encerra o worker, inclusive a reconciliação");
+            logs.Avisos.Any(m => m.Contains("Exportacao:IntervaloReconciliacaoSegundos")).Should()
+                .Be(ajustaIntervalo, "o ajuste de um valor fora da faixa sai como aviso no log");
+            logs.Avisos.Any(m => m.Contains("Exportacao:LimiteSemSinalDeVidaSegundos")).Should()
+                .Be(ajustaLimite, "o ajuste de um valor fora da faixa sai como aviso no log");
+        }
+
+        // -----------------------------------------------------------------------------------------------------
+        // Reconferência da F2, achado 3: resultado desconhecido da gravação da conclusão não apaga o pacote
         // -----------------------------------------------------------------------------------------------------
 
         [Fact]
-        public async Task PastaVaziaForaDeDesenvolvimento_WorkerELimpezaNaoSobem_EJobFicaPendente()
+        public async Task GravacaoDaConclusaoSemRespostaEmTodasAsTentativas_ComConcluidoNoBanco_MantemOPacote()
         {
-            var processo = NovoProcesso(s => s.Pasta = "", ambiente: Environments.Production);
+            // A primeira gravação da conclusão chega ao banco, mas a resposta se perde (exceção depois de gravar); nas
+            // tentativas seguintes o banco nem responde à leitura do job. Para o worker o resultado é desconhecido, e o
+            // banco tem Concluido: apagar o pacote deixaria um job Concluído sem arquivo para baixar.
+            var respostaPerdida = new ConclusaoSemResposta();
+            var processo = await IniciarProcessoAsync(interceptor: respostaPerdida);
+            var id = CriarJob();
+            respostaPerdida.Alvo = id;
+            processo.Fila.Enfileirar(id);
+
+            // Um job por vez: quando a sentinela conclui, o worker já desistiu de gravar a conclusão do primeiro job
+            // (são 5 tentativas, com esperas de 1, 2, 4 e 8 s).
+            var sentinela = CriarJob();
+            processo.Fila.Enfileirar(sentinela);
+            await AguardarStatusAsync(sentinela, StatusExportacao.Concluido, TimeSpan.FromSeconds(45));
+
+            respostaPerdida.LeiturasRecusadas.Should().BeGreaterThan(0, "as tentativas seguintes não conseguem ler o job");
+            var job = LerJob(id);
+            Status(job).Should().Be(StatusExportacao.Concluido, "a primeira gravação chegou ao banco");
+            job.NomeArquivo.Should().Be($"exportacao-{id}.zip");
+            File.Exists(Final(id)).Should().BeTrue("com o resultado da gravação desconhecido o pacote publicado não é apagado");
+            job.TamanhoBytes.Should().Be(new FileInfo(Final(id)).Length);
+        }
+
+        [Fact]
+        public async Task ConclusaoRecusadaPorqueOJobDeixouDeEstarProcessando_ApagaOPacote()
+        {
+            // Controle: quando a conclusão é recusada (outro executor encerrou o job durante a geração, por exemplo a
+            // recuperação do início de outro processo), o pacote nunca vai valer e é apagado.
+            var alvo = 0;
+            _gerador.Comportamento = async (idJob, destino, _, ct) =>
+            {
+                await destino.WriteAsync(new byte[2048], ct);
+                if (idJob == Volatile.Read(ref alvo))
+                {
+                    AlterarJob(idJob, j =>
+                    {
+                        j.Status = (int)StatusExportacao.Falhou;
+                        j.MensagemErro = MensagemInterrupcao;
+                        j.DataConclusao = DateTime.UtcNow;
+                    });
+                }
+
+                return new ResultadoPacoteExportacao(3, 2, 2048);
+            };
+            var processo = await IniciarProcessoAsync();
+            var id = CriarJob();
+            Volatile.Write(ref alvo, id);
+            processo.Fila.Enfileirar(id);
+            var sentinela = CriarJob();
+            processo.Fila.Enfileirar(sentinela);
+
+            await AguardarStatusAsync(sentinela, StatusExportacao.Concluido);
+
+            var job = LerJob(id);
+            Status(job).Should().Be(StatusExportacao.Falhou, "a conclusão foi recusada e vale o estado gravado pelo outro executor");
+            job.MensagemErro.Should().Be(MensagemInterrupcao);
+            File.Exists(Final(id)).Should().BeFalse("o pacote de uma conclusão recusada é apagado");
+            File.Exists(Parcial(id)).Should().BeFalse();
+            File.Exists(Final(sentinela)).Should().BeTrue();
+        }
+
+        // -----------------------------------------------------------------------------------------------------
+        // Reconferência da F2, achado 4: falha ao encerrar um órfão não recomeça a contagem nem para a volta
+        // -----------------------------------------------------------------------------------------------------
+
+        [Fact]
+        public async Task EncerramentoDeOrfaoFalhaUmaVez_RepeteNaVoltaSeguinteSemEsperarOLimite_EOutroOrfaoDaMesmaVoltaEEncerrado()
+        {
+            // Uma volta a cada 2 s e limite de 10 s: "mesma volta" e "volta seguinte" ficam bem separadas no tempo.
+            var falhas = new FalhaAoGravarStatus(StatusExportacao.Falhou, vezes: 1);
+            await IniciarProcessoAsync(configuracao: new Dictionary<string, string?>
+            {
+                ["Exportacao:IntervaloReconciliacaoSegundos"] = "2",
+                ["Exportacao:LimiteSemSinalDeVidaSegundos"] = "10",
+            }, interceptor: falhas);
+
+            // Dois órfãos gravados juntos, depois do início: a reconciliação vê os dois pela primeira vez na mesma volta,
+            // e os dois passam do limite na mesma volta. O primeiro encerramento dessa volta falha (banco fora do ar).
+            var orfaos = CriarJobs(2, StatusExportacao.Processando, j => j.DataInicio = DateTime.UtcNow.AddMinutes(-10));
+
+            await AguardarAsync(() => falhas.Disparadas == 1, "o encerramento do primeiro órfão deveria falhar uma vez",
+                TimeSpan.FromSeconds(30));
+            var falhouEm = falhas.MomentoDaPrimeiraFalha!.Value;
+            var comFalha = falhas.IdDaPrimeiraFalha!.Value;
+            orfaos.Should().Contain(comFalha);
+            var outro = orfaos.Single(id => id != comFalha);
+
+            var encerradoComFalha = await AguardarStatusAsync(comFalha, StatusExportacao.Falhou, TimeSpan.FromSeconds(30));
+            var encerradoOutro = await AguardarStatusAsync(outro, StatusExportacao.Falhou);
+
+            using (new AssertionScope())
+            {
+                encerradoOutro.DataConclusao.Should().NotBeNull().And.BeOnOrBefore(falhouEm.AddSeconds(1),
+                    "o outro órfão é encerrado na mesma volta em que o encerramento do primeiro falhou");
+                encerradoComFalha.DataConclusao.Should().NotBeNull().And.BeOnOrBefore(falhouEm.AddSeconds(5),
+                    "o órfão cujo encerramento falhou é encerrado na volta seguinte, sem esperar de novo o limite de 10 s");
+                encerradoComFalha.MensagemErro.Should().Be(MensagemInterrupcao);
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------------------
+        // Revisão, achado 5, e reconferência da F2, pergunta 5: pasta obrigatória fora de Development
+        // -----------------------------------------------------------------------------------------------------
+
+        [Theory]
+        [InlineData("Production")]
+        [InlineData("Test")]
+        public async Task PastaVaziaForaDeDesenvolvimento_WorkerELimpezaNaoSobem_EJobFicaPendente(string ambiente)
+        {
+            var processo = NovoProcesso(s => s.Pasta = "", ambiente: ambiente);
 
             await IniciarAsync(processo.Worker);
             processo.Worker.ExecuteTask.Should()
-                .BeNull("sem Exportacao:Pasta fora de Development e Test o worker não pode usar a pasta temporária compartilhada");
+                .BeNull("sem Exportacao:Pasta fora de Development o worker não pode usar a pasta temporária compartilhada");
 
             var limpeza = processo.Provedor.GetRequiredService<ExportacaoLimpeza>();
             await IniciarAsync(limpeza);
@@ -582,6 +752,20 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
             await Task.Delay(300);
             Status(LerJob(id)).Should().Be(StatusExportacao.Pendente);
             _gerador.Chamadas(id).Should().Be(0);
+        }
+
+        [Theory]
+        [InlineData("Development", "", false)]
+        [InlineData("Test", "", true)]
+        [InlineData("Staging", "", true)]
+        [InlineData("Production", "   ", true)]
+        [InlineData("Production", @"D:\PagueAres\Exportacao", false)]
+        [InlineData("Test", @"D:\PagueAres\Exportacao", false)]
+        public void PastaObrigatoriaAusente_SoDevelopmentAceitaPastaVazia(string ambiente, string pasta, bool ausente)
+        {
+            var settings = new ExportacaoSettings { Pasta = pasta };
+
+            ArquivosExportacao.PastaObrigatoriaAusente(settings, new AmbienteFalso(ambiente)).Should().Be(ausente);
         }
 
         [Fact]
@@ -814,10 +998,14 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
         /// </summary>
         private Processo NovoProcesso(Action<ExportacaoSettings>? ajustar = null,
             IReadOnlyDictionary<string, string?>? configuracao = null, string ambiente = "Production",
-            IInterceptor? interceptor = null)
+            IInterceptor? interceptor = null, ILoggerProvider? logs = null)
         {
             var services = new ServiceCollection();
-            services.AddLogging();
+            services.AddLogging(b =>
+            {
+                if (logs is not null)
+                    b.AddProvider(logs);
+            });
             services.AddDbContext<PagueAresContext>(o =>
             {
                 o.UseInMemoryDatabase(_nomeBanco, _raiz);
@@ -849,9 +1037,10 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
         }
 
         private async Task<Processo> IniciarProcessoAsync(Action<ExportacaoSettings>? ajustar = null,
-            IReadOnlyDictionary<string, string?>? configuracao = null, IInterceptor? interceptor = null)
+            IReadOnlyDictionary<string, string?>? configuracao = null, IInterceptor? interceptor = null,
+            ILoggerProvider? logs = null)
         {
-            var processo = NovoProcesso(ajustar, configuracao, interceptor: interceptor);
+            var processo = NovoProcesso(ajustar, configuracao, interceptor: interceptor, logs: logs);
             await IniciarAsync(processo.Worker);
             return processo;
         }
@@ -879,6 +1068,27 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
             ctx.ExportacaoJobs.Add(job);
             ctx.SaveChanges();
             return job.IdExportacaoJob;
+        }
+
+        /// <summary>Cria vários jobs numa só gravação, para que apareçam juntos para quem consulta o banco.</summary>
+        private List<int> CriarJobs(int quantidade, StatusExportacao status, Action<ExportacaoJob>? ajustar = null)
+        {
+            using var ctx = NovoContexto();
+            var jobs = Enumerable.Range(0, quantidade).Select(_ =>
+            {
+                var job = new ExportacaoJob
+                {
+                    IdUsuario = IdUsuarioFicticio,
+                    Status = (int)status,
+                    FiltrosJson = JsonSerializer.Serialize(new FiltroExportacaoDto(), Json),
+                    DataCriacao = DateTime.UtcNow,
+                };
+                ajustar?.Invoke(job);
+                return job;
+            }).ToList();
+            ctx.ExportacaoJobs.AddRange(jobs);
+            ctx.SaveChanges();
+            return jobs.Select(j => j.IdExportacaoJob).ToList();
         }
 
         private ExportacaoJob LerJob(int id)
@@ -909,9 +1119,9 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
 
         private static StatusExportacao Status(ExportacaoJob job) => (StatusExportacao)job.Status;
 
-        private async Task<ExportacaoJob> AguardarStatusAsync(int id, StatusExportacao esperado)
+        private async Task<ExportacaoJob> AguardarStatusAsync(int id, StatusExportacao esperado, TimeSpan? prazo = null)
         {
-            var limite = DateTime.UtcNow + Prazo;
+            var limite = DateTime.UtcNow + (prazo ?? Prazo);
             while (true)
             {
                 var job = LerJob(id);
@@ -930,9 +1140,9 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
             }
         }
 
-        private static async Task AguardarAsync(Func<bool> condicao, string motivo)
+        private static async Task AguardarAsync(Func<bool> condicao, string motivo, TimeSpan? prazo = null)
         {
-            var limite = DateTime.UtcNow + Prazo;
+            var limite = DateTime.UtcNow + (prazo ?? Prazo);
             while (!condicao())
             {
                 if (DateTime.UtcNow > limite)
@@ -1082,7 +1292,63 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
         /// </summary>
         private sealed class FalhaAoGravarStatus(StatusExportacao alvo, int vezes) : SaveChangesInterceptor
         {
+            private readonly object _trava = new();
             private int _tentativas;
+            private int _disparadas;
+            private int? _idDaPrimeiraFalha;
+            private DateTime? _momentoDaPrimeiraFalha;
+
+            public int Disparadas => Volatile.Read(ref _disparadas);
+
+            /// <summary>Job da primeira gravação que falhou.</summary>
+            public int? IdDaPrimeiraFalha { get { lock (_trava) return _idDaPrimeiraFalha; } }
+
+            /// <summary>Momento (UTC) da primeira gravação que falhou.</summary>
+            public DateTime? MomentoDaPrimeiraFalha { get { lock (_trava) return _momentoDaPrimeiraFalha; } }
+
+            public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
+            {
+                Verificar(eventData.Context);
+                return base.SavingChanges(eventData, result);
+            }
+
+            public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+                InterceptionResult<int> result, CancellationToken cancellationToken = default)
+            {
+                Verificar(eventData.Context);
+                return base.SavingChangesAsync(eventData, result, cancellationToken);
+            }
+
+            private void Verificar(DbContext? contexto)
+            {
+                var entrada = contexto?.ChangeTracker.Entries<ExportacaoJob>().FirstOrDefault(e =>
+                    e.State == EntityState.Modified
+                    && e.Property(j => j.Status).IsModified
+                    && e.Entity.Status == (int)alvo);
+                if (entrada is null || Interlocked.Increment(ref _tentativas) > vezes)
+                    return;
+
+                lock (_trava)
+                {
+                    if (_idDaPrimeiraFalha is null)
+                    {
+                        _idDaPrimeiraFalha = entrada.Entity.IdExportacaoJob;
+                        _momentoDaPrimeiraFalha = DateTime.UtcNow;
+                    }
+                }
+
+                Interlocked.Increment(ref _disparadas);
+                throw new DbUpdateException("Simulação: o banco de dados está fora do ar.");
+            }
+        }
+
+        /// <summary>
+        /// Simula o banco recusando as gravações de job que não mudam o <c>Status</c>, ou seja, o progresso e o sinal de
+        /// vida do executor; a reivindicação e os estados finais passam. Sem sinal de vida, a <c>Versao</c> do job em
+        /// execução fica parada.
+        /// </summary>
+        private sealed class FalhaNoSinalDeVida : SaveChangesInterceptor
+        {
             private int _disparadas;
 
             public int Disparadas => Volatile.Read(ref _disparadas);
@@ -1102,15 +1368,97 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
 
             private void Verificar(DbContext? contexto)
             {
-                var levaAoAlvo = contexto?.ChangeTracker.Entries<ExportacaoJob>().Any(e =>
-                    e.State == EntityState.Modified
-                    && e.Property(j => j.Status).IsModified
-                    && e.Entity.Status == (int)alvo) == true;
-                if (!levaAoAlvo || Interlocked.Increment(ref _tentativas) > vezes)
+                var semMudarStatus = contexto?.ChangeTracker.Entries<ExportacaoJob>().Any(e =>
+                    e.State == EntityState.Modified && !e.Property(j => j.Status).IsModified) == true;
+                if (!semMudarStatus)
                     return;
 
                 Interlocked.Increment(ref _disparadas);
-                throw new DbUpdateException("Simulação: o banco de dados está fora do ar.");
+                throw new DbUpdateException("Simulação: o banco recusou a gravação do sinal de vida.");
+            }
+        }
+
+        /// <summary>
+        /// Simula a resposta perdida da gravação que conclui o job <see cref="Alvo"/>: a gravação chega ao banco, mas o
+        /// worker recebe uma exceção; dali em diante toda leitura desse job neste processo falha, como com o banco fora
+        /// do ar. As leituras feitas pelo teste (contextos sem o interceptor) continuam funcionando.
+        /// </summary>
+        private sealed class ConclusaoSemResposta : SaveChangesInterceptor, IMaterializationInterceptor
+        {
+            private int _alvo;
+            private int _bancoFora;
+            private int _leiturasRecusadas;
+
+            public int Alvo
+            {
+                get => Volatile.Read(ref _alvo);
+                set => Volatile.Write(ref _alvo, value);
+            }
+
+            public int LeiturasRecusadas => Volatile.Read(ref _leiturasRecusadas);
+
+            public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+            {
+                Verificar(eventData.Context);
+                return base.SavedChanges(eventData, result);
+            }
+
+            public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+                CancellationToken cancellationToken = default)
+            {
+                Verificar(eventData.Context);
+                return base.SavedChangesAsync(eventData, result, cancellationToken);
+            }
+
+            public object InitializedInstance(MaterializationInterceptionData materializationData, object entity)
+            {
+                if (Volatile.Read(ref _bancoFora) == 1 && entity is ExportacaoJob job && job.IdExportacaoJob == Alvo)
+                {
+                    Interlocked.Increment(ref _leiturasRecusadas);
+                    throw new InvalidOperationException("Simulação: o banco de dados não responde.");
+                }
+
+                return entity;
+            }
+
+            private void Verificar(DbContext? contexto)
+            {
+                var concluiu = contexto?.ChangeTracker.Entries<ExportacaoJob>().Any(e =>
+                    e.Entity.IdExportacaoJob == Alvo && e.Entity.Status == (int)StatusExportacao.Concluido) == true;
+                if (!concluiu || Interlocked.Exchange(ref _bancoFora, 1) == 1)
+                    return;
+
+                throw new DbUpdateException("Simulação: a gravação chegou ao banco, mas a resposta se perdeu.");
+            }
+        }
+
+        /// <summary>Guarda as mensagens de aviso do log (até um limite, para não crescer sem fim).</summary>
+        private sealed class ColetorDeAvisos : ILoggerProvider
+        {
+            private const int Maximo = 1000;
+            private readonly ConcurrentQueue<string> _avisos = new();
+
+            public IReadOnlyList<string> Avisos => [.. _avisos];
+
+            public ILogger CreateLogger(string categoria) => new Registrador(this);
+
+            public void Dispose()
+            {
+                // Compartilhado entre os processos do teste: nada a liberar.
+            }
+
+            private sealed class Registrador(ColetorDeAvisos coletor) : ILogger
+            {
+                public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+                public bool IsEnabled(LogLevel logLevel) => logLevel == LogLevel.Warning;
+
+                public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+                    Func<TState, Exception?, string> formatter)
+                {
+                    if (logLevel == LogLevel.Warning && coletor._avisos.Count < Maximo)
+                        coletor._avisos.Enqueue(formatter(state, exception));
+                }
             }
         }
     }
