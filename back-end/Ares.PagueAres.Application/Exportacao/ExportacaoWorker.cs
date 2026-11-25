@@ -66,6 +66,23 @@ namespace Ares.PagueAres.Application.Exportacao
         /// </summary>
         private const int SinaisDeVidaPorLimite = 10;
 
+        /// <summary>
+        /// Faixa aceita para <c>IntervaloReconciliacaoSegundos</c>: de 1 s (sem consultas ao banco em sequência) a 1 h
+        /// (bem abaixo do maior tempo que o <see cref="Task.Delay(TimeSpan, CancellationToken)"/> aceita).
+        /// </summary>
+        private const double IntervaloReconciliacaoMinimoSegundos = 1;
+
+        private const double IntervaloReconciliacaoMaximoSegundos = 3600;
+
+        /// <summary>
+        /// Faixa aceita para <c>LimiteSemSinalDeVidaSegundos</c>: de 10 s (abaixo disso, uma lentidão passageira do banco
+        /// basta para a reconciliação de outro processo tomar por órfão um job que ainda gera) a 1 dia (acima disso, um
+        /// job sem executor prenderia por tempo demais o limite de exportações em andamento do usuário).
+        /// </summary>
+        private const double LimiteSemSinalDeVidaMinimoSegundos = 10;
+
+        private const double LimiteSemSinalDeVidaMaximoSegundos = 86400;
+
         private static readonly JsonSerializerOptions OpcoesFiltro = new(JsonSerializerDefaults.Web)
         {
             Converters = { new JsonStringEnumConverter() },
@@ -88,19 +105,49 @@ namespace Ares.PagueAres.Application.Exportacao
             _medidorEspaco = medidorEspaco;
             _ambiente = ambiente;
             _logger = logger;
+
+            var padrao = new ExportacaoSettings();
+            IntervaloReconciliacao = SegundosNaFaixa(_settings.IntervaloReconciliacaoSegundos,
+                nameof(ExportacaoSettings.IntervaloReconciliacaoSegundos),
+                IntervaloReconciliacaoMinimoSegundos, IntervaloReconciliacaoMaximoSegundos,
+                padrao.IntervaloReconciliacaoSegundos);
+            LimiteSemSinalDeVida = SegundosNaFaixa(_settings.LimiteSemSinalDeVidaSegundos,
+                nameof(ExportacaoSettings.LimiteSemSinalDeVidaSegundos),
+                LimiteSemSinalDeVidaMinimoSegundos, LimiteSemSinalDeVidaMaximoSegundos,
+                padrao.LimiteSemSinalDeVidaSegundos);
         }
 
         /// <summary>Tempo sem nenhuma gravação do executor depois do qual um job Processando é tido como órfão.</summary>
-        private TimeSpan LimiteSemSinalDeVida => TimeSpan.FromSeconds(Math.Max(1, _settings.LimiteSemSinalDeVidaSegundos));
+        private TimeSpan LimiteSemSinalDeVida { get; }
 
         private TimeSpan IntervaloSinalDeVida => LimiteSemSinalDeVida / SinaisDeVidaPorLimite;
 
-        private TimeSpan IntervaloReconciliacao => TimeSpan.FromSeconds(Math.Max(0.1, _settings.IntervaloReconciliacaoSegundos));
+        private TimeSpan IntervaloReconciliacao { get; }
+
+        /// <summary>
+        /// Converte em tempo um valor de configuração em segundos, limitado à faixa aceita. Um valor fora dela, inclusive
+        /// infinito, vira o extremo mais próximo, e um valor que não é número (NaN) vira o padrão; nos dois casos o log
+        /// registra um aviso. Assim nenhum valor da configuração chega ao <see cref="TimeSpan"/> ou ao
+        /// <see cref="Task.Delay(TimeSpan, CancellationToken)"/> fora do que eles aceitam.
+        /// </summary>
+        private TimeSpan SegundosNaFaixa(double valor, string nome, double minimo, double maximo, double padrao)
+        {
+            var ajustado = double.IsNaN(valor) ? padrao : Math.Clamp(valor, minimo, maximo);
+            if (ajustado != valor)
+            {
+                _logger.LogWarning(
+                    "Exportacao:{Configuracao} = {Valor} está fora da faixa aceita ({Minimo} a {Maximo} segundos); " +
+                    "o serviço de exportação usa {Ajustado} segundos.",
+                    nome, valor, minimo, maximo, ajustado);
+            }
+
+            return TimeSpan.FromSeconds(ajustado);
+        }
 
         /// <summary>
         /// Faz a recuperação antes de começar a ler a fila, para que ela termine antes de qualquer reivindicação deste
         /// processo: um job que este worker acabou de pegar nunca é confundido com um job interrompido. Sem
-        /// <c>Exportacao:Pasta</c> fora de Development e Test o worker não sobe (veja
+        /// <c>Exportacao:Pasta</c> fora de Development o worker não sobe (veja
         /// <see cref="ArquivosExportacao.PastaObrigatoriaAusente"/>).
         /// </summary>
         public override async Task StartAsync(CancellationToken cancellationToken)
@@ -141,8 +188,9 @@ namespace Ares.PagueAres.Application.Exportacao
         // -----------------------------------------------------------------------------------------------------
 
         /// <summary>
-        /// Encerra os jobs que estavam Processando, apaga os <c>.parcial</c> e reenfileira os Pendente. Uma falha aqui
-        /// (por exemplo, banco fora do ar na subida) só vai para o log: a reconciliação periódica refaz o trabalho.
+        /// Encerra os jobs que estavam Processando (e apaga o pacote que algum deles tenha chegado a publicar), apaga os
+        /// <c>.parcial</c> e reenfileira os Pendente. Uma falha aqui (por exemplo, banco fora do ar na subida) só vai
+        /// para o log: a reconciliação periódica refaz o trabalho.
         /// </summary>
         private async Task RecuperarAsync(CancellationToken ct)
         {
@@ -165,6 +213,9 @@ namespace Ares.PagueAres.Application.Exportacao
                     if (await GravacaoExportacaoJob.AtualizarAsync(_scopeFactory, id,
                             job => MarcarFalhou(job, MensagemInterrupcao), ct))
                     {
+                        // O executor anterior pode ter publicado o pacote sem conseguir gravar a conclusão (veja
+                        // ConcluirAsync): o pacote de um job Falhou nunca vale.
+                        ArquivosExportacao.TentarApagar(Path.Combine(pasta, ArquivosExportacao.NomeArquivo(id)), _logger);
                         _logger.LogWarning("Exportação {IdExportacao} estava em processamento no início do serviço e foi marcada como falha.", id);
                     }
                 }
@@ -225,19 +276,19 @@ namespace Ares.PagueAres.Application.Exportacao
         /// A cada <c>IntervaloReconciliacaoSegundos</c>, encerra os jobs Processando órfãos e reenfileira os Pendente
         /// que estão fora da fila. Cobre o que a recuperação do início não alcança: uma gravação de estado final que
         /// falhou de vez, uma reivindicação que falhou (o job continua Pendente, mas saiu da fila) e uma recuperação
-        /// do início que falhou. Nunca lança.
+        /// do início que falhou. Nunca lança, e termina na parada do host qualquer que seja a exceção em curso.
         /// </summary>
         private async Task ReconciliarPeriodicamenteAsync(CancellationToken stoppingToken)
         {
             var observados = new Dictionary<int, ObservacaoJob>();
-            while (true)
+            while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     await Task.Delay(IntervaloReconciliacao, stoppingToken);
                     await ReconciliarAsync(observados, stoppingToken);
                 }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                catch (Exception) when (stoppingToken.IsCancellationRequested)
                 {
                     return;
                 }
@@ -290,7 +341,9 @@ namespace Ares.PagueAres.Application.Exportacao
         /// menos <see cref="LimiteSemSinalDeVida"/>. O executor de qualquer processo renova a <c>Versao</c> a cada
         /// gravação de progresso e a cada sinal de vida (<see cref="IntervaloSinalDeVida"/>), então um job em execução
         /// em outro processo nunca fica tanto tempo com a mesma <c>Versao</c>. O encerramento grava com o token
-        /// <c>Versao</c> observado: se o executor gravou no meio, nada muda.
+        /// <c>Versao</c> observado: se o executor gravou no meio, nada muda. Se o encerramento de um job falhar (por
+        /// exemplo, banco fora do ar), a observação dele continua valendo, a próxima volta tenta de novo sem recomeçar a
+        /// contagem, e os demais órfãos desta volta seguem sendo encerrados.
         /// </summary>
         private async Task EncerrarOrfaosAsync(List<(int Id, Guid Versao)> processando,
             Dictionary<int, ObservacaoJob> observados, CancellationToken ct)
@@ -317,8 +370,16 @@ namespace Ares.PagueAres.Application.Exportacao
                 if (Stopwatch.GetElapsedTime(observacao.DesdeTimestamp, agora) < LimiteSemSinalDeVida)
                     continue;
 
-                observados.Remove(id);
-                await EncerrarOrfaoAsync(id, versao, ct);
+                try
+                {
+                    await EncerrarOrfaoAsync(id, versao, ct);
+                    observados.Remove(id);
+                }
+                catch (Exception ex) when (!ct.IsCancellationRequested)
+                {
+                    _logger.LogError(ex,
+                        "Falha ao encerrar a exportação {IdExportacao}, em processamento sem executor; nova tentativa na próxima volta.", id);
+                }
             }
         }
 
@@ -518,7 +579,7 @@ namespace Ares.PagueAres.Application.Exportacao
 
             if (cancelado)
             {
-                if (await GravarEstadoFinalAsync(id, MarcarCancelado, stoppingToken))
+                if (await GravarEstadoFinalAsync(id, MarcarCancelado, stoppingToken) == ResultadoGravacao.Gravada)
                     _logger.LogInformation("Exportação {IdExportacao} cancelada durante a geração.", id);
             }
             else if (mensagemFalha is not null)
@@ -528,16 +589,19 @@ namespace Ares.PagueAres.Application.Exportacao
         }
 
         /// <summary>
-        /// Grava a conclusão. Devolve <c>false</c> quando o pacote não deve ficar disponível: o job deixou de estar
-        /// Processando (outro executor o mudou), o cancelamento foi pedido no banco enquanto ele terminava, ou a
-        /// gravação falhou em todas as tentativas (o job fica para a reconciliação, que o marca como Falhou).
+        /// Grava a conclusão. Devolve <c>false</c> quando o pacote deve ser apagado porque nunca vai valer: a gravação foi
+        /// recusada (o job deixou de estar Processando, porque outro executor o mudou) ou o cancelamento foi pedido no
+        /// banco enquanto ele terminava. Quando o resultado é desconhecido (as tentativas se esgotaram por erro, ou o
+        /// host parou no meio delas), a conclusão pode ter sido gravada e só a resposta se perdido, então o pacote fica:
+        /// se o job continuou Processando, quem o encerra (a reconciliação periódica ou a recuperação do próximo início)
+        /// também apaga o pacote.
         /// </summary>
         private async Task<bool> ConcluirAsync(int id, string nomeArquivo, long tamanhoBytes,
             ResultadoPacoteExportacao resultado, CancellationToken stoppingToken)
         {
             var cancelado = false;
             var jaConcluido = false;
-            var gravou = await GravarEstadoFinalAsync(id, job =>
+            var gravacao = await GravarEstadoFinalAsync(id, job =>
             {
                 // Uma tentativa anterior pode ter gravado e só a resposta do banco se perdeu.
                 jaConcluido = job.Status == (int)StatusExportacao.Concluido && job.NomeArquivo == nomeArquivo;
@@ -563,31 +627,64 @@ namespace Ares.PagueAres.Application.Exportacao
                 return true;
             }, stoppingToken);
 
-            if (jaConcluido || (gravou && !cancelado))
+            if (jaConcluido || (gravacao == ResultadoGravacao.Gravada && !cancelado))
             {
                 _logger.LogInformation("Exportação {IdExportacao} concluída: {Titulos} títulos, {Anexos} anexos, {Bytes} bytes.",
                     id, resultado.TotalTitulos, resultado.TotalAnexos, tamanhoBytes);
                 return true;
             }
 
+            // Com o cancelamento pedido o pacote nunca vale, tenha a gravação do Cancelado chegado ao banco ou não.
+            if (gravacao == ResultadoGravacao.Desconhecida && !cancelado)
+            {
+                _logger.LogWarning(
+                    "Resultado desconhecido da gravação da conclusão da exportação {IdExportacao}; o pacote fica na pasta. " +
+                    "Se a conclusão não foi gravada, a reconciliação (ou a recuperação do próximo início) encerra o job " +
+                    "como falha e apaga o pacote.", id);
+                return true;
+            }
+
             return false;
+        }
+
+        /// <summary>Resultado da gravação de um estado final.</summary>
+        private enum ResultadoGravacao
+        {
+            /// <summary>O estado foi gravado.</summary>
+            Gravada,
+
+            /// <summary>
+            /// O estado não foi gravado: o job não existe, a regra recusou a mudança (o job já não estava como esperado)
+            /// ou outras gravações do mesmo job venceram todas as tentativas.
+            /// </summary>
+            Recusada,
+
+            /// <summary>
+            /// As tentativas se esgotaram por erro, ou o host parou no meio delas: a última gravação pode ter chegado ao
+            /// banco sem que a resposta voltasse.
+            /// </summary>
+            Desconhecida,
         }
 
         /// <summary>
         /// Grava um estado final com <see cref="GravacaoExportacaoJob.AtualizarAsync"/>, repetindo com espera crescente
         /// (<see cref="EsperaInicialGravacaoFinal"/>, dobrando, até <see cref="TentativasGravacaoFinal"/> tentativas)
         /// quando a gravação falha, por exemplo com o banco fora do ar. Na parada do host não repete: o job que ficar
-        /// Processando é encerrado pela recuperação do próximo início. Esgotadas as tentativas, devolve <c>false</c> e o
-        /// job fica para a reconciliação periódica. Nunca lança.
+        /// Processando é encerrado pela recuperação do próximo início. Esgotadas as tentativas, devolve
+        /// <see cref="ResultadoGravacao.Desconhecida"/> e o job, se continuar Processando, fica para a reconciliação
+        /// periódica. Nunca lança.
         /// </summary>
-        private async Task<bool> GravarEstadoFinalAsync(int id, Func<ExportacaoJob, bool> alterar, CancellationToken stoppingToken)
+        private async Task<ResultadoGravacao> GravarEstadoFinalAsync(int id, Func<ExportacaoJob, bool> alterar,
+            CancellationToken stoppingToken)
         {
             var espera = EsperaInicialGravacaoFinal;
             for (var tentativa = 1; ; tentativa++)
             {
                 try
                 {
-                    return await GravacaoExportacaoJob.AtualizarAsync(_scopeFactory, id, alterar, CancellationToken.None);
+                    return await GravacaoExportacaoJob.AtualizarAsync(_scopeFactory, id, alterar, CancellationToken.None)
+                        ? ResultadoGravacao.Gravada
+                        : ResultadoGravacao.Recusada;
                 }
                 catch (Exception ex) when (tentativa < TentativasGravacaoFinal && !stoppingToken.IsCancellationRequested)
                 {
@@ -600,7 +697,7 @@ namespace Ares.PagueAres.Application.Exportacao
                     _logger.LogError(ex,
                         "Não foi possível gravar o estado final da exportação {IdExportacao} depois de {Tentativas} tentativas; " +
                         "a reconciliação periódica a encerra.", id, tentativa);
-                    return false;
+                    return ResultadoGravacao.Desconhecida;
                 }
 
                 try
@@ -610,7 +707,7 @@ namespace Ares.PagueAres.Application.Exportacao
                 catch (OperationCanceledException)
                 {
                     _logger.LogWarning("Parada do serviço durante as tentativas de gravar o estado final da exportação {IdExportacao}.", id);
-                    return false;
+                    return ResultadoGravacao.Desconhecida;
                 }
 
                 espera *= 2;
@@ -830,9 +927,6 @@ namespace Ares.PagueAres.Application.Exportacao
     {
         public const string PrefixoArquivo = "exportacao-";
 
-        /// <summary>Ambiente dos testes automatizados, em que a pasta vazia também é aceita.</summary>
-        public const string AmbienteTestes = "Test";
-
         private static readonly Regex PadraoPacote =
             new(@"\Aexportacao-[0-9]+\.zip\z", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
@@ -841,7 +935,7 @@ namespace Ares.PagueAres.Application.Exportacao
 
         /// <summary>
         /// Pasta configurada em <c>Exportacao:Pasta</c>; vazia, a pasta temporária do processo (aceita só em
-        /// Development e Test, veja <see cref="PastaObrigatoriaAusente"/>).
+        /// Development, veja <see cref="PastaObrigatoriaAusente"/>).
         /// </summary>
         public static string ResolverPasta(ExportacaoSettings settings) =>
             string.IsNullOrWhiteSpace(settings.Pasta)
@@ -849,15 +943,14 @@ namespace Ares.PagueAres.Application.Exportacao
                 : Path.GetFullPath(settings.Pasta);
 
         /// <summary>
-        /// Fora dos ambientes Development e Test, <c>Exportacao:Pasta</c> é obrigatória. A pasta temporária pode ser a
-        /// mesma para duas instâncias da API no mesmo servidor (homologação e produção, por exemplo), e os nomes
+        /// Fora do ambiente Development, <c>Exportacao:Pasta</c> é obrigatória. A pasta temporária pode ser a mesma para
+        /// duas instâncias da API no mesmo servidor (homologação e produção, por exemplo), e os nomes
         /// <c>exportacao-&lt;id&gt;.zip</c> se repetem entre bancos: uma instância sobrescreveria ou apagaria os pacotes
-        /// da outra. Com a pasta ausente, o worker e a limpeza não sobem e a API recusa novas exportações com 503.
+        /// da outra. Com a pasta ausente, o worker e a limpeza não sobem e a API recusa novas exportações com 503. Os
+        /// testes automatizados (ambiente Test) também configuram uma pasta própria.
         /// </summary>
         public static bool PastaObrigatoriaAusente(ExportacaoSettings settings, IHostEnvironment ambiente) =>
-            string.IsNullOrWhiteSpace(settings.Pasta)
-            && !ambiente.IsDevelopment()
-            && !ambiente.IsEnvironment(AmbienteTestes);
+            string.IsNullOrWhiteSpace(settings.Pasta) && !ambiente.IsDevelopment();
 
         public static string NomeArquivo(int idExportacao) => $"{PrefixoArquivo}{idExportacao}.zip";
 

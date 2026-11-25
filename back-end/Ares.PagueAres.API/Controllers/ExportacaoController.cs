@@ -89,7 +89,7 @@ namespace Ares.PagueAres.API.Controllers
                 if (recusa is not null)
                     return recusa;
 
-                // Sem pasta própria fora de Development e Test o worker não sobe: um job criado agora ficaria Pendente
+                // Sem pasta própria fora de Development o worker não sobe: um job criado agora ficaria Pendente
                 // para sempre. Recusa com 503 até a configuração ser corrigida.
                 if (ArquivosExportacao.PastaObrigatoriaAusente(_settings, ambiente))
                 {
