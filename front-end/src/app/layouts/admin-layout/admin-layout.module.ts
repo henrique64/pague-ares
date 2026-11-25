@@ -29,6 +29,7 @@ import { TravelTypeListComponent } from "app/configuration/travel-type-list/trav
 import { ExportacoesComponent } from "app/exportacoes/exportacoes.component";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
 import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginator";
+import { PROVIDERS_DATA_PT_BR } from "app/core/date/pt-br-date-adapter";
 
 @NgModule({
   imports: [
@@ -54,7 +55,7 @@ import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginato
     MatProgressSpinnerModule,
     MatPaginatorModule
   ],
-  providers: [provideNgxMask()],
+  providers: [provideNgxMask(), ...PROVIDERS_DATA_PT_BR],
   declarations: [
     HomeComponent,
     PaymentsComponent,

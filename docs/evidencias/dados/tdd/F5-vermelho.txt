@@ -1,0 +1,35 @@
+F5 vermelho (defeitos 1 e 2: datas digitadas lidas como mes/dia; "Limpar Filtros" deixa texto de data no campo)
+Comando: npx ng test --watch=false --browsers=ChromeHeadless (Edge headless), no front-end, branch feature/exportacao-anexos-f5
+Resultado: TOTAL: 14 FAILED, 124 SUCCESS (138 specs). Nenhuma falha de compilacao.
+Esqueleto: src/app/core/date/pt-br-date-adapter.ts so herda NativeDateAdapter (sem parse/format proprios) e nao esta
+  ligado ao AdminLayoutModule; isso reproduz o comportamento atual do app.
+Arquivos de teste: src/app/core/date/pt-br-date-adapter.spec.ts e src/app/exportacoes/exportacoes.component.spec.ts
+
+Defeito 1 - Date.parse le 01/11/2025 como MM/dd/aaaa
+ [FALHOU] PtBrDateAdapter parse 01/11/2025 e 1o de novembro, nao 11 de janeiro
+          Expected 0 to be 10.  /  Expected 11 to be 1.   (virou 11 de janeiro)
+ [FALHOU] PtBrDateAdapter parse 31/12/2025 e 31 de dezembro
+          Expected NaN to be 2025. (Date.parse("31/12/2025") e invalido: mes 31)
+ [FALHOU] PtBrDateAdapter parse aceita dia e mes sem zero a esquerda (1/2/2025)
+          Expected 0 to be 1.  /  Expected 2 to be 1.   (virou 2 de janeiro)
+ [FALHOU] PtBrDateAdapter parse mes 13 e dia 0 devolvem data invalida
+          Expected true to be false. (10/13/2025 foi aceito como 13 de outubro)
+ [FALHOU] PtBrDateAdapter parse tolera espacos / hora zerada / texto que nao e data / ano bissexto / vazio ou so espacos
+ [FALHOU] PtBrDateAdapter format o que e exibido volta igual quando digitado de novo
+          Expected 1788318000000 to be 1770606000000. (exibe 09/02/2026, relido como 2 de setembro)
+ [FALHOU] PtBrDateAdapter ligacao: o AdminLayoutModule usa o adaptador pt-BR
+          Expected 'en-US' to be 'pt-BR'. / Expected false to be true. / Expected 0 to be 10.
+ [FALHOU] ExportacoesComponent digitar 01/11/2025 no inicio do periodo da solicitacao vale 1o de novembro
+          Expected 0 to be 10. / Expected 11 to be 1. / Expected '2025-01-11' to be '2025-11-01'.
+          / Expected undefined to be '2025-12-31'. (31/12/2025 digitado no fim nao chega ao filtro)
+ Passam no vermelho (controles): 31/02/2025 invalida (por acaso, Date.parse rejeita), vazio -> null,
+  e o spec de data impossivel no componente.
+
+Defeito 2 - "Limpar Filtros" deixa o texto da data no campo
+ [FALHOU] ExportacoesComponent Limpar Filtros esvazia os campos de data na tela e o filtro montado nao traz datas
+          Expected '31/12/2025' to be ''. (tres campos de fim de periodo seguem com o texto; o texto digitado nunca virou
+          valor do modelo, entao zerar o modelo nao muda nada para o ngModel)
+          Expected 3 to be 6. (so 3 das 6 datas chegaram ao modelo, efeito do defeito 1)
+ [FALHOU] ExportacoesComponent Limpar Filtros tambem esvazia texto de data ainda invalido (que nao chegou ao modelo)
+          Expected '31/02/2025' to be ''.
+ Controle que ja passa: Limpar Filtros esvazia os demais campos de texto da tela (codigo, documento, nome, CPF/CNPJ).
