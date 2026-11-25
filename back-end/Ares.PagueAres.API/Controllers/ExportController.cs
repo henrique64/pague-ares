@@ -337,11 +337,13 @@ namespace Ares.PagueAres.API.Controllers
 
                 zipStream.SetLevel(3); //0-9, 9 being the highest level of compression
 
-                foreach (var attachment in attachments)
+                var nomesEntradas = NomesEntradasZip(attachments.Select(a => (a.IdDocumentoRddv, (string?)a.NomeArquivo)));
+
+                foreach (var (attachment, nomeEntrada) in attachments.Zip(nomesEntradas))
                 {
                     MemoryStream msAtt = new MemoryStream(Convert.FromBase64String(attachment.Arquivo.Contains(",") ? attachment.Arquivo.Split(",")[1] : attachment.Arquivo));
 
-                    ZipEntry xmlEntry = new ZipEntry(attachment.NomeArquivo);
+                    ZipEntry xmlEntry = new ZipEntry(nomeEntrada);
                     xmlEntry.DateTime = DateTime.Now;
 
                     zipStream.PutNextEntry(xmlEntry);
@@ -399,11 +401,13 @@ namespace Ares.PagueAres.API.Controllers
 
                 zipStream.SetLevel(3); //0-9, 9 being the highest level of compression
 
-                foreach (var attachment in attachments)
+                var nomesEntradas = NomesEntradasZip(attachments.Select(a => (a.IdDocumentoSolicitacao, (string?)a.NomeArquivo)));
+
+                foreach (var (attachment, nomeEntrada) in attachments.Zip(nomesEntradas))
                 {
                     MemoryStream msAtt = new MemoryStream(Convert.FromBase64String(attachment.Arquivo.Contains(",") ? attachment.Arquivo.Split(",")[1] : attachment.Arquivo));
 
-                    ZipEntry xmlEntry = new ZipEntry(attachment.NomeArquivo);
+                    ZipEntry xmlEntry = new ZipEntry(nomeEntrada);
                     xmlEntry.DateTime = DateTime.Now;
 
                     zipStream.PutNextEntry(xmlEntry);
@@ -424,6 +428,22 @@ namespace Ares.PagueAres.API.Controllers
                 logger.LogError(ex, "Falha ao gerar o ZIP de anexos da solicitação {Id}.", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
+        }
+
+        /// <summary>
+        /// Nomes das entradas dos ZIPs por título, na ordem dos anexos. O nome original vem do usuário: passa
+        /// por <see cref="NomesPacote.Sanitizar"/> (sem <c>..</c>, separador de pasta nem unidade, para a extração
+        /// não escrever fora da pasta de destino) e por <see cref="NomesPacote.Deduplicar"/> (dois anexos de
+        /// mesmo nome, sem diferenciar caixa, não se sobrescrevem). Nome que já é seguro fica como está; nome que
+        /// fica vazio depois da sanitização vira <c>anexo-&lt;id do anexo&gt;</c>.
+        /// </summary>
+        private static IReadOnlyList<string> NomesEntradasZip(IEnumerable<(int IdAnexo, string? NomeArquivo)> anexos)
+        {
+            return NomesPacote.Deduplicar(anexos.Select(anexo =>
+            {
+                var nome = NomesPacote.Sanitizar(anexo.NomeArquivo);
+                return nome.Length > 0 ? nome : $"anexo-{anexo.IdAnexo}";
+            }));
         }
     }
 }
