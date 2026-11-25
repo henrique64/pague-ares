@@ -1,6 +1,8 @@
-import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit, QueryList, ViewChildren } from "@angular/core";
+import { NgModel } from "@angular/forms";
 import { HttpErrorResponse } from "@angular/common/http";
 import { MatSnackBar } from "@angular/material/snack-bar";
+import { MatEndDate, MatStartDate } from "@angular/material/datepicker";
 import { Subject, Subscription, interval, of } from "rxjs";
 import { catchError, exhaustMap, takeUntil } from "rxjs/operators";
 import { ExportacaoService } from "app/services/exportacao.service";
@@ -58,6 +60,9 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   jobs: ExportacaoJobModel[] = [];
   userList: UserListModel[] = [];
   departamentos: DepartamentoModel[] = [];
+
+  // Todos os campos ligados por ngModel; serve para esvaziar o texto dos campos de data ao limpar o formulário.
+  @ViewChildren(NgModel) private modelos?: QueryList<NgModel>;
 
   private pollingSub: Subscription | null = null;
   // Emite uma vez ao destruir o componente: nenhuma resposta tardia pode mexer na tela nem ligar o polling.
@@ -250,6 +255,20 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   limparFormulario() {
     this.form = ExportacoesComponent.formularioVazio();
+    this.limparTextoDosCamposDeData();
+  }
+
+  // Zerar o modelo não basta para os campos de data: o texto digitado que não virou data válida (ex.: 31/02/2025)
+  // nunca chegou ao modelo, então o ngModel não enxerga mudança e deixa o texto no campo. Os campos são esvaziados
+  // direto, e o erro de "data inválida" que esse texto deixou é recalculado.
+  private limparTextoDosCamposDeData() {
+    this.modelos?.forEach((modelo) => {
+      const campo = modelo.valueAccessor;
+      if (campo instanceof MatStartDate || campo instanceof MatEndDate) {
+        campo.writeValue(null);
+        modelo.control.updateValueAndValidity({ emitEvent: false });
+      }
+    });
   }
 
   gerarExportacao() {

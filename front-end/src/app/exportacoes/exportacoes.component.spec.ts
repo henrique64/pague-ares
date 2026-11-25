@@ -66,6 +66,7 @@ describe('ExportacoesComponent', () => {
       ],
       schemas: [NO_ERRORS_SCHEMA],
       providers: [
+        ...PROVIDERS_DATA_PT_BR,
         { provide: ExportacaoService, useValue: exportacao },
         { provide: UsersService, useValue: users },
         { provide: DepartmentService, useValue: dept },

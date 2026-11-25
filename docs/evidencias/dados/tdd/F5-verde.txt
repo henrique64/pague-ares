@@ -1,0 +1,22 @@
+F5 verde (defeitos 1 e 2) - ng test no front-end, depois da correcao
+Comando: npx ng test --watch=false --browsers=ChromeHeadless (Edge headless)
+Resultado: TOTAL: 138 SUCCESS (Executed 138 of 138 SUCCESS). Falhas: nenhuma. (138 = 124 que ja passavam + os 14 do vermelho)
+Comando: npx ng build -> Application bundle generation complete (EXIT=0)
+
+Correcao
+ - Defeito 1: front-end/src/app/core/date/pt-br-date-adapter.ts (PtBrDateAdapter: parse dd/MM/aaaa com d/M/aaaa aceito,
+   data inexistente devolve data invalida; format dd/MM/aaaa; MAT_DATE_LOCALE pt-BR; formatos proprios). Registrado nos
+   providers do AdminLayoutModule, que declara todos os componentes com datepicker (exportacoes, payments, create-request,
+   create-rddv). O que a API recebe nao muda: continua a Date local do seletor, serializada pelos mesmos servicos.
+ - Defeito 2: ExportacoesComponent.limparFormulario esvazia tambem o texto dos campos de data (MatStartDate/MatEndDate
+   via ViewChildren(NgModel)) e recalcula a validade; antes so o modelo era zerado e o ngModel nao enxergava mudanca
+   quando o texto nunca tinha virado valor do modelo.
+
+Specs que falhavam no vermelho e passam agora (14)
+ - PtBrDateAdapter: 01/11/2025, 31/12/2025, 1/2/2025, espacos, hora zerada, 31/02/2025 e mes 13 invalidos, texto que nao e data,
+   bissexto, vazio/so espacos, format de ida e volta, ligacao no AdminLayoutModule
+ - ExportacoesComponent: digitar 01/11/2025 vale 1o de novembro (getMonth()===10, getDate()===1, filtro 2025-11-01);
+   Limpar Filtros esvazia os 6 campos de data e o filtro nao traz datas; Limpar esvazia texto de data invalido (31/02/2025)
+Observacao: no vermelho o spec do componente ainda nao registrava PROVIDERS_DATA_PT_BR (usava so o MatNativeDateModule, isto e,
+  o comportamento antigo); o registro entrou junto da correcao. Tambem no vermelho, o controle "vazio -> null" faz parte do
+  spec que falha por causa dos "so espacos" (Date.parse("   ") devolve data invalida, nao null).
