@@ -39,7 +39,11 @@ namespace Ares.PagueAres.API.Controllers
                     return Unauthorized("Chave de visualização inválida ou expirada.");
                 }
 
-                var data = await dbContext.DocumentoSolicitacaos.Where(x => x.IdDocumentoSolicitacao == attachmentId).FirstOrDefaultAsync();
+                // A chave autoriza só a solicitação {id}: o anexo precisa ser dela. Anexo de outro título
+                // responde como anexo inexistente, para não confirmar que ele existe.
+                var data = await dbContext.DocumentoSolicitacaos
+                    .Where(x => x.IdDocumentoSolicitacao == attachmentId && x.IdSolicitacao == id)
+                    .FirstOrDefaultAsync();
 
                 if (data == null)
                 {
@@ -86,7 +90,11 @@ namespace Ares.PagueAres.API.Controllers
                     return Unauthorized("Chave de visualização inválida ou expirada.");
                 }
 
-                var data = await dbContext.DocumentoRddv.Where(x => x.IdDocumentoRddv == attachmentId).FirstOrDefaultAsync();
+                // A chave autoriza só o RDDV {id}: o anexo precisa ser dele. Anexo de outro título
+                // responde como anexo inexistente, para não confirmar que ele existe.
+                var data = await dbContext.DocumentoRddv
+                    .Where(x => x.IdDocumentoRddv == attachmentId && x.IdRelatorio == id)
+                    .FirstOrDefaultAsync();
 
                 if (data == null)
                 {
