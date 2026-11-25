@@ -235,7 +235,7 @@ sealed class Verificador(Resultado res, string caminhoZip)
         new("Data início", Tipo.Data), new("Data fim", Tipo.Data), new("Data de cadastro", Tipo.Data), new("Data de vencimento", Tipo.Data),
         new("Moeda", Tipo.Texto), new("Diária de viagem", Tipo.SimNao), new("Diárias", Tipo.Valor), new("Valor da diária", Tipo.Valor),
         new("Valor do km", Tipo.Valor), new("Adiantamento", Tipo.SimNao), new("Valor do adiantamento", Tipo.Valor), new("Saldo cartão VTM", Tipo.Valor),
-        new("Total das despesas", Tipo.Valor), new("Centro de custo", Tipo.Texto), new("Projeto", Tipo.Texto), new("PCA", Tipo.Texto),
+        new("Valor líquido do RDDV", Tipo.Valor), new("Centro de custo", Tipo.Texto), new("Projeto", Tipo.Texto), new("PCA", Tipo.Texto),
         new("Banco", Tipo.Texto), new("Agência", Tipo.Texto), new("Conta", Tipo.Texto), new("Observação", Tipo.Texto),
         new("Status gestor", Tipo.Texto), new("Data aprovação gestor", Tipo.DataHora), new("Observação do gestor", Tipo.Texto),
         new("Status financeiro", Tipo.Texto), new("Data aprovação financeiro", Tipo.DataHora), new("Observação do setor", Tipo.Texto),
