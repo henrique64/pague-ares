@@ -20,11 +20,21 @@ namespace Ares.PagueAres.Application.Exportacao
 
         private readonly ConcurrentDictionary<int, ExecucaoExportacao> _emExecucao = new();
 
+        // Ids que estão no canal e ainda não começaram a executar. Evita repetir um id já à espera e permite à
+        // reconciliação do worker saber quais jobs Pendente ficaram fora da fila.
+        private readonly ConcurrentDictionary<int, byte> _aguardando = new();
+
         // Garante um job por vez neste processo mesmo que, por engano, mais de um worker use a mesma fila.
         private readonly SemaphoreSlim _umJobPorVez = new(1, 1);
 
-        /// <summary>Põe o job no fim da fila. Nunca bloqueia (a fila não tem limite).</summary>
-        public void Enfileirar(int idExportacao) => _canal.Writer.TryWrite(idExportacao);
+        /// <summary>
+        /// Põe o job no fim da fila, se ele ainda não estiver à espera nela. Nunca bloqueia (a fila não tem limite).
+        /// </summary>
+        public void Enfileirar(int idExportacao)
+        {
+            if (_aguardando.TryAdd(idExportacao, 0))
+                _canal.Writer.TryWrite(idExportacao);
+        }
 
         /// <summary>
         /// Interrompe a geração do job, se ele estiver em execução neste processo. Devolve <c>false</c> quando o job
@@ -44,15 +54,24 @@ namespace Ares.PagueAres.Application.Exportacao
         /// <summary>Lê os ids na ordem de chegada até o token ser cancelado. Só o worker lê.</summary>
         internal IAsyncEnumerable<int> LerAsync(CancellationToken ct) => _canal.Reader.ReadAllAsync(ct);
 
+        /// <summary>O job está em execução neste processo (registrado, reivindicado ou não).</summary>
+        internal bool EmExecucao(int idExportacao) => _emExecucao.ContainsKey(idExportacao);
+
+        /// <summary>O job está à espera na fila ou em execução neste processo.</summary>
+        internal bool NaFilaOuEmExecucao(int idExportacao) =>
+            _aguardando.ContainsKey(idExportacao) || _emExecucao.ContainsKey(idExportacao);
+
         /// <summary>
         /// Registra o job como em execução neste processo, esperando o anterior terminar se houver um. O registro deve
-        /// ser descartado ao fim da geração.
+        /// ser descartado ao fim da geração. O id só deixa de constar como à espera depois de registrado, para que a
+        /// reconciliação nunca o veja fora das duas listas enquanto ele ainda vai ser processado.
         /// </summary>
         internal async Task<ExecucaoExportacao> IniciarExecucaoAsync(int idExportacao, CancellationTokenSource cts, CancellationToken ct)
         {
             await _umJobPorVez.WaitAsync(ct);
             var execucao = new ExecucaoExportacao(idExportacao, cts, Encerrar);
             _emExecucao[idExportacao] = execucao;
+            _aguardando.TryRemove(idExportacao, out _);
             return execucao;
         }
 
@@ -65,7 +84,7 @@ namespace Ares.PagueAres.Application.Exportacao
 
     /// <summary>
     /// Job em execução neste processo: o <see cref="CancellationTokenSource"/> da geração e o motivo de uma eventual
-    /// interrupção (pedido do usuário ou perda da posse do job para outro executor).
+    /// interrupção (pedido do usuário, perda da posse do job para outro executor ou falta de espaço em disco).
     /// </summary>
     internal sealed class ExecucaoExportacao : IDisposable
     {
@@ -74,6 +93,7 @@ namespace Ares.PagueAres.Application.Exportacao
         private int _encerrada;
         private volatile bool _cancelamentoSolicitado;
         private volatile bool _possePerdida;
+        private volatile bool _espacoInsuficiente;
 
         public ExecucaoExportacao(int idExportacao, CancellationTokenSource cts, Action<ExecucaoExportacao> aoEncerrar)
         {
@@ -90,6 +110,9 @@ namespace Ares.PagueAres.Application.Exportacao
         /// <summary>O job deixou de estar Processando no banco: outro executor mudou o status dele.</summary>
         public bool PossePerdida => _possePerdida;
 
+        /// <summary>O espaço livre da unidade da pasta caiu abaixo do mínimo configurado durante a geração.</summary>
+        public bool EspacoInsuficiente => _espacoInsuficiente;
+
         public void Cancelar()
         {
             _cancelamentoSolicitado = true;
@@ -99,6 +122,12 @@ namespace Ares.PagueAres.Application.Exportacao
         public void PerderPosse()
         {
             _possePerdida = true;
+            Interromper();
+        }
+
+        public void InterromperPorFaltaDeEspaco()
+        {
+            _espacoInsuficiente = true;
             Interromper();
         }
 
