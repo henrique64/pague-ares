@@ -20,6 +20,7 @@ Insere dados fictícios e determinísticos (mesma `--semente`, mesmos dados) no 
 ```
 dotnet run tools/exportacao/semente/semente.cs -- --titulos 500 --mb-por-titulo 5 --semente 42
 dotnet run tools/exportacao/semente/semente.cs -- --limpar
+dotnet run tools/exportacao/semente/semente.cs -- --autoteste
 dotnet run tools/exportacao/semente/semente.cs -- --ajuda
 ```
 
@@ -28,6 +29,7 @@ dotnet run tools/exportacao/semente/semente.cs -- --ajuda
 | `--titulos <n>` | 500 | Títulos **exportáveis**: cerca de 60% solicitações e 40% RDDVs (com 2 a 8 despesas cada). |
 | `--mb-por-titulo <n>` | 5 | Total de anexos por título, repartido em 1 a 3 anexos (aceita decimal, por exemplo `0.1`). |
 | `--semente <n>` | 42 | Semente do gerador pseudoaleatório. Datas partem de uma data fixa, nunca do relógio. |
+| `--autoteste` | | Verifica os CPFs e CNPJs fictícios (ver abaixo) e sai. Não acessa banco nem exige variável de ambiente. |
 | `--limpar` | | Remove tudo o que a semente criou e sai. Não semeia. |
 
 O que é criado:
@@ -37,7 +39,10 @@ O que é criado:
 - Além deles entram cerca de 5% (mínimo 2) de **rascunhos e cancelados**, também aprovados pelo gestor, para provar que ficam de fora da exportação. Eles têm um anexo pequeno cada.
 - Anexos em base64 na coluna `Arquivo`, conteúdo binário pseudoaleatório com cabeçalho de PDF ou JPEG, metade com o prefixo `data:...;base64,`. A coluna `CaminhoArquivo` guarda o tipo de mídia do conteúdo (`application/pdf` ou `image/jpeg`), como o front grava `file.type` no upload e como o `PreviewController` espera ao servir o anexo. Cada anexo vai num comando próprio (nunca se monta o total em memória), em transações de 20 títulos.
 - Nomes problemáticos de anexo (`../x.pdf`, `..\..\windows\system.ini`, `C:\Windows\x.exe`, `CON.pdf`, `nul`, `a/b\c.pdf`, nome com espaço final, caracteres inválidos, nome de 245 caracteres, nome vazio), nomes duplicados no mesmo título (inclusive em outra caixa) e tipos de documento variados, para exercitar a sanitização e a deduplicação do pacote.
+- CPF e CNPJ **obviamente fictícios**: o número-base é sorteado pela `--semente`, mas os dois dígitos verificadores são propositalmente errados (o gerador calcula o dígito correto e o troca por outro valor). Nenhum passa na validação oficial, então não podem coincidir com documento real, o que importa porque os dados aparecem em capturas de tela. Saem sempre formatados (`000.000.000-00` e `00.000.000/0000-00`), são únicos dentro de uma execução e continuam determinísticos pela `--semente`. Usados em `Solicitacao.NumDocParceiro` e em `Rddv.CPF`.
 - Marcação para o `--limpar`: `[SEMENTE]` no início de `Solicitacao.Descricao` e de `Rddv.Finalidade`, e e-mails `@exemplo.invalid` nos usuários. O `--limpar` também apaga os jobs de exportação desses usuários, quando a tabela `ExportacaoJob` já existe.
+
+`--autoteste` gera 10.000 CPFs e 10.000 CNPJs com a `--semente` informada e confirma que nenhum passa no algoritmo de dígito verificador (módulo 11, implementado à parte do gerador e conferido contra um CPF e um CNPJ válidos conhecidos), que todos têm o formato esperado, que são únicos e que repetir a semente repete a lista. Sai com `0` se tudo passar e `1` se algo falhar.
 
 Se já existir qualquer dado da semente, o comando recusa (código 3): rode `--limpar` antes.
 
@@ -99,5 +104,6 @@ Códigos de saída: `0` ok; `1` falha na exportação ou na rede; `2` uso incorr
 ## Como foram testadas
 
 - O verificador roda contra um ZIP montado à mão: pacote correto sai `0`; um byte trocado num anexo, uma entrada `../x`, CSV diferente do JSON, célula de valor como texto, hiperlink quebrado, entrada da raiz ausente, totais errados e entrada solta na raiz saem `1`.
+- A semente roda `--autoteste` (10.000 CPFs e 10.000 CNPJs sem nenhum dígito verificador válido, todos únicos).
 - A semente recusa servidor não local sem conectar (código 2). Seus comandos SQL só foram exercitados contra um banco de verdade na verificação integrada (E14).
 - A medição roda contra uma API simulada em memória (login, criação, status, link de download e download) e o leitor de `indice.json` lê o ZIP com mais de 65 mil entradas (Zip64).

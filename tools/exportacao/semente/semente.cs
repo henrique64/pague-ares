@@ -6,6 +6,7 @@
 //
 // Uso:   dotnet run tools/exportacao/semente/semente.cs -- [--titulos 500] [--mb-por-titulo 5] [--semente 42]
 //        dotnet run tools/exportacao/semente/semente.cs -- --limpar
+//        dotnet run tools/exportacao/semente/semente.cs -- --autoteste
 //        dotnet run tools/exportacao/semente/semente.cs -- --ajuda
 //
 // Variáveis de ambiente (os valores nunca são impressos nem gravados):
@@ -28,6 +29,7 @@ int titulos = 500;
 double mbPorTitulo = 5;
 int semente = 42;
 bool limpar = false;
+bool autoteste = false;
 
 try
 {
@@ -42,6 +44,9 @@ try
                 return 0;
             case "--limpar":
                 limpar = true;
+                break;
+            case "--autoteste":
+                autoteste = true;
                 break;
             case "--titulos":
                 titulos = int.Parse(ValorDe(args, ref i), CultureInfo.InvariantCulture);
@@ -69,6 +74,9 @@ if (titulos < 1 || titulos > 100000 || mbPorTitulo < 0 || mbPorTitulo > 200)
     Console.Error.WriteLine("Faixa inválida: --titulos 1..100000 e --mb-por-titulo 0..200.");
     return 2;
 }
+
+// ---- Autoverificação dos documentos fictícios: não toca em banco nem em variável de ambiente ------------
+if (autoteste) return AutoTesteDocumentos(semente);
 
 // ---- Recusa de servidor não local: acontece ANTES de qualquer conexão ----------------------------------
 var conexaoBruta = Environment.GetEnvironmentVariable("PAGUEARES_SEMENTE_CONEXAO");
@@ -166,6 +174,8 @@ static void MostrarAjuda()
                                 Além deles entram ~5% de rascunhos e cancelados, que devem ficar de fora.
           --mb-por-titulo <n>   MB de anexos por título (1 a 3 anexos); padrão 5.
           --semente <n>         semente do gerador; mesma semente, mesmos dados; padrão 42.
+          --autoteste           gera 10.000 CPFs e 10.000 CNPJs e confere que todos têm dígito verificador inválido,
+                                formato correto e são únicos; não acessa banco. Sai com 0 se passar, 1 se falhar.
           --limpar              remove tudo o que a semente criou (marca [SEMENTE] e e-mails @exemplo.invalid) e sai.
           --ajuda               mostra este texto.
 
@@ -414,7 +424,7 @@ static async Task<int> InserirSolicitacaoAsync(SqlConnection conn, SqlTransactio
     if (statusFin == 2 && rng.Next(100) < 60) { statusCon = 2; dataCon = dataFin!.Value.AddDays(rng.Next(1, 6)); }
 
     bool pj = rng.Next(2) == 0;
-    string docParceiro = pj ? Cnpj(rng, rng.Next(2) == 0) : Cpf(rng, rng.Next(2) == 0);
+    string docParceiro = pj ? Cnpj(rng) : Cpf(rng);
     string nomeParceiro = pj ? Empresas[rng.Next(Empresas.Length)] : Pessoa(rng);
     bool parcelado = rng.Next(100) < 25;
     int tipoSol = 1 + rng.Next(3);
@@ -530,7 +540,7 @@ static async Task<int> InserirRddvAsync(SqlConnection conn, SqlTransaction tx, C
         P(cmd, "@DataAtrib", System.Data.SqlDbType.DateTime2, atribuido == null ? null : aprovGestor.AddHours(2));
         P(cmd, "@Atribuidor", System.Data.SqlDbType.Int, atribuido == null ? null : c.IdAdm);
         P(cmd, "@Func", System.Data.SqlDbType.NVarChar, Pessoa(rng), -1);
-        P(cmd, "@Cpf", System.Data.SqlDbType.NVarChar, Cpf(rng, rng.Next(2) == 0), -1);
+        P(cmd, "@Cpf", System.Data.SqlDbType.NVarChar, Cpf(rng), -1);
         P(cmd, "@Dep", System.Data.SqlDbType.Int, dep);
         P(cmd, "@Finalidade", System.Data.SqlDbType.NVarChar, finalidade, -1);
         P(cmd, "@TipoRel", System.Data.SqlDbType.Int, tipoRel);
@@ -680,15 +690,28 @@ static DateTime DataAleatoria(Random rng) => Ref.AddDays(-rng.Next(0, 365)).AddM
 static string Pessoa(Random rng) =>
     $"{Nomes[rng.Next(Nomes.Length)]} {Sobrenomes[rng.Next(Sobrenomes.Length)]} {Sobrenomes[rng.Next(Sobrenomes.Length)]}";
 
-// CPF e CNPJ com dígito verificador válido, gerados ao acaso a partir da semente (sem relação com pessoas reais).
-static string Cpf(Random rng, bool formatado)
+// CPF e CNPJ obviamente fictícios: o número-base é sorteado a partir da semente, mas os dois dígitos verificadores
+// são propositalmente trocados por valores errados. Assim o documento nunca passa na validação oficial e não
+// pode coincidir com o de uma pessoa ou empresa real. A saída é sempre formatada (000.000.000-00 e
+// 00.000.000/0000-00) e única dentro de uma execução (Documentos.Usados).
+static string Cpf(Random rng)
 {
     var d = new int[11];
-    do { for (int i = 0; i < 9; i++) d[i] = rng.Next(10); } while (d.Take(9).Distinct().Count() == 1);
-    d[9] = DigitoCpf(d, 9, 10);
-    d[10] = DigitoCpf(d, 10, 11);
-    var s = string.Concat(d);
-    return formatado ? $"{s[..3]}.{s[3..6]}.{s[6..9]}-{s[9..]}" : s;
+    string s;
+    do
+    {
+        do { for (int i = 0; i < 9; i++) d[i] = rng.Next(10); } while (d.Take(9).Distinct().Count() == 1);
+        // Dígitos corretos, calculados em sequência (o segundo depende do primeiro correto); depois são trocados.
+        var correto = new int[11];
+        Array.Copy(d, correto, 9);
+        correto[9] = DigitoCpf(correto, 9, 10);
+        correto[10] = DigitoCpf(correto, 10, 11);
+        d[9] = DigitoErrado(correto[9], rng);
+        d[10] = DigitoErrado(correto[10], rng);
+        s = string.Concat(d);
+        s = $"{s[..3]}.{s[3..6]}.{s[6..9]}-{s[9..]}";
+    } while (!Documentos.Usados.Add(s));
+    return s;
 }
 
 static int DigitoCpf(int[] d, int n, int pesoInicial)
@@ -699,17 +722,24 @@ static int DigitoCpf(int[] d, int n, int pesoInicial)
     return resto < 2 ? 0 : 11 - resto;
 }
 
-static string Cnpj(Random rng, bool formatado)
+static string Cnpj(Random rng)
 {
     var d = new int[14];
-    for (int i = 0; i < 8; i++) d[i] = rng.Next(10);
-    d[8] = 0; d[9] = 0; d[10] = 0; d[11] = 1;
-    int[] p1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    int[] p2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    d[12] = DigitoCnpj(d, 12, p1);
-    d[13] = DigitoCnpj(d, 13, p2);
-    var s = string.Concat(d);
-    return formatado ? $"{s[..2]}.{s[2..5]}.{s[5..8]}/{s[8..12]}-{s[12..]}" : s;
+    string s;
+    do
+    {
+        for (int i = 0; i < 8; i++) d[i] = rng.Next(10);
+        d[8] = 0; d[9] = 0; d[10] = 0; d[11] = 1;
+        var correto = new int[14];
+        Array.Copy(d, correto, 12);
+        correto[12] = DigitoCnpj(correto, 12, Documentos.PesosCnpj1);
+        correto[13] = DigitoCnpj(correto, 13, Documentos.PesosCnpj2);
+        d[12] = DigitoErrado(correto[12], rng);
+        d[13] = DigitoErrado(correto[13], rng);
+        s = string.Concat(d);
+        s = $"{s[..2]}.{s[2..5]}.{s[5..8]}/{s[8..12]}-{s[12..]}";
+    } while (!Documentos.Usados.Add(s));
+    return s;
 }
 
 static int DigitoCnpj(int[] d, int n, int[] pesos)
@@ -720,9 +750,86 @@ static int DigitoCnpj(int[] d, int n, int[] pesos)
     return resto < 2 ? 0 : 11 - resto;
 }
 
+// Devolve um dígito de 0 a 9 sempre diferente do correto.
+static int DigitoErrado(int correto, Random rng) => (correto + 1 + rng.Next(9)) % 10;
+
+// Validação oficial (módulo 11) escrita à parte do gerador, só para o autoteste conferir que nada passa.
+static bool CpfPassaNoDv(string doc)
+{
+    var n = new string(doc.Where(char.IsDigit).ToArray());
+    if (n.Length != 11) return false;
+    var d = n.Select(ch => ch - '0').ToArray();
+    return d[9] == DigitoCpf(d, 9, 10) && d[10] == DigitoCpf(d, 10, 11);
+}
+
+static bool CnpjPassaNoDv(string doc)
+{
+    var n = new string(doc.Where(char.IsDigit).ToArray());
+    if (n.Length != 14) return false;
+    var d = n.Select(ch => ch - '0').ToArray();
+    return d[12] == DigitoCnpj(d, 12, Documentos.PesosCnpj1) && d[13] == DigitoCnpj(d, 13, Documentos.PesosCnpj2);
+}
+
+// --autoteste: 10.000 CPFs e 10.000 CNPJs; nenhum pode passar no DV, todos no formato e únicos; mesma semente, mesma lista.
+static int AutoTesteDocumentos(int semente)
+{
+    const int Quantidade = 10000;
+    var falhas = new List<string>();
+
+    List<string> Gerar(Func<Random, string> gerador)
+    {
+        Documentos.Usados.Clear();
+        var rng = new Random(semente);
+        var lista = new List<string>(Quantidade);
+        for (int i = 0; i < Quantidade; i++) lista.Add(gerador(rng));
+        return lista;
+    }
+
+    var cpfs = Gerar(Cpf);
+    var cnpjs = Gerar(Cnpj);
+    var cpfsRepetidos = Gerar(Cpf);
+    var cnpjsRepetidos = Gerar(Cnpj);
+
+    var fmtCpf = new System.Text.RegularExpressions.Regex(@"^\d{3}\.\d{3}\.\d{3}-\d{2}$");
+    var fmtCnpj = new System.Text.RegularExpressions.Regex(@"^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$");
+
+    int cpfValidos = cpfs.Count(CpfPassaNoDv), cnpjValidos = cnpjs.Count(CnpjPassaNoDv);
+    int cpfFormato = cpfs.Count(x => !fmtCpf.IsMatch(x)), cnpjFormato = cnpjs.Count(x => !fmtCnpj.IsMatch(x));
+    int cpfUnicos = cpfs.Distinct().Count(), cnpjUnicos = cnpjs.Distinct().Count();
+
+    if (cpfValidos != 0) falhas.Add($"{cpfValidos} CPF(s) passam no dígito verificador");
+    if (cnpjValidos != 0) falhas.Add($"{cnpjValidos} CNPJ(s) passam no dígito verificador");
+    if (cpfFormato != 0) falhas.Add($"{cpfFormato} CPF(s) fora do formato 000.000.000-00");
+    if (cnpjFormato != 0) falhas.Add($"{cnpjFormato} CNPJ(s) fora do formato 00.000.000/0000-00");
+    if (cpfUnicos != Quantidade) falhas.Add($"CPFs repetidos: {Quantidade - cpfUnicos}");
+    if (cnpjUnicos != Quantidade) falhas.Add($"CNPJs repetidos: {Quantidade - cnpjUnicos}");
+    if (!cpfs.SequenceEqual(cpfsRepetidos)) falhas.Add("CPFs não são determinísticos para a mesma semente");
+    if (!cnpjs.SequenceEqual(cnpjsRepetidos)) falhas.Add("CNPJs não são determinísticos para a mesma semente");
+
+    // Prova de que o validador do teste reconhece documentos válidos (senão "nenhum passa" seria vazio).
+    if (!CpfPassaNoDv("529.982.247-25")) falhas.Add("validador de CPF não reconhece um CPF válido conhecido");
+    if (!CnpjPassaNoDv("11.222.333/0001-81")) falhas.Add("validador de CNPJ não reconhece um CNPJ válido conhecido");
+
+    Console.WriteLine($"semente={semente}");
+    Console.WriteLine($"CPF : gerados={cpfs.Count} passam no DV={cpfValidos} fora do formato={cpfFormato} únicos={cpfUnicos} exemplo={cpfs[0]}");
+    Console.WriteLine($"CNPJ: gerados={cnpjs.Count} passam no DV={cnpjValidos} fora do formato={cnpjFormato} únicos={cnpjUnicos} exemplo={cnpjs[0]}");
+    if (falhas.Count == 0) { Console.WriteLine("AUTOTESTE OK"); return 0; }
+    foreach (var f in falhas) Console.Error.WriteLine("FALHA: " + f);
+    Console.Error.WriteLine("AUTOTESTE FALHOU");
+    return 1;
+}
+
 // =====================================================================================================
 // Tipos e dados fixos
 // =====================================================================================================
+
+// Estado compartilhado dos documentos fictícios: os já gerados nesta execução (garante unicidade) e os pesos do CNPJ.
+static class Documentos
+{
+    public static readonly HashSet<string> Usados = new();
+    public static readonly int[] PesosCnpj1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    public static readonly int[] PesosCnpj2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+}
 
 // Listas fixas e inventadas: nada aqui corresponde a pessoa, empresa ou banco real.
 static class Fixos
