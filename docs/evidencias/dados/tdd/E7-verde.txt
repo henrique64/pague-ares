@@ -1,0 +1,118 @@
+E7 — API de exportação (ExportacaoController e tokens de download) — fase VERDE (testes depois da implementação)
+Data: 2026-11-25
+Branch: feature/exportacao-anexos (testes no commit 96625de)
+Comando: dotnet test back-end/Ares.PagueAres.sln --filter "FullyQualifiedName~ExportacaoControllerTests"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportacaoControllerTests.cs
+Produção: back-end/Ares.PagueAres.API/Controllers/ExportacaoController.cs,
+  back-end/Ares.PagueAres.API/Services/TokensDownloadExportacao.cs e o registro do singleton em Program.cs.
+Banco: EF Core InMemory, worker desligado; só usuários e dados fictícios (e-mails @exemplo.invalid).
+
+Resultado: 63 testes — 63 aprovados, 0 com falha, em 4 execuções seguidas (para pegar instabilidade do teste de
+requisições simultâneas com o mesmo token).
+  Execução 1: 63/63 aprovados
+  Execução 2: 63/63 aprovados
+  Execução 3: 63/63 aprovados
+  Execução 4: 63/63 aprovados
+Suíte inteira (dotnet test back-end/Ares.PagueAres.sln): Unit 131/131 e Integration 220/220 aprovados.
+
+Prova de que os testes pegam a falha certa (mutação temporária, desfeita em seguida; não commitada):
+  sem a checagem de papel FIN/ADM, sem o filtro de dono nas consultas por id e com o token lido por TryGetValue
+  em vez de removido por TryRemove, 20 testes falham: os 15 casos de PapelSemFinOuAdm_Responde403ENaoAlteraNada,
+  os 3 de JobDeOutroUsuario_Responde404ENaoAlteraNada, Download_TokenUsadoDuasVezes_200EDepois401 e
+  Download_DuasRequisicoesSimultaneasComOMesmoToken_ExatamenteUmaResponde200.
+
+Cenários do brief e onde são cobertos
+------------------------------------------------------------------------------------------
+Sem token -> 401 nas rotas autenticadas; download sem token -> 401
+  SemToken_RotaAutenticada_Responde401 (5 rotas), Download_SemToken_Responde401 (sem token e token vazio)
+SOL, GES e CON -> 403 em POST, GET lista, GET por id, link-download e DELETE
+  PapelSemFinOuAdm_Responde403ENaoAlteraNada (3 papéis x 5 rotas, jobs do próprio usuário; nada é alterado)
+FIN e ADM -> POST 202 com job Pendente; idUsuario/userId no corpo ou na query -> job com o id do JWT
+  FinOuAdm_Post_Responde202ComJobPendente, Post_IdentidadeNoCorpoOuNaQuery_EIgnorada_JobGravadoComOIdDoJwt
+GET lista do FIN sem job do ADM; GET por id e link-download de job alheio -> 404
+  GetLista_SoOsJobsDoProprioUsuarioDosUltimos30Dias_MaisRecentesPrimeiro, JobDeOutroUsuario_Responde404ENaoAlteraNada
+  (GET id, link-download e DELETE; o outro usuário também é ADM+FIN)
+Link-download de Pendente -> 409; de Expirado -> 410
+  LinkDownload_DeJobNaoConcluido_Responde409 (Pendente, Processando, Falhou, Cancelado),
+  LinkDownload_DeJobExpirado_Responde410, LinkDownload_DeConcluidoComPrazoVencidoOuSemArquivo_Responde410
+Token usado duas vezes -> 200 e 401; simultâneas -> exatamente uma 200; vencido -> 401; inventado -> 401
+  Download_TokenUsadoDuasVezes_200EDepois401, Download_DuasRequisicoesSimultaneasComOMesmoToken_ExatamenteUmaResponde200
+  (10 rodadas), ComLimitesCurtos.Download_TokenVencido_Responde401 (validade 1 s, espera 1,5 s),
+  Download_TokenInventado_Responde401 (token aleatório de 32 bytes e tentativa de caminho relativo)
+Download 200: application/zip, Content-Disposition com o nome de C2, corpo igual ao arquivo
+  Download_TokenValido_Responde200EmZipComNomeDoContratoECorpoIgualAoArquivo (também sem Accept-Ranges)
+Terceiro job ativo -> 429; fim antes do início -> 400; sem títulos -> 400; nenhum erro com texto de exceção
+  Post_TerceiroJobAtivoDoMesmoUsuario_Responde429, Post_FiltroComFimAntesDoInicio_Responde400 (3 períodos),
+  Post_FiltroSemTitulos_Responde400, Post_CorpoInvalido_Responde400SemTextoDeExcecao (tipo fora do enum, enum
+  inexistente, número inválido, JSON quebrado, corpo vazio), ComLimitesCurtos.Post_MaisTitulosQueOLimite_Responde400;
+  toda resposta de erro passa por AfirmarErroAsync (envelope com success=false e mensagem, sem "Exception",
+  pilha, "System.", "Ares.PagueAres" ou trecho de mensagem do serializador)
+DELETE de Pendente -> 204 e Cancelado; DELETE de Concluido -> 204, arquivo apagado e Expirado
+  Delete_DePendente_Responde204EJobCancelado, Delete_DeConcluido_Responde204ApagaOArquivoEExpira,
+  Delete_DeProcessando_Responde204EPedeOCancelamento, Delete_DeJobJaEncerrado_Responde409 (Falhou, Expirado, Cancelado)
+
+Testes ([resultado] nome; o prefixo ComLimitesCurtos. indica a classe aninhada com a FabricaLimitesCurtos)
+------------------------------------------------------------------------------------------
+[PASSOU] Delete_DeConcluido_Responde204ApagaOArquivoEExpira
+[PASSOU] Delete_DeJobJaEncerrado_Responde409(status: Cancelado)
+[PASSOU] Delete_DeJobJaEncerrado_Responde409(status: Expirado)
+[PASSOU] Delete_DeJobJaEncerrado_Responde409(status: Falhou)
+[PASSOU] Delete_DePendente_Responde204EJobCancelado
+[PASSOU] Delete_DeProcessando_Responde204EPedeOCancelamento
+[PASSOU] Download_DuasRequisicoesSimultaneasComOMesmoToken_ExatamenteUmaResponde200
+[PASSOU] Download_JobExpiradoDepoisDoLink_Responde410
+[PASSOU] Download_SemToken_Responde401(rota: "/api/exportacao/download")
+[PASSOU] Download_SemToken_Responde401(rota: "/api/exportacao/download?token=")
+[PASSOU] Download_TokenInventado_Responde401
+[PASSOU] Download_TokenUsadoDuasVezes_200EDepois401
+[PASSOU] Download_TokenValido_Responde200EmZipComNomeDoContratoECorpoIgualAoArquivo
+[PASSOU] ComLimitesCurtos.Download_TokenVencido_Responde401
+[PASSOU] Fabrica_ComWorkerDesligado_NaoSobeWorkerNemLimpeza
+[PASSOU] FinOuAdm_Post_Responde202ComJobPendente(papel: "ADM")
+[PASSOU] FinOuAdm_Post_Responde202ComJobPendente(papel: "FIN")
+[PASSOU] GetLista_SoOsJobsDoProprioUsuarioDosUltimos30Dias_MaisRecentesPrimeiro
+[PASSOU] GetPorId_DoProprioJob_Responde200ComPercentual
+[PASSOU] GetPorId_JobInexistente_Responde404
+[PASSOU] JobDeOutroUsuario_Responde404ENaoAlteraNada(rota: "DELETE id")
+[PASSOU] JobDeOutroUsuario_Responde404ENaoAlteraNada(rota: "GET id")
+[PASSOU] JobDeOutroUsuario_Responde404ENaoAlteraNada(rota: "POST link-download")
+[PASSOU] LinkDownload_DeConcluidoComPrazoVencidoOuSemArquivo_Responde410
+[PASSOU] LinkDownload_DeConcluido_DevolveTokenDe32BytesComValidadeConfigurada
+[PASSOU] LinkDownload_DeJobExpirado_Responde410
+[PASSOU] LinkDownload_DeJobNaoConcluido_Responde409(status: Cancelado)
+[PASSOU] LinkDownload_DeJobNaoConcluido_Responde409(status: Falhou)
+[PASSOU] LinkDownload_DeJobNaoConcluido_Responde409(status: Pendente)
+[PASSOU] LinkDownload_DeJobNaoConcluido_Responde409(status: Processando)
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "CON", rota: "DELETE id")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "CON", rota: "GET id")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "CON", rota: "GET lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "CON", rota: "POST link-download")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "CON", rota: "POST lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "GES", rota: "DELETE id")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "GES", rota: "GET id")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "GES", rota: "GET lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "GES", rota: "POST link-download")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "GES", rota: "POST lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "SOL", rota: "DELETE id")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "SOL", rota: "GET id")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "SOL", rota: "GET lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "SOL", rota: "POST link-download")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "SOL", rota: "POST lista")
+[PASSOU] Post_CorpoInvalido_Responde400SemTextoDeExcecao(corpo: "")
+[PASSOU] Post_CorpoInvalido_Responde400SemTextoDeExcecao(corpo: "{ isto não é json")
+[PASSOU] Post_CorpoInvalido_Responde400SemTextoDeExcecao(corpo: "{\"codigo\":\"abc\"}")
+[PASSOU] Post_CorpoInvalido_Responde400SemTextoDeExcecao(corpo: "{\"tipoTitulo\":9}")
+[PASSOU] Post_CorpoInvalido_Responde400SemTextoDeExcecao(corpo: "{\"tipoTitulo\":\"nao-existe\"}")
+[PASSOU] Post_FiltroComFimAntesDoInicio_Responde400(filtroJson: "{\"dataAprovacaoFinanceiroInicio\":\"2026-02-01\","···)
+[PASSOU] Post_FiltroComFimAntesDoInicio_Responde400(filtroJson: "{\"dataSolicitacaoInicio\":\"2026-11-20\",\"dataSo"···)
+[PASSOU] Post_FiltroComFimAntesDoInicio_Responde400(filtroJson: "{\"dataVencimentoInicio\":\"2026-11-20\",\"dataVen"···)
+[PASSOU] Post_FiltroSemTitulos_Responde400
+[PASSOU] Post_IdentidadeNoCorpoOuNaQuery_EIgnorada_JobGravadoComOIdDoJwt(campo: "idUsuario")
+[PASSOU] Post_IdentidadeNoCorpoOuNaQuery_EIgnorada_JobGravadoComOIdDoJwt(campo: "userId")
+[PASSOU] ComLimitesCurtos.Post_MaisTitulosQueOLimite_Responde400
+[PASSOU] Post_TerceiroJobAtivoDoMesmoUsuario_Responde429
+[PASSOU] SemToken_RotaAutenticada_Responde401(metodo: "DELETE", rota: "/api/exportacao/1") [< 1 ms]
+[PASSOU] SemToken_RotaAutenticada_Responde401(metodo: "GET", rota: "/api/exportacao")
+[PASSOU] SemToken_RotaAutenticada_Responde401(metodo: "GET", rota: "/api/exportacao/1")
+[PASSOU] SemToken_RotaAutenticada_Responde401(metodo: "POST", rota: "/api/exportacao")
+[PASSOU] SemToken_RotaAutenticada_Responde401(metodo: "POST", rota: "/api/exportacao/1/link-download") [< 1 ms]

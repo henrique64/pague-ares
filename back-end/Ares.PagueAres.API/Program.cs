@@ -20,6 +20,7 @@ builder.Services.Configure<ExportacaoSettings>(builder.Configuration.GetSection(
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<Ares.PagueAres.API.Services.TokensDownloadExportacao>();
 
 // CORS: se AllowedOrigins estiver configurado restringe às origens listadas; senão permite qualquer origem.
 var allowedOrigins = builder.Configuration["AllowedOrigins"];

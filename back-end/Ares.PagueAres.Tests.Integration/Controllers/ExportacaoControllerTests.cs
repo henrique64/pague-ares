@@ -277,8 +277,9 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             resposta.StatusCode.Should().Be(HttpStatusCode.OK);
             var envelope = await resposta.Content.ReadFromJsonAsync<GenericResponse<List<ExportacaoJobDto>>>(Json);
             envelope!.Success.Should().BeTrue();
-            envelope.Data!.Select(j => j.Id).Should().Equal(hoje, doisDias);
-            envelope.Data.Select(j => j.Id).Should().NotContain(new[] { antigo, doAdministrador });
+            var ids = envelope.Data!.Select(j => j.Id).ToList();
+            ids.Should().Equal(hoje, doisDias);
+            ids.Should().NotContain(new[] { antigo, doAdministrador });
         }
 
         [Fact]
