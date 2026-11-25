@@ -16,8 +16,14 @@ namespace Ares.PagueAres.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class ExportController(PagueAresContext dbContext, IMemoryCache memoryCache) : ControllerBase
+    public class ExportController(PagueAresContext dbContext, IMemoryCache memoryCache, ILogger<ExportController> logger) : ControllerBase
     {
+        private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
+        private const string MensagemFiltroInvalido = "Filtro de exportação inválido.";
+
+        // Garante que a leitura e a remoção da chave de exportação aconteçam juntas (uso único).
+        private static readonly Lock TravaChaveExportacao = new();
+
         private Dictionary<int, string> StatusGestor = new Dictionary<int, string>() {
             {0, "Aguardando Autorização"},
             {1, "Aguardando Autorização"},
@@ -51,6 +57,34 @@ namespace Ares.PagueAres.API.Controllers
             {3, "Reembolso"}
         };
 
+        /// <summary>
+        /// Valida a chave de exportação e a remove do cache na mesma operação, para que ela só
+        /// possa ser usada uma vez. Devolve a resposta de recusa, ou null quando a chave é válida.
+        /// </summary>
+        private ActionResult? ConsumirChaveExportacao(string key)
+        {
+            lock (TravaChaveExportacao)
+            {
+                if (!memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
+                {
+                    return Unauthorized("Chave de visualização inválida ou expirada.");
+                }
+
+                if (previewKey?.RequestType != Domain.Enums.EnumRequestType.Exportacao)
+                {
+                    return Unauthorized("Chave de visualização inválida para esta solicitação.");
+                }
+
+                memoryCache.Remove("preview-key-" + key);
+
+                return null;
+            }
+        }
+
+        /// <param name="userId">
+        /// Ignorado. Continua aceito porque o front-end ainda o envia, mas o escopo da exportação
+        /// não depende de quem diz ser o usuário: a chave só é emitida para FIN e ADM.
+        /// </param>
         [HttpGet]
         [Route("payments")]
         [AllowAnonymous]
@@ -58,16 +92,11 @@ namespace Ares.PagueAres.API.Controllers
         {
             if (string.IsNullOrEmpty(key)) return Unauthorized("Chave de visualização não informada.");
 
-            if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
+            var recusaChave = ConsumirChaveExportacao(key);
+
+            if (recusaChave != null)
             {
-                if (previewKey?.RequestType != Domain.Enums.EnumRequestType.Exportacao)
-                {
-                    return Unauthorized("Chave de visualização inválida para esta solicitação.");
-                }
-            }
-            else
-            {
-                return Unauthorized("Chave de visualização inválida ou expirada.");
+                return recusaChave;
             }
 
             ListFilterDto? nFilter;
@@ -75,15 +104,16 @@ namespace Ares.PagueAres.API.Controllers
             try
             {
                 nFilter = JsonConvert.DeserializeObject<ListFilterDto>(sFilter);
-
-                if (nFilter == null)
-                {
-                    throw new Exception("Nenhum filtro foi informado.");
-                }
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogWarning(ex, "Filtro da exportação de pagamentos inválido.");
+                return BadRequest(MensagemFiltroInvalido);
+            }
+
+            if (nFilter == null)
+            {
+                return BadRequest(MensagemFiltroInvalido);
             }
 
             ListFilterDto filter = nFilter;
@@ -92,25 +122,10 @@ namespace Ares.PagueAres.API.Controllers
             {
                 var requests = dbContext.Solicitacaos.AsQueryable();
 
-                // Rascunhos e cancelados nunca entram na exportação do fluxo de aprovação
+                // Escopo de FIN e ADM, os únicos papéis que recebem a chave de exportação:
+                // rascunhos e cancelados nunca entram, e só títulos aprovados pelo gestor.
                 requests = requests.Where(d => !d.Rascunho && !d.Cancelado);
-
-                var roles = await (from u in dbContext.UsuarioFuncaos
-                                   from f in dbContext.Funcaos.Where(x => x.IdFuncao == u.IdFuncao)
-                                   where u.IdUsuario == userId
-                                   select f).ToListAsync();
-
-                bool isFinancial = roles.Any(f => f.Alias == "FIN");
-                bool isAccounting = roles.Any(f => f.Alias == "CON");
-
-                if (isFinancial)
-                {
-                    requests = requests.Where(r => (r.AprovadoGestor ?? false));
-                }
-                else
-                {
-                    requests = requests.Where(r => (r.AprovadoGestor ?? false) && r.IdUsuarioAtribuido == userId);
-                }
+                requests = requests.Where(r => (r.AprovadoGestor ?? false));
 
                 if (!string.IsNullOrEmpty(filter.DocumentNumber))
                 {
@@ -187,17 +202,9 @@ namespace Ares.PagueAres.API.Controllers
 
                 var rddv = dbContext.Rddv.AsQueryable();
 
-                // Rascunhos e cancelados nunca entram na exportação do fluxo de aprovação
+                // Mesmo escopo de FIN e ADM das solicitações.
                 rddv = rddv.Where(d => !d.Rascunho && !d.Cancelado);
-
-                if (isFinancial)
-                {
-                    rddv = rddv.Where(r => (r.AprovadoGestor ?? false));
-                }
-                else
-                {
-                    rddv = rddv.Where(r => (r.AprovadoGestor ?? false) && r.IdUsuarioAtribuido == userId);
-                }
+                rddv = rddv.Where(r => (r.AprovadoGestor ?? false));
 
                 if (filter.RequestStart.HasValue && filter.RequestEnd.HasValue)
                 {
@@ -322,7 +329,8 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogError(ex, "Falha ao gerar o Excel da exportação de pagamentos.");
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
         }
 
@@ -337,7 +345,8 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
                 {
-                    if (previewKey?.EntityId != id && 
+                    // A chave precisa ser deste RDDV: outro id ou outro tipo de título é recusado.
+                    if (previewKey?.EntityId != id ||
                         previewKey?.RequestType != Domain.Enums.EnumRequestType.Rddv)
                     {
                         return Unauthorized("Chave de visualização não autorizada para esta solicitação.");
@@ -382,7 +391,8 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogError(ex, "Falha ao gerar o ZIP de anexos do RDDV {Id}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
         }
 
@@ -397,7 +407,8 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
                 {
-                    if (previewKey?.EntityId != id &&
+                    // A chave precisa ser desta solicitação: outro id ou outro tipo de título é recusado.
+                    if (previewKey?.EntityId != id ||
                         previewKey?.RequestType != Domain.Enums.EnumRequestType.Solicitacao)
                     {
                         return Unauthorized("Chave de visualização não autorizada para esta solicitação.");
@@ -442,7 +453,8 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogError(ex, "Falha ao gerar o ZIP de anexos da solicitação {Id}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
         }
     }
