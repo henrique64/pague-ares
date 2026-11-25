@@ -1,0 +1,15 @@
+F3 vermelho (achados 4 e 7) - ng test no front-end, antes da correcao
+Comando: npx ng test --watch=false --browsers=ChromeHeadless (Edge headless)
+Executed 121 of 121 (5 FAILED) (3.517 secs / 3.067 secs)
+Falhas:
+ExportacoesComponent ações download sem sair da aplicação Baixar cria um iframe oculto com a URL do token, sem navegar nem abrir janela FAILED
+ExportacoesComponent ações download sem sair da aplicação se o servidor devolve um documento (token recusado), o usuário é orientado a gerar o link de novo FAILED
+ExportacoesComponent ações download sem sair da aplicação um novo Baixar descarta o iframe anterior FAILED
+ExportacoesComponent polling da lista criar() que responde depois do ngOnDestroy não recarrega a lista nem liga o polling FAILED
+ExportacoesComponent polling da lista resposta de listar() que chega depois do ngOnDestroy com job Pendente não liga o polling FAILED
+Mensagens:
+	Error: Expected 0 to be 2.
+	Error: Expected spy ExportacaoService.listar not to have been called.
+	Error: Expected spy navegarPara not to have been called.
+	Error: Expected true to be false.
+	TypeError: Cannot read properties of undefined (reading 'dispatchEvent')

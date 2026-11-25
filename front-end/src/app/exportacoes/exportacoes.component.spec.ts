@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -10,7 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ExportacoesComponent } from './exportacoes.component';
 import { ExportacaoService } from 'app/services/exportacao.service';
 import { UsersService } from 'app/services/users.service';
@@ -81,7 +81,6 @@ describe('ExportacoesComponent', () => {
   function montarTela() {
     fixture = TestBed.createComponent(ExportacoesComponent);
     component = fixture.componentInstance;
-    spyOn<any>(component, 'navegarPara');
     spyOn<any>(component, 'confirmar').and.returnValue(true);
     fixture.detectChanges();
   }
@@ -275,6 +274,47 @@ describe('ExportacoesComponent', () => {
       expect(exportacao.listar.calls.count()).toBe(chamadas);
     }));
 
+    it('resposta de listar() que chega depois do ngOnDestroy com job Pendente não liga o polling', fakeAsync(() => {
+      const resposta = new Subject<any>();
+      exportacao.listar.and.returnValue(resposta);
+      montarTela();
+
+      component.ngOnDestroy();
+      resposta.next(envelope([job(1, EnumStatusExportacao.Pendente)]));
+      resposta.complete();
+
+      try {
+        expect(component.pollingAtivo).toBeFalse();
+        exportacao.listar.calls.reset();
+        tick(30000);
+        expect(exportacao.listar).not.toHaveBeenCalled();
+      } finally {
+        discardPeriodicTasks();
+      }
+    }));
+
+    it('criar() que responde depois do ngOnDestroy não recarrega a lista nem liga o polling', fakeAsync(() => {
+      const resposta = new Subject<any>();
+      exportacao.criar.and.returnValue(resposta);
+      jobsAtuais = [job(1, EnumStatusExportacao.Pendente)];
+      montarTela();
+      tick();
+      component.gerarExportacao();
+      component.ngOnDestroy();
+      exportacao.listar.calls.reset();
+
+      resposta.next(envelope(job(2, EnumStatusExportacao.Pendente)));
+      resposta.complete();
+
+      try {
+        expect(exportacao.listar).not.toHaveBeenCalled();
+        tick(30000);
+        expect(exportacao.listar).not.toHaveBeenCalled();
+      } finally {
+        discardPeriodicTasks();
+      }
+    }));
+
     it('erro de rede durante o polling não derruba a consulta seguinte', fakeAsync(() => {
       jobsAtuais = [job(1, EnumStatusExportacao.Processando)];
       montarTela();
@@ -291,18 +331,65 @@ describe('ExportacoesComponent', () => {
   });
 
   describe('ações', () => {
-    it('Baixar gera o link e navega para a URL do token', () => {
-      jobsAtuais = [job(5, EnumStatusExportacao.Concluido)];
-      exportacao.gerarLinkDownload.and.returnValue(of(envelope({ token: 'tok-abc', expiraEm: '2026-11-25T15:00:00Z' })));
-      montarTela();
+    describe('download sem sair da aplicação', () => {
+      let frames: HTMLIFrameElement[];
+      let janelaAberta: jasmine.Spy;
 
-      component.baixar(jobsAtuais[0]);
+      beforeEach(() => {
+        jobsAtuais = [job(5, EnumStatusExportacao.Concluido)];
+        exportacao.gerarLinkDownload.and.returnValue(of(envelope({ token: 'tok-abc', expiraEm: '2026-11-25T15:00:00Z' })));
+        montarTela();
 
-      expect(exportacao.gerarLinkDownload).toHaveBeenCalledOnceWith(5);
-      expect((component as any).navegarPara).toHaveBeenCalledOnceWith('http://api/exportacao/download?token=tok-abc');
+        // Captura o iframe sem anexá-lo, para o teste não fazer requisição de rede.
+        frames = [];
+        const anexar = document.body.appendChild.bind(document.body);
+        spyOn(document.body, 'appendChild').and.callFake(((el: Node) => {
+          if (el instanceof HTMLIFrameElement) {
+            frames.push(el);
+            return el;
+          }
+          return anexar(el);
+        }) as any);
+        janelaAberta = spyOn(window, 'open');
+      });
+
+      it('Baixar cria um iframe oculto com a URL do token, sem navegar nem abrir janela', () => {
+        component.baixar(jobsAtuais[0]);
+
+        expect(exportacao.gerarLinkDownload).toHaveBeenCalledOnceWith(5);
+        expect(janelaAberta).not.toHaveBeenCalled();
+        expect(frames.length).toBe(1);
+        expect(frames[0].src).toBe('http://api/exportacao/download?token=tok-abc');
+        expect(frames[0].style.display).toBe('none');
+      });
+
+      it('se o servidor devolve um documento (token recusado), o usuário é orientado a gerar o link de novo', () => {
+        component.baixar(jobsAtuais[0]);
+
+        frames[0].dispatchEvent(new Event('load'));
+
+        expect(snackbar.open).toHaveBeenCalledTimes(1);
+        const texto = snackbar.open.calls.mostRecent().args[0];
+        expect(texto).toContain('Gere o link de novo');
+        expect(frames[0].isConnected).toBeFalse();
+      });
+
+      it('download que o navegador aceita como arquivo (sem load) não mostra erro', () => {
+        component.baixar(jobsAtuais[0]);
+
+        expect(snackbar.open).not.toHaveBeenCalled();
+      });
+
+      it('um novo Baixar descarta o iframe anterior', () => {
+        component.baixar(jobsAtuais[0]);
+        component.baixar(jobsAtuais[0]);
+
+        expect(frames.length).toBe(2);
+        expect(frames[0]).not.toBe(frames[1]);
+      });
     });
 
-    it('Baixar com falha mostra mensagem e não navega', () => {
+    it('Baixar com falha ao gerar o link mostra a mensagem e não cria iframe', () => {
       jobsAtuais = [job(5, EnumStatusExportacao.Concluido)];
       exportacao.gerarLinkDownload.and.returnValue(throwError(new HttpErrorResponse({
         status: 410, error: { success: false, message: 'O arquivo expirou. Gere a exportação de novo.' },
@@ -311,7 +398,7 @@ describe('ExportacoesComponent', () => {
 
       component.baixar(jobsAtuais[0]);
 
-      expect((component as any).navegarPara).not.toHaveBeenCalled();
+      expect(document.querySelector('iframe')).toBeNull();
       expect(snackbar.open).toHaveBeenCalledWith('O arquivo expirou. Gere a exportação de novo.', 'OK', jasmine.anything());
     });
 
