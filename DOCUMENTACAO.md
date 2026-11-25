@@ -454,6 +454,7 @@ O app usa **rotas com hash** (`useHash: true`), por exemplo `http://localhost:42
 /                         → AdminLayoutComponent (redireciona para /login se não autenticado)
   /home                   → HomeComponent
   /payments               → PaymentsComponent
+  /exportacoes            → ExportacoesComponent (só FIN e ADM, via papelGuard)
   /rddv                   → RddvComponent
   /config                 → ConfigurationComponent
   /icons                  → IconsComponent
@@ -462,7 +463,7 @@ O app usa **rotas com hash** (`useHash: true`), por exemplo `http://localhost:42
   /create-user[/:id]      → CreateUserComponent
 ```
 
-O `AdminLayoutModule` é carregado via **lazy loading**. Após login bem-sucedido o app navega para `/payments`. O menu lateral varia por papel: ADM (Home, Solicitações, Configurações), FIN/CON (Home, Solicitações), GES/SOL (Solicitações).
+O `AdminLayoutModule` é carregado via **lazy loading**. A rota `/exportacoes` é a única com guarda de papel (`papelGuard(EnumFuncao.Financeiro, EnumFuncao.Administrador)`, em `guards/papel.guard.ts`): quem não é FIN nem ADM é redirecionado para `/payments`. Após login bem-sucedido o app navega para `/payments`. O menu lateral varia por papel: ADM (Home, Solicitações, Exportações, Configurações), FIN (Home, Solicitações, Exportações), CON (Home, Solicitações; não exporta), GES/SOL (Solicitações).
 
 ---
 
@@ -530,6 +531,7 @@ Componentes declarados no módulo do layout (`/rddv` tem rota; `RefundsComponent
 | `TravelTypeService` | CRUD de tipos de viagem |
 | `DepartmentService` | Lista de departamentos |
 | `ExportService` | URLs de exportação Excel e ZIP de anexos |
+| `ExportacaoService` | Exportações de títulos com anexos em `/api/exportacao`: criar, listar, obter, gerar link de download de uso único e cancelar (o download usa `/api/exportacao/download?token=`) |
 | `PreviewTokenService` | Geração da preview key temporária |
 | `ConfigService` | Leitura e escrita de configurações do sistema |
 | `SystemService` | Inicialização da aplicação (`APP_INITIALIZER`) — carrega `assets/config.json` |

@@ -26,7 +26,7 @@ Ambos seguem um **fluxo de aprovação em três estágios**: Gestor → Financei
 | Autenticação | JWT HS256 (`Microsoft.AspNetCore.Authentication.JwtBearer`) + Active Directory (LDAP) |
 | Senhas locais | BCrypt (`BCrypt.Net-Next` 4.0.3); hashes SHA256 legados são migrados no login |
 | E-mail | SMTP (`System.Net.Mail`) |
-| Excel | FreeSpire.XLS 16.4.0 |
+| Excel | ClosedXML 0.105.1 |
 | ZIP | SharpZipLib 1.4.2 |
 | JSON | Newtonsoft.Json 13.0.4 (usado em `ExportController`) |
 | Docs da API | `Microsoft.AspNetCore.OpenApi` 10.0.8 + Scalar UI (`Scalar.AspNetCore` 2.14.14) — **não há Swagger** |
@@ -220,6 +220,16 @@ Todos os controllers usam `[Route("api/[controller]")]` e `[Authorize]` (JWT Bea
 | `TravelTypeController` | `/api/traveltype` | `GET /`, `GET /{id}`, `POST /` |
 | `DepartmentController` | `/api/department` | `GET /` — lista de departamentos (substitui listas fixas no frontend) |
 | `PreviewController` | `/api/preview` | `POST /generate-preview-key?entityId=&requestType=`, `GET /payment/{id}/{attachmentId}?key=`, `GET /rddv/{id}/{attachmentId}?key=` |
+| `ExportacaoController` | `/api/exportacao` | `POST /` — cria um job de exportação de títulos (202 com o job; 400 para filtro inválido ou sem títulos, 429 ao passar de `MaxJobsAtivosPorUsuario`); `GET /` — jobs do próprio usuário dos últimos 30 dias; `GET /{id}` — um job do próprio usuário; `POST /{id}/link-download` — gera o link de download de uso único (só para job Concluido); `GET /download?token=` — baixa o ZIP pelo token, anônimo na autenticação, consumido na primeira vez; `DELETE /{id}` — cancela (Pendente vira Cancelado, Processando pede cancelamento, Concluido vira Expirado e apaga o arquivo) |
+
+**Exportações (`ExportacaoController`)**: exigem papel **FIN** ou **ADM** do JWT (outros perfis recebem 403), e cada usuário só enxerga e altera os próprios jobs (job de outro usuário responde 404). A identidade vem sempre do token, nunca do corpo ou da query. O download é por navegação direta do navegador, que não envia o cabeçalho `Authorization`, por isso o link de uso único (`TokensDownloadExportacao`, em `API/Services`).
+
+O processamento é em segundo plano, em `Application/Exportacao/`:
+- `ExportacaoFila`: fila em memória que recebe os ids dos jobs criados e registra o job em execução, para que o cancelamento interrompa a geração na hora.
+- `ExportacaoWorker`: `BackgroundService` que gera o ZIP (planilha Excel com ClosedXML e anexos) job a job, com progresso gravado em `ExportacaoJob`.
+- `ExportacaoLimpeza`: `BackgroundService` que, ao subir e a cada `IntervaloLimpezaMinutos`, expira os pacotes vencidos e apaga arquivos órfãos mais velhos que `RetencaoHoras`.
+
+Os jobs ficam na tabela `ExportacaoJob` (mapeada com `ToTable("ExportacaoJob")` em `PagueAresContext`), com o token de concorrência `Versao`. A seção `Exportacao` do `appsettings.json` traz as chaves `Pasta` (vazia = pasta temporária do sistema, `PagueAres/Exportacao`), `RetencaoHoras`, `IntervaloLimpezaMinutos`, `MaxTitulosPorExportacao`, `MaxJobsAtivosPorUsuario`, `MaxBytesPorExportacao`, `EspacoLivreMinimoMb`, `ValidadeLinkDownloadSegundos` e `WorkerHabilitado`, todas ligadas à classe `ExportacaoSettings` (`Application/Configuration`).
 
 Observações:
 - **Não existem** mais `GET /api/request` nem `GET /api/rddv` (listagem crua sem escopo de usuário foi removida; use `/api/listing`).

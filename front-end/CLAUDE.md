@@ -90,6 +90,8 @@ src/app/
 ├── login/                     # Página de login
 ├── home/                      # Dashboard com estatísticas (atualiza a cada 30 s)
 ├── payments/                  # Lista de Solicitações/RDDVs por visão (abas)
+├── exportacoes/               # ExportacoesComponent: tela de exportações de títulos com anexos (só FIN e ADM)
+├── guards/                    # papel.guard.ts (papelGuard): libera a rota só para os papéis informados
 ├── rddv/                      # RddvComponent (declarado no módulo, sem rota própria)
 ├── refunds/                   # RefundsComponent (declarado no módulo, sem rota própria)
 ├── icons/                     # Página de ícones (template Material Dashboard)
@@ -121,6 +123,7 @@ Definido em `app.routing.ts` e `layouts/admin-layout/admin-layout.routing.ts` (r
 /                         → AdminLayoutComponent     (redireciona para /login se não autenticado)
   /home                   → HomeComponent
   /payments               → PaymentsComponent
+  /exportacoes            → ExportacoesComponent     (só FIN e ADM, via papelGuard)
   /config                 → ConfigurationComponent
   /rddv                   → RddvComponent
   /icons                  → IconsComponent
@@ -129,9 +132,9 @@ Definido em `app.routing.ts` e `layouts/admin-layout/admin-layout.routing.ts` (r
   /create-user[/:id]      → CreateUserComponent
 ```
 
-O `AdminLayoutModule` é carregado com **lazy loading** (`loadChildren`). Não há `canActivate`; o redirecionamento ao login está em `AdminLayoutComponent`. Após login com sucesso o app navega para `/payments`; se já autenticado ao abrir `/login`, vai para `/home`.
+O `AdminLayoutModule` é carregado com **lazy loading** (`loadChildren`). A única rota com `canActivate` é `/exportacoes`, protegida pelo `papelGuard(EnumFuncao.Financeiro, EnumFuncao.Administrador)` (`guards/papel.guard.ts`), que redireciona para `/payments` quando o usuário não tem nenhum dos papéis; as demais rotas não têm guarda, e o redirecionamento ao login está em `AdminLayoutComponent`. Após login com sucesso o app navega para `/payments`; se já autenticado ao abrir `/login`, vai para `/home`.
 
-O menu lateral (`sidebar.component.ts`) depende do papel: ADM vê Home, Solicitações e Configurações; FIN/CON veem Home e Solicitações; GES e SOL veem apenas Solicitações. Os relatórios são abertos em nova aba a partir das listagens (`/#/payment-report/{codigo}`).
+O menu lateral (`sidebar.component.ts`) depende do papel: ADM vê Home, Solicitações, Exportações e Configurações; FIN vê Home, Solicitações e Exportações; CON vê Home e Solicitações (não exporta); GES e SOL veem apenas Solicitações. Os relatórios são abertos em nova aba a partir das listagens (`/#/payment-report/{codigo}`).
 
 ---
 
@@ -159,6 +162,7 @@ O papel vem do JWT (claim `Roles`, aliases separados por vírgula) e é consulta
 | `TravelTypeService` | `travel-type.service.ts` | Tipos de viagem |
 | `DepartmentService` | `department.service.ts` | Departamentos (`/api/Department`) — substituiu as listas fixas |
 | `ExportService` | `export.service.ts` | URLs de Excel e ZIP de anexos |
+| `ExportacaoService` | `exportacao.service.ts` | Exportações de títulos com anexos: criar, listar, obter, gerar link de download e cancelar, em `/api/exportacao` (o download usa `/api/exportacao/download?token=`) |
 | `PreviewTokenService` | `preview-token.service.ts` | Gera a *preview key* (válida por 1 min) para anexos/exportação |
 | `ConfigService` | `config.service.ts` | Leitura e escrita de configurações do sistema |
 | `SystemService` | `system.service.ts` | `APP_INITIALIZER`: carrega `assets/config.json` |
@@ -184,7 +188,7 @@ Relatório de Despesas com Viagem: funcionário, CPF, tipo de viagem, datas, des
 Listagem em abas conforme o papel: "Minhas Solicitações" (MyView), "Gestor" (GES/ADM) e "Financeiro/Contábil" (FIN/CON/ADM). Mostra Solicitações e RDDVs juntos (`/api/Listing`).
 - Filtros por período, parceiro, nº do documento, status etc.; o filtro é persistido por usuário no `localStorage` e o `viewMode` é validado pelo papel.
 - Badge "Rascunho", spinner de carregamento, resposta "último vence" ao alternar abas/contas.
-- Botões "Solicitar Pagamento", "Solicitar RDDV", "Exportar" (Excel, só na visão financeira) e "Filtrar/Limpar".
+- Botões "Solicitar Pagamento", "Solicitar RDDV", "Exportar" (Excel, só na visão financeira e só para FIN e ADM; CON não vê o botão, `allowExport`) e "Filtrar/Limpar".
 
 ### HomeComponent (`/home`)
 Cards Pendentes/Aprovados/Reprovados (soma de Solicitações e RDDVs), atualização a cada 30 s, lista de itens para atribuição de responsável (ADM/FIN).
