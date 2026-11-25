@@ -1,0 +1,39 @@
+F1 — Correção dos achados 1 e 3 da revisão de segurança — fase VERMELHA (testes antes da correção)
+Data: 2026-11-25
+Branch: feature/exportacao-anexos-f1 (base 2d1b9ee)
+Comando: dotnet test back-end/Ares.PagueAres.sln --filter "FullyQualifiedName~ExportLegadoSecurityTests"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportLegadoSecurityTests.cs
+Banco: EF Core InMemory da PagueAresWebAppFactory, só dados fictícios.
+
+Resultado: 26 testes — 6 com falha, 20 aprovados (os 18 testes da E1 e os 2 controles novos do caminho legítimo).
+
+Achado 1 [alto] — preview de anexo não confere o título da chave
+Cenário: o usuário 6 (SOL) pede a chave do próprio título 7400 e com ela pede o anexo 97401, que é
+do rascunho 7401 do usuário 3. Idem no RDDV (chave do RDDV 7410, anexo 97411 do rascunho 7411).
+------------------------------------------------------------------------------------------
+[FALHOU] PreviewAnexo_ChaveDoTituloComAnexoDeOutroTitulo_Retorna404(Solicitacao, "payment", 7400, 97401)
+         esperado 404; recebido 200 (o anexo do rascunho de outro usuário foi entregue)
+[FALHOU] PreviewAnexo_ChaveDoTituloComAnexoDeOutroTitulo_Retorna404(Rddv, "rddv", 7410, 97411)
+         esperado 404; recebido 200 (o anexo do rascunho de outro usuário foi entregue)
+
+Achado 3 [médio] — zip-slip nos ZIPs legados por título
+Cenário: o título 7420 (Solicitação) e o RDDV 7430 têm anexos chamados "..\..\fora.pdf",
+"../../fora2.pdf", "C:\Windows\fora3.pdf", "/fora4.pdf", "boleto.pdf", "boleto.pdf" e "BOLETO.pdf".
+------------------------------------------------------------------------------------------
+[FALHOU] ZipAnexos_NomeComCaminho_EntradaNaoSaiDaPastaDeExtracao(Solicitacao, "request", 7420)
+         entradas "../../fora.pdf" e "../../fora2.pdf" contêm ".." (a extração escreve fora da pasta de destino)
+[FALHOU] ZipAnexos_NomeComCaminho_EntradaNaoSaiDaPastaDeExtracao(Rddv, "rddv", 7430)
+         entradas "../../fora.pdf" e "../../fora2.pdf" contêm ".."
+[FALHOU] ZipAnexos_AnexosComMesmoNome_EntradasDistintas(Solicitacao, "request", 7420)
+         a entrada "BOLETO.PDF" (sem diferenciar caixa) se repete: um anexo sobrescreve o outro na extração
+[FALHOU] ZipAnexos_AnexosComMesmoNome_EntradasDistintas(Rddv, "rddv", 7430)
+         a entrada "BOLETO.PDF" (sem diferenciar caixa) se repete
+
+Controles do caminho legítimo (passam antes e depois)
+------------------------------------------------------------------------------------------
+[PASSOU] PreviewAnexo_ChaveEAnexoDoMesmoTitulo_Retorna200(Solicitacao, "payment", 7400, 97400)
+[PASSOU] PreviewAnexo_ChaveEAnexoDoMesmoTitulo_Retorna200(Rddv, "rddv", 7410, 97410)
+
+Testes da E1 (continuam passando)
+------------------------------------------------------------------------------------------
+[PASSOU] os 18 testes da E1 (cenários de chave, escopo do Excel, ZIP por título, rascunho e mensagens de erro)

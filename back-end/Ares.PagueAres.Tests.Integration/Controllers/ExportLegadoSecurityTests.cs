@@ -3,6 +3,7 @@ using Ares.PagueAres.Infrastructure;
 using Ares.PagueAres.Infrastructure.Models;
 using Ares.PagueAres.Tests.Integration.Infrastructure;
 using ClosedXML.Excel;
+using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 
@@ -18,7 +19,9 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
     ///   gestor), independente do userId enviado na query;
     /// - os ZIPs por título recusam chave de outro tipo ou de outro id;
     /// - rascunho só gera chave para o dono;
-    /// - nenhuma resposta de erro expõe texto de exceção.
+    /// - nenhuma resposta de erro expõe texto de exceção;
+    /// - o preview de anexo só entrega anexo do próprio título da chave (anexo de outro título é 404);
+    /// - as entradas dos ZIPs por título nunca saem da pasta de extração (zip-slip) e não se repetem.
     ///
     /// Testes com [Trait("Category", "Controle")] confirmam o caminho legítimo e devem passar
     /// antes e depois da correção.
@@ -39,6 +42,36 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         private const int IdAnexoRddv54 = 9054;
         private const int IdAnexoRddv103 = 9103;
         private const int IdAnexoRddvCorrompido = 9311;
+
+        // Preview de anexo: o usuário 6 (SOL) é dono de um título e pede a chave dele; o título vizinho é
+        // rascunho do usuário 3. A chave do título do usuário 6 não pode abrir o anexo do rascunho.
+        private const int IdSolicitacaoDoUsuario6 = 7400;
+        private const int IdSolicitacaoRascunhoDeOutroUsuario = 7401;
+        private const int IdRddvDoUsuario6 = 7410;
+        private const int IdRddvRascunhoDeOutroUsuario = 7411;
+
+        private const int IdAnexoSolicitacaoDoUsuario6 = 97400;
+        private const int IdAnexoSolicitacaoRascunhoDeOutroUsuario = 97401;
+        private const int IdAnexoRddvDoUsuario6 = 97410;
+        private const int IdAnexoRddvRascunhoDeOutroUsuario = 97411;
+        private const int IdAnexoInexistente = 99999;
+
+        // ZIPs por título com nomes de anexo maliciosos (zip-slip) e repetidos.
+        private const int IdSolicitacaoNomesMaliciosos = 7420;
+        private const int IdRddvNomesMaliciosos = 7430;
+        private const int PrimeiroIdAnexoSolicitacaoNomesMaliciosos = 97420;
+        private const int PrimeiroIdAnexoRddvNomesMaliciosos = 97430;
+
+        private static readonly string[] NomesDeAnexoMaliciosos =
+        [
+            @"..\..\fora.pdf",
+            "../../fora2.pdf",
+            @"C:\Windows\fora3.pdf",
+            "/fora4.pdf",
+            "boleto.pdf",
+            "boleto.pdf",
+            "BOLETO.pdf"
+        ];
 
         // "%PDF-1.4\n" em base64, com o prefixo data URI que o front-end grava.
         private const string ArquivoValido = "data:application/pdf;base64,JVBERi0xLjQK";
@@ -137,7 +170,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             };
         }
 
-        private static DocumentoSolicitacao NovoAnexoSolicitacao(int idAnexo, int idSolicitacao, string arquivo)
+        private static DocumentoSolicitacao NovoAnexoSolicitacao(int idAnexo, int idSolicitacao, string arquivo, string? nomeArquivo = null)
         {
             return new DocumentoSolicitacao
             {
@@ -147,13 +180,13 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
                 IdUsuario = 3,
                 DataCriacao = DateTime.Now,
                 Indice = 1,
-                NomeArquivo = $"anexo-{idAnexo}.pdf",
+                NomeArquivo = nomeArquivo ?? $"anexo-{idAnexo}.pdf",
                 CaminhoArquivo = "application/pdf",
                 Arquivo = arquivo
             };
         }
 
-        private static DocumentoRddv NovoAnexoRddv(int idAnexo, int idRelatorio, string arquivo)
+        private static DocumentoRddv NovoAnexoRddv(int idAnexo, int idRelatorio, string arquivo, string? nomeArquivo = null)
         {
             return new DocumentoRddv
             {
@@ -163,10 +196,28 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
                 IdUsuario = 3,
                 DataCriacao = DateTime.Now,
                 Indice = 1,
-                NomeArquivo = $"anexo-{idAnexo}.pdf",
+                NomeArquivo = nomeArquivo ?? $"anexo-{idAnexo}.pdf",
                 CaminhoArquivo = "application/pdf",
                 Arquivo = arquivo
             };
+        }
+
+        private static Solicitacao NovaSolicitacaoRascunho(int id, int idUsuario)
+        {
+            var solicitacao = NovaSolicitacaoAprovadaPeloGestor(id, idUsuario);
+            solicitacao.Rascunho = true;
+            solicitacao.AprovadoGestor = null;
+            solicitacao.StatusGestor = 1;
+            return solicitacao;
+        }
+
+        private static Rddv NovoRddvRascunho(int id, int idUsuario)
+        {
+            var rddv = NovoRddvAprovadoPeloGestor(id, idUsuario);
+            rddv.Rascunho = true;
+            rddv.AprovadoGestor = null;
+            rddv.StatusGestor = 1;
+            return rddv;
         }
 
         private static void SeedCenarioExportacao(PagueAresContext ctx)
@@ -190,6 +241,35 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
                 NovoAnexoRddv(IdAnexoRddv54, 54, ArquivoValido),
                 NovoAnexoRddv(IdAnexoRddv103, IdRddvMesmoIdDeSolicitacao, ArquivoValido),
                 NovoAnexoRddv(IdAnexoRddvCorrompido, IdRddvAnexoCorrompido, ArquivoCorrompido));
+
+            // Preview de anexo: título do usuário 6 e rascunho vizinho do usuário 3, cada um com um anexo.
+            ctx.Solicitacaos.AddRange(
+                NovaSolicitacaoAprovadaPeloGestor(IdSolicitacaoDoUsuario6, idUsuario: 6),
+                NovaSolicitacaoRascunho(IdSolicitacaoRascunhoDeOutroUsuario, idUsuario: 3));
+
+            ctx.Rddv.AddRange(
+                NovoRddvAprovadoPeloGestor(IdRddvDoUsuario6, idUsuario: 6),
+                NovoRddvRascunho(IdRddvRascunhoDeOutroUsuario, idUsuario: 3));
+
+            ctx.DocumentoSolicitacaos.AddRange(
+                NovoAnexoSolicitacao(IdAnexoSolicitacaoDoUsuario6, IdSolicitacaoDoUsuario6, ArquivoValido),
+                NovoAnexoSolicitacao(IdAnexoSolicitacaoRascunhoDeOutroUsuario, IdSolicitacaoRascunhoDeOutroUsuario, ArquivoValido));
+
+            ctx.DocumentoRddv.AddRange(
+                NovoAnexoRddv(IdAnexoRddvDoUsuario6, IdRddvDoUsuario6, ArquivoValido),
+                NovoAnexoRddv(IdAnexoRddvRascunhoDeOutroUsuario, IdRddvRascunhoDeOutroUsuario, ArquivoValido));
+
+            // ZIPs por título: um anexo para cada nome malicioso ou repetido.
+            ctx.Solicitacaos.Add(NovaSolicitacaoAprovadaPeloGestor(IdSolicitacaoNomesMaliciosos, idUsuario: 3));
+            ctx.Rddv.Add(NovoRddvAprovadoPeloGestor(IdRddvNomesMaliciosos, idUsuario: 3));
+
+            for (int i = 0; i < NomesDeAnexoMaliciosos.Length; i++)
+            {
+                ctx.DocumentoSolicitacaos.Add(NovoAnexoSolicitacao(
+                    PrimeiroIdAnexoSolicitacaoNomesMaliciosos + i, IdSolicitacaoNomesMaliciosos, ArquivoValido, NomesDeAnexoMaliciosos[i]));
+                ctx.DocumentoRddv.Add(NovoAnexoRddv(
+                    PrimeiroIdAnexoRddvNomesMaliciosos + i, IdRddvNomesMaliciosos, ArquivoValido, NomesDeAnexoMaliciosos[i]));
+            }
 
             ctx.SaveChanges();
         }
@@ -222,6 +302,15 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 
         private static string UrlExportacaoExcel(string sFilter, int userId, string key) =>
             $"/api/export/payments?sFilter={Uri.EscapeDataString(sFilter)}&userId={userId}&key={Uri.EscapeDataString(key)}";
+
+        private HttpClient ClienteSOLUsuario6() => _factory.GetAuthenticatedClient(6, "Outro Solicitante", "SOL");
+
+        private static async Task<List<string>> LerEntradasDoZipAsync(HttpResponseMessage response)
+        {
+            using var stream = new MemoryStream(await response.Content.ReadAsByteArrayAsync());
+            using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
+            return zip.Entries.Select(e => e.FullName).ToList();
+        }
 
         private static List<string> LerCodigosDoExcel(byte[] conteudo)
         {
@@ -452,6 +541,96 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             body.Should().NotContainEquivalentOf("base64", "a mensagem da FormatException não pode vazar");
             response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
             body.Should().Contain(MensagemErroGenerica);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // Preview de anexo: a chave de um título não abre anexo de outro título
+        // ═══════════════════════════════════════════════════════════════════════
+
+        [Theory]
+        [Trait("Category", "SecurityGap")]
+        [InlineData(EnumRequestType.Solicitacao, "payment", IdSolicitacaoDoUsuario6, IdAnexoSolicitacaoRascunhoDeOutroUsuario)]
+        [InlineData(EnumRequestType.Rddv, "rddv", IdRddvDoUsuario6, IdAnexoRddvRascunhoDeOutroUsuario)]
+        public async Task PreviewAnexo_ChaveDoTituloComAnexoDeOutroTitulo_Retorna404(
+            EnumRequestType tipo, string rota, int idTitulo, int idAnexoDeOutroTitulo)
+        {
+            var client = ClienteSOLUsuario6();
+            var key = await GerarChaveAsync(client, idTitulo, tipo);
+
+            var response = await client.GetAsync($"/api/preview/{rota}/{idTitulo}/{idAnexoDeOutroTitulo}?key={key}");
+            var inexistente = await client.GetAsync($"/api/preview/{rota}/{idTitulo}/{IdAnexoInexistente}?key={key}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound,
+                $"o anexo {idAnexoDeOutroTitulo} é do rascunho de outro usuário, não do título {idTitulo} da chave");
+            (await response.Content.ReadAsStringAsync()).Should().Be(await inexistente.Content.ReadAsStringAsync(),
+                "anexo de outro título responde igual a anexo inexistente, sem confirmar que ele existe");
+        }
+
+        [Theory]
+        [Trait("Category", "Controle")]
+        [InlineData(EnumRequestType.Solicitacao, "payment", IdSolicitacaoDoUsuario6, IdAnexoSolicitacaoDoUsuario6)]
+        [InlineData(EnumRequestType.Rddv, "rddv", IdRddvDoUsuario6, IdAnexoRddvDoUsuario6)]
+        public async Task PreviewAnexo_ChaveEAnexoDoMesmoTitulo_Retorna200(
+            EnumRequestType tipo, string rota, int idTitulo, int idAnexo)
+        {
+            var client = ClienteSOLUsuario6();
+            var key = await GerarChaveAsync(client, idTitulo, tipo);
+
+            var response = await client.GetAsync($"/api/preview/{rota}/{idTitulo}/{idAnexo}?key={key}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "o anexo é do próprio título da chave");
+            response.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // ZIPs por título: nome de anexo não escapa da pasta (zip-slip) nem se repete
+        // ═══════════════════════════════════════════════════════════════════════
+
+        [Theory]
+        [Trait("Category", "SecurityGap")]
+        [InlineData(EnumRequestType.Solicitacao, "request", IdSolicitacaoNomesMaliciosos)]
+        [InlineData(EnumRequestType.Rddv, "rddv", IdRddvNomesMaliciosos)]
+        public async Task ZipAnexos_NomeComCaminho_EntradaNaoSaiDaPastaDeExtracao(EnumRequestType tipo, string rota, int idTitulo)
+        {
+            var client = ClienteFIN();
+            var key = await GerarChaveAsync(client, idTitulo, tipo);
+
+            var response = await client.GetAsync($"/api/export/{rota}/attachment/{idTitulo}?key={key}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var entradas = await LerEntradasDoZipAsync(response);
+
+            entradas.Should().HaveCount(NomesDeAnexoMaliciosos.Length, "cada anexo vira uma entrada do ZIP");
+            using (new FluentAssertions.Execution.AssertionScope())
+            {
+                foreach (var entrada in entradas)
+                {
+                    entrada.Should().NotContain("..", "'..' na entrada leva a extração para fora da pasta de destino");
+                    entrada.Should().NotStartWith("/", "entrada absoluta escreve fora da pasta de destino");
+                    entrada.Should().NotContain("\\", "barra invertida vira separador de pasta no Windows");
+                    entrada.Should().NotContain(":", "dois-pontos indica unidade (C:) ou fluxo alternativo no Windows");
+                }
+            }
+        }
+
+        [Theory]
+        [Trait("Category", "SecurityGap")]
+        [InlineData(EnumRequestType.Solicitacao, "request", IdSolicitacaoNomesMaliciosos)]
+        [InlineData(EnumRequestType.Rddv, "rddv", IdRddvNomesMaliciosos)]
+        public async Task ZipAnexos_AnexosComMesmoNome_EntradasDistintas(EnumRequestType tipo, string rota, int idTitulo)
+        {
+            var client = ClienteFIN();
+            var key = await GerarChaveAsync(client, idTitulo, tipo);
+
+            var response = await client.GetAsync($"/api/export/{rota}/attachment/{idTitulo}?key={key}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var entradas = await LerEntradasDoZipAsync(response);
+
+            entradas.Should().HaveCount(NomesDeAnexoMaliciosos.Length, "cada anexo vira uma entrada do ZIP");
+            entradas.Select(e => e.ToUpperInvariant()).Should().OnlyHaveUniqueItems(
+                "anexos de mesmo nome (sem diferenciar caixa) se sobrescreveriam na extração");
+            entradas.Should().Contain("boleto.pdf", "nome que já é seguro é mantido como está");
         }
     }
 }
