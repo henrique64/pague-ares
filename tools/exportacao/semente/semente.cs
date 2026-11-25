@@ -614,6 +614,7 @@ static async Task InserirAnexosAsync(SqlConnection conn, SqlTransaction tx, Ctx 
         long tam = Math.Max(1024, (long)(bytesTotal * pesos[a] / somaPesos));
         bool jpeg = rng.Next(100) < 30;
         string ext = jpeg ? "jpg" : "pdf";
+        string tipoMidia = jpeg ? "image/jpeg" : "application/pdf";
         int tipoDoc = c.TiposDocumento[rng.Next(c.TiposDocumento.Count)];
         string nome;
 
@@ -644,7 +645,8 @@ static async Task InserirAnexosAsync(SqlConnection conn, SqlTransaction tx, Ctx 
         P(cmd, "@Data", System.Data.SqlDbType.DateTime, dataBase.AddHours(rng.Next(1, 20)));
         P(cmd, "@Indice", System.Data.SqlDbType.Int, a);
         P(cmd, "@Nome", System.Data.SqlDbType.VarChar, nome.Length > 256 ? nome[..256] : nome, 256);
-        P(cmd, "@Caminho", System.Data.SqlDbType.VarChar, $"semente/{tabela}/{idTitulo}/{a}", 1024);
+        // Como o front (file.type no upload), CaminhoArquivo guarda o tipo de mídia; o PreviewController o usa no File(...).
+        P(cmd, "@Caminho", System.Data.SqlDbType.VarChar, tipoMidia, 1024);
         // Base64 é ASCII puro: varchar(max) converte para a coluna text sem perda e sem conversão proibida.
         P(cmd, "@Arquivo", System.Data.SqlDbType.VarChar, b64, -1);
         await cmd.ExecuteNonQueryAsync();
