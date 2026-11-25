@@ -73,4 +73,30 @@ describe('PaymentsComponent', () => {
     expect(component.isViewModeAllowed(EnumPaymentListViewMode.ManagerView)).toBeTrue();
     expect(component.isViewModeAllowed(EnumPaymentListViewMode.FinancialView)).toBeTrue();
   });
+
+  it('allowExport: contabilidade na visão financeira não exporta', () => {
+    component.isAccounting = true;
+    component.isFinancial = false;
+    component.isAdmin = false;
+    component.viewMode = EnumPaymentListViewMode.FinancialView;
+    expect(component.allowExport).toBeFalse();
+  });
+
+  it('allowExport: financeiro na visão financeira exporta', () => {
+    component.isFinancial = true;
+    component.viewMode = EnumPaymentListViewMode.FinancialView;
+    expect(component.allowExport).toBeTrue();
+  });
+
+  it('allowExport: administrador na visão financeira exporta', () => {
+    component.isAdmin = true;
+    component.viewMode = EnumPaymentListViewMode.FinancialView;
+    expect(component.allowExport).toBeTrue();
+  });
+
+  it('allowExport: financeiro fora da visão financeira não exporta', () => {
+    component.isFinancial = true;
+    component.viewMode = EnumPaymentListViewMode.MyView;
+    expect(component.allowExport).toBeFalse();
+  });
 });
