@@ -1,0 +1,49 @@
+E1 — Segurança dos endpoints legados — fase VERDE (testes depois da correção)
+Data: 2026-11-25
+Branch: feature/exportacao-anexos-e1
+Comando: dotnet test back-end/Ares.PagueAres.sln --filter "FullyQualifiedName~ExportLegadoSecurityTests"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportLegadoSecurityTests.cs
+Banco: EF Core InMemory da PagueAresWebAppFactory, só dados fictícios.
+
+Resultado: 18 testes — 18 aprovados, 0 com falha.
+
+Cenários de ataque (vermelho na fase anterior, verde agora)
+------------------------------------------------------------------------------------------
+[PASSOU] ChaveExportacao_PapelCON_Retorna403
+         403 com Success=false e a mensagem "Exportação permitida apenas para os perfis Financeiro e Administrador."
+[PASSOU] ChaveExportacao_PapelSOL_Retorna403
+         403 com Success=false
+[PASSOU] ExportacaoExcel_ADM_IncluiSolicitacaoAprovadaNaoAtribuidaAEle
+         o Excel traz a solicitação 300 (aprovada pelo gestor e atribuída a outro usuário) e não traz rascunho, cancelado nem título sem aprovação do gestor
+[PASSOU] ChaveExportacao_UsadaDuasVezes_SegundaRetorna401
+         primeira chamada 200; segunda 401
+[PASSOU] ZipRddv_ChaveDeOutroRddv_Retorna401
+[PASSOU] ZipRddv_ChaveDeSolicitacaoComMesmoId_Retorna401
+[PASSOU] ZipSolicitacao_ChaveDeOutraSolicitacao_Retorna401
+[PASSOU] ZipSolicitacao_ChaveDeRddvComMesmoId_Retorna401
+[PASSOU] ChaveSolicitacaoRascunho_FINDeOutroUsuario_Negada
+[PASSOU] ChaveRddvRascunho_FINDeOutroUsuario_Negada
+[PASSOU] ExportacaoExcel_FiltroMalformado_Retorna400SemMensagemInterna
+         400 com o corpo "Filtro de exportação inválido."
+[PASSOU] AnexoBase64Invalido_RespostaSemMensagemInterna(Solicitacao, 310, "/api/export/request/attachment/310")
+[PASSOU] AnexoBase64Invalido_RespostaSemMensagemInterna(Rddv, 311, "/api/export/rddv/attachment/311")
+[PASSOU] AnexoBase64Invalido_RespostaSemMensagemInterna(Solicitacao, 310, "/api/preview/payment/310/9310")
+[PASSOU] AnexoBase64Invalido_RespostaSemMensagemInterna(Rddv, 311, "/api/preview/rddv/311/9311")
+         nos quatro casos: 500 com o corpo "Não foi possível concluir a operação. Tente de novo."; a exceção vai só para o log
+
+Controles do caminho legítimo
+------------------------------------------------------------------------------------------
+[PASSOU] ZipRddv_ChaveCorreta_RetornaZip
+[PASSOU] ChaveSolicitacaoRascunho_Dono_Concedida
+[PASSOU] ChaveGerada_RespostaNaoExpoeIdUsuario
+
+Regressão
+------------------------------------------------------------------------------------------
+Comando: dotnet test back-end/Ares.PagueAres.sln
+Antes da etapa: Tests.Integration 47/47 e Tests.Unit 20/20 aprovados.
+Depois da etapa: Tests.Integration 65/65 (47 anteriores + 18 novos) e Tests.Unit 20/20 aprovados.
+
+Verificação de vazamento de exceção
+------------------------------------------------------------------------------------------
+rg "ex\.Message" back-end/Ares.PagueAres.API/Controllers/ExportController.cs back-end/Ares.PagueAres.API/Controllers/PreviewController.cs
+→ nenhuma ocorrência.
