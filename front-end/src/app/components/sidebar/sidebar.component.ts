@@ -38,6 +38,18 @@ export const FinanceRoutes: RouteInfo[] = [
     title: "Solicitações",
     icon: "source",
     class: "",
+  },
+  { path: "/exportacoes", title: "Exportações", icon: "archive", class: "" },
+];
+
+// Contabilidade não exporta: mesma lista do Financeiro, sem o item Exportações.
+export const AccountingRoutes: RouteInfo[] = [
+  { path: "/home", title: "Home", icon: "dashboard", class: "" },
+  {
+    path: "/payments",
+    title: "Solicitações",
+    icon: "source",
+    class: "",
   }
 ];
 
@@ -49,6 +61,7 @@ export const AdminRoutes: RouteInfo[] = [
     icon: "source",
     class: "",
   },
+  { path: "/exportacoes", title: "Exportações", icon: "archive", class: "" },
   { path: "/config", title: "Configurações", icon: "settings", class: "" },
 ];
 
@@ -71,8 +84,11 @@ export class SidebarComponent implements OnInit {
     if (this.authService.IsInRole(EnumFuncao.Administrador)) {
       ROUTES = AdminRoutes;
     }
-    else if (this.authService.IsInRole(EnumFuncao.Financeiro) || this.authService.IsInRole(EnumFuncao.Contabilidade)) {
+    else if (this.authService.IsInRole(EnumFuncao.Financeiro)) {
       ROUTES = FinanceRoutes;
+    }
+    else if (this.authService.IsInRole(EnumFuncao.Contabilidade)) {
+      ROUTES = AccountingRoutes;
     }
     else if (this.authService.IsInRole(EnumFuncao.Gestor)) {
       ROUTES = ManagerRoutes;

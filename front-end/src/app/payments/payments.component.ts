@@ -284,7 +284,8 @@ export class PaymentsComponent implements OnInit {
   }
 
   get allowExport(): boolean {
-    return this.viewMode == EnumPaymentListViewMode.FinancialView;
+    // A exportação é restrita a Financeiro e Administrador; Contabilidade vê a visão financeira, mas não exporta.
+    return this.viewMode == EnumPaymentListViewMode.FinancialView && (this.isFinancial || this.isAdmin);
   }
 
   async exportFinancialView() {
