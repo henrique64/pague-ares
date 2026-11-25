@@ -565,6 +565,7 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
                 ajustar?.Invoke(s);
             });
             services.AddSingleton<ExportacaoFila>();
+            services.AddSingleton<IMedidorEspacoLivre, MedidorEspacoLivreUnidade>();
             services.AddSingleton<ExportacaoWorker>();
             services.AddSingleton<ExportacaoLimpeza>();
 

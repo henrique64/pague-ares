@@ -19,6 +19,7 @@ namespace Ares.PagueAres.Application.Extensions
             service.AddScoped<IFonteExportacao, FonteExportacaoEf>();
             service.AddScoped<IGeradorPacoteExportacao, GeradorPacoteExportacao>();
             service.AddSingleton<ExportacaoFila>();
+            service.AddSingleton<IMedidorEspacoLivre, MedidorEspacoLivreUnidade>();
 
             // Com WorkerHabilitado = false nenhum dos dois serviços sobe e os jobs ficam Pendente.
             var exportacao = configuration.GetSection("Exportacao").Get<ExportacaoSettings>() ?? new ExportacaoSettings();

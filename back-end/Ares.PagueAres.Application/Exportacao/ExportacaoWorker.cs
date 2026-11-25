@@ -53,14 +53,16 @@ namespace Ares.PagueAres.Application.Exportacao
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ExportacaoFila _fila;
         private readonly ExportacaoSettings _settings;
+        private readonly IMedidorEspacoLivre _medidorEspaco;
         private readonly ILogger<ExportacaoWorker> _logger;
 
         public ExportacaoWorker(IServiceScopeFactory scopeFactory, ExportacaoFila fila,
-            IOptions<ExportacaoSettings> settings, ILogger<ExportacaoWorker> logger)
+            IOptions<ExportacaoSettings> settings, IMedidorEspacoLivre medidorEspaco, ILogger<ExportacaoWorker> logger)
         {
             _scopeFactory = scopeFactory;
             _fila = fila;
             _settings = settings.Value;
+            _medidorEspaco = medidorEspaco;
             _logger = logger;
         }
 
@@ -502,7 +504,7 @@ namespace Ares.PagueAres.Application.Exportacao
             if (minimoMb <= 0)
                 return true;
 
-            var livreBytes = EspacoLivreBytes(pasta);
+            var livreBytes = _medidorEspaco.EspacoLivreBytes(pasta);
             if (livreBytes is null)
             {
                 _logger.LogWarning("Não foi possível medir o espaço livre da pasta de exportação {Pasta}; a geração segue sem a verificação.", pasta);
@@ -516,28 +518,6 @@ namespace Ares.PagueAres.Application.Exportacao
             _logger.LogWarning("Espaço livre insuficiente para exportar em {Pasta}: {LivreMb} MB livres, mínimo {MinimoMb} MB.",
                 pasta, livreMb, minimoMb);
             return false;
-        }
-
-        /// <summary>
-        /// Espaço livre da unidade da pasta. No Windows a <see cref="DriveInfo"/> precisa da raiz da unidade; no Linux
-        /// ela aceita qualquer caminho e mede o sistema de arquivos que o contém (o volume montado, no Docker).
-        /// Devolve <c>null</c> quando não dá para medir (por exemplo, compartilhamento de rede).
-        /// </summary>
-        private static long? EspacoLivreBytes(string pasta)
-        {
-            try
-            {
-                var caminho = Path.GetFullPath(pasta);
-                var unidade = OperatingSystem.IsWindows() ? Path.GetPathRoot(caminho) : caminho;
-                if (string.IsNullOrEmpty(unidade))
-                    return null;
-
-                return new DriveInfo(unidade).AvailableFreeSpace;
-            }
-            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
-            {
-                return null;
-            }
         }
     }
 
