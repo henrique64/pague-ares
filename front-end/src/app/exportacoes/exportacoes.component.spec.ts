@@ -11,6 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { Subject, of, throwError } from 'rxjs';
+import { PROVIDERS_DATA_PT_BR } from 'app/core/date/pt-br-date-adapter';
 import { ExportacoesComponent } from './exportacoes.component';
 import { ExportacaoService } from 'app/services/exportacao.service';
 import { UsersService } from 'app/services/users.service';
@@ -158,6 +159,111 @@ describe('ExportacoesComponent', () => {
       c.form.incluirAnexos = false;
 
       expect(c.montarFiltro().incluirAnexos).toBeFalse();
+    });
+  });
+
+  describe('datas digitadas nos campos de período', () => {
+    async function digitar(input: HTMLInputElement, texto: string) {
+      input.value = texto;
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    function inputsDoPeriodo(rotulo: string): { inicio: HTMLInputElement; fim: HTMLInputElement } {
+      const campo = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-form-field'))
+        .find((f) => f.querySelector('mat-label')?.textContent?.includes(rotulo))!;
+      return {
+        inicio: campo.querySelector('input[matStartDate]') as HTMLInputElement,
+        fim: campo.querySelector('input[matEndDate]') as HTMLInputElement,
+      };
+    }
+
+    function botaoLimpar(): HTMLButtonElement {
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+        .find((b) => b.textContent?.includes('Limpar Filtros')) as HTMLButtonElement;
+    }
+
+    it('digitar 01/11/2025 no início do período da solicitação vale 1º de novembro, não 11 de janeiro', async () => {
+      montarTela();
+      await fixture.whenStable();
+      const { inicio, fim } = inputsDoPeriodo('Período da Solicitação');
+
+      await digitar(inicio, '01/11/2025');
+      await digitar(fim, '31/12/2025');
+
+      const d = component.form.dataSolicitacaoInicio!;
+      expect(d.getMonth()).toBe(10);
+      expect(d.getDate()).toBe(1);
+      const filtro = component.montarFiltro();
+      expect(filtro.dataSolicitacaoInicio).toBe('2025-11-01');
+      expect(filtro.dataSolicitacaoFim).toBe('2025-12-31');
+    });
+
+    it('data impossível (31/02/2025) não entra no filtro', async () => {
+      montarTela();
+      await fixture.whenStable();
+      const { inicio } = inputsDoPeriodo('Período de Vencimento');
+
+      await digitar(inicio, '31/02/2025');
+
+      expect(component.form.dataVencimentoInicio).toBeNull();
+      expect(component.montarFiltro().dataVencimentoInicio).toBeUndefined();
+    });
+
+    it('Limpar Filtros esvazia os campos de data na tela e o filtro montado não traz datas', async () => {
+      montarTela();
+      await fixture.whenStable();
+      const periodos = ['Período da Solicitação', 'Período de Vencimento', 'Período de Aprovação do Financeiro'].map(inputsDoPeriodo);
+      for (const p of periodos) {
+        await digitar(p.inicio, '01/11/2025');
+        await digitar(p.fim, '31/12/2025');
+      }
+      expect(periodos[0].inicio.value).toBe('01/11/2025');
+      expect(Object.keys(component.montarFiltro()).filter((k) => k.startsWith('data')).length).toBe(6);
+
+      botaoLimpar().click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      for (const p of periodos) {
+        expect(p.inicio.value).toBe('');
+        expect(p.fim.value).toBe('');
+      }
+      expect(Object.keys(component.montarFiltro()).filter((k) => k.startsWith('data'))).toEqual([]);
+    });
+
+    it('Limpar Filtros também esvazia texto de data ainda inválido (que não chegou ao modelo)', async () => {
+      montarTela();
+      await fixture.whenStable();
+      const { inicio } = inputsDoPeriodo('Período da Solicitação');
+      await digitar(inicio, '31/02/2025');
+      expect(inicio.value).toBe('31/02/2025');
+
+      botaoLimpar().click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(inicio.value).toBe('');
+    });
+
+    it('Limpar Filtros esvazia os demais campos de texto da tela', async () => {
+      montarTela();
+      await fixture.whenStable();
+      const el: HTMLElement = fixture.nativeElement;
+      const campos = ['#codigo', '#numeroDocumento', '#nomeParceiro', '#documentoParceiro'].map((s) => el.querySelector(s) as HTMLInputElement);
+      for (const c of campos) await digitar(c, '7');
+      expect(component.form.nomeParceiro).toBe('7');
+
+      botaoLimpar().click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      for (const c of campos) expect(c.value).toBe('');
     });
   });
 
