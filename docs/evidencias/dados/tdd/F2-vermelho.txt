@@ -1,0 +1,72 @@
+F2 — Correção dos achados 2, 5 e 6 da revisão do serviço em segundo plano da exportação — fase VERMELHA
+Data: 2026-11-25
+Branch: feature/exportacao-anexos-f2 (base 2d1b9ee; testes rodados sobre 01ee9d3, que só torna injetável a medição de
+  espaço livre, sem mudar comportamento)
+Comando: dotnet test back-end/Ares.PagueAres.Tests.Integration/Ares.PagueAres.Tests.Integration.csproj --filter "FullyQualifiedName~ExportacaoWorker"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Exportacao/ExportacaoWorkerTests.cs
+Banco: EF Core InMemory (mesma InMemoryDatabaseRoot para simular dois processos), só dados fictícios.
+Simulações: banco fora do ar por um SaveChangesInterceptor do teste (DbUpdateException nas N primeiras gravações que
+  levam o job a um status); espaço em disco por um IMedidorEspacoLivre falso; ambiente Production por um
+  IHostEnvironment falso; tempos curtos de reconciliação lidos da seção Exportacao (IntervaloReconciliacaoSegundos=0.2,
+  LimiteSemSinalDeVidaSegundos=3), chaves que o código atual ainda ignora.
+
+Resultado: 29 testes — 20 aprovados, 9 com falha. O projeto compila; nenhuma falha é de compilação.
+As 9 falhas são os cenários novos dos achados; os 3 cenários novos que passam são controles (o que não pode mudar).
+
+Achado 2 [médio] — job preso em Processando
+------------------------------------------------------------------------------------------
+[FALHOU] GravacaoDaConclusaoFalhaNasPrimeirasTentativas_RepeteEGravaConcluido [20 s]
+         Expected atual to be StatusExportacao.Concluido, but found StatusExportacao.Processando.
+         (a primeira falha da gravação da conclusão só vai para o log; o job fica Processando)
+[FALHOU] GravacaoDaFalhaFalhaNasPrimeirasTentativas_RepeteEGravaFalhou [20 s]
+         Expected atual to be StatusExportacao.Falhou, but found StatusExportacao.Processando.
+[FALHOU] ProcessandoSemExecutor_ViraFalhouNaReconciliacao_EComPedidoDeCancelamentoViraCancelado [20 s]
+         Expected atual to be StatusExportacao.Falhou, but found StatusExportacao.Processando.
+         (não há reconciliação: o job órfão só sairia de Processando num reinício)
+[FALHOU] PendenteForaDaFila_EReenfileiradoPelaReconciliacaoEProcessado [20 s]
+         Expected atual to be StatusExportacao.Concluido, but found StatusExportacao.Pendente.
+[FALHOU] ReivindicacaoFalha_PendenteVoltaAFilaPelaReconciliacao [20 s]
+         Expected atual to be StatusExportacao.Concluido, but found StatusExportacao.Pendente.
+         (a reivindicação que falha tira o job da fila até o reinício)
+[PASSOU] JobEmExecucaoNesteProcesso_NaoEReconciliadoMesmoPassandoOLimite (controle)
+[PASSOU] JobEmExecucaoEmOutroProcessoComSinalDeVida_NaoEReconciliado (controle)
+
+Achado 5 [baixo] — pasta compartilhada entre instâncias
+------------------------------------------------------------------------------------------
+[FALHOU] PastaVaziaForaDeDesenvolvimento_WorkerELimpezaNaoSobem_EJobFicaPendente [12 ms]
+         Expected processo.Worker.ExecuteTask to be <null>, but found System.Threading.Tasks.UnwrapPromise`1[...]
+         {Status=WaitingForActivation}. (com Pasta vazio em Production o worker sobe em %TEMP%\PagueAres\Exportacao)
+[FALHOU] PastaVaziaForaDeDesenvolvimento_ApiRecusaNovaExportacaoCom503 [1 s]
+         Expected resposta.StatusCode to be HttpStatusCode.ServiceUnavailable {value: 503}, but found
+         HttpStatusCode.Accepted {value: 202}. (corpo: {"success":true,"message":"Exportação solicitada.",...})
+
+Achado 6 [baixo] — espaço em disco só no início
+------------------------------------------------------------------------------------------
+[FALHOU] EspacoCaiAbaixoDoMinimoDuranteAGeracao_ViraFalhouComMensagemDeEspacoEApagaParcial [20 s]
+         Expected atual to be StatusExportacao.Falhou, but found StatusExportacao.Processando.
+         (o espaço livre cai de 50 GB para 100 MB durante a geração e nada interrompe o job)
+[FALHOU] DiscoCheioDuranteAGeracao_ViraFalhouComMensagemDeEspaco [86 ms]
+         Expected job.MensagemErro to be "O servidor está sem espaço em disco suficiente para gerar a exportação
+         agora. ...", but "Não foi possível gerar a exportação. Gere de novo; se o erro continuar, acione o suporte."
+         (IOException de disco cheio, HResult 0x80070070, vira a mensagem genérica)
+[PASSOU] EspacoNaoMensuravel_GeracaoSegueEConclui (controle: caminho UNC, sem medição, segue com aviso)
+
+Cenários já existentes (E6), todos aprovados nesta execução
+------------------------------------------------------------------------------------------
+[PASSOU] DoisJobsNaFila_GeradorNuncaRodaDoisAoMesmoTempo_EAmbosConcluem
+[PASSOU] DoisWorkersNoMesmoBanco_JobPendenteEGeradoExatamenteUmaVez
+[PASSOU] Inicio_ProcessandoViraFalhou_ParciaisApagados_PendentesProcessadosPorDataDeCriacao
+[PASSOU] CancelamentoDePendente_ViraCanceladoSemChamarOGerador
+[PASSOU] CancelamentoEmProcessando_PelaFila_ViraCanceladoEApagaParcial
+[PASSOU] CancelamentoEmProcessando_SoPeloBanco_ViraCanceladoEApagaParcial
+[PASSOU] ParadaDoHostDuranteAGeracao_ViraFalhouComMensagemDeInterrupcao
+[PASSOU] ExportacaoException_ViraFalhouComAMensagemDela
+[PASSOU] ExcecaoGenerica_ViraFalhouComMensagemGenericaSemOTextoDaExcecao
+[PASSOU] EspacoLivreAbaixoDoMinimo_ViraFalhouComMensagemAmigavelSemChamarOGerador
+[PASSOU] Limpeza_ExpiraConcluidoVencido_ApagaOrfaoVelho_MantemArquivoDeJobValido
+[PASSOU] Sucesso_ArquivoFinalSemParcial_TamanhoEExpiracaoGravados
+[PASSOU] Progresso_EGravadoDuranteAGeracao
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: True)
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: False)
+[PASSOU] Factory_RegistraWorkerELimpeza_UsaPastaPropria_EApagaAPastaNoDispose
+[PASSOU] FactoryComWorkerDesabilitado_NaoRegistraWorkerNemLimpeza

@@ -1,0 +1,69 @@
+F2 — Correção dos achados 2, 5 e 6 da revisão do serviço em segundo plano da exportação — fase VERDE
+Data: 2026-11-25
+Branch: feature/exportacao-anexos-f2 (testes do commit 6ba6625 rodados com a correção aplicada)
+Comando: dotnet test back-end/Ares.PagueAres.Tests.Integration/Ares.PagueAres.Tests.Integration.csproj --filter "FullyQualifiedName~ExportacaoWorker"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Exportacao/ExportacaoWorkerTests.cs
+Banco: EF Core InMemory, só dados fictícios.
+
+Resultado: 29 testes — 29 aprovados, 0 com falha, em 3 execuções seguidas (para pegar instabilidade de concorrência).
+  Execução 1: 29/29 aprovados (com build)
+  Execução 2: 29/29 aprovados (--no-build)
+  Execução 3: 29/29 aprovados (--no-build)
+
+Suíte inteira: dotnet build back-end/Ares.PagueAres.sln -c Debug → 0 erros;
+  dotnet test back-end/Ares.PagueAres.sln → Ares.PagueAres.Tests.Unit 131/131 aprovados;
+  Ares.PagueAres.Tests.Integration 232/232 aprovados.
+
+Achado 2 [médio] — job preso em Processando
+------------------------------------------------------------------------------------------
+[PASSOU] GravacaoDaConclusaoFalhaNasPrimeirasTentativas_RepeteEGravaConcluido [3 s]
+         duas gravações da conclusão falham (banco fora do ar simulado); a terceira, depois de 1 s e 2 s, grava Concluido
+[PASSOU] GravacaoDaFalhaFalhaNasPrimeirasTentativas_RepeteEGravaFalhou [3 s]
+         idem para Falhou, com a mensagem da ExportacaoException
+[PASSOU] ProcessandoSemExecutor_ViraFalhouNaReconciliacao_EComPedidoDeCancelamentoViraCancelado [3 s]
+         Processando sem executor e sem gravação por 3 s → Falhou com a mensagem de interrupção e .parcial apagado;
+         o que tinha pedido de cancelamento → Cancelado
+[PASSOU] PendenteForaDaFila_EReenfileiradoPelaReconciliacaoEProcessado [280 ms]
+[PASSOU] ReivindicacaoFalha_PendenteVoltaAFilaPelaReconciliacao [294 ms]
+         a reivindicação falha uma vez; o job fica Pendente, volta à fila na reconciliação e é gerado uma vez
+[PASSOU] JobEmExecucaoNesteProcesso_NaoEReconciliadoMesmoPassandoOLimite (controle) [4 s]
+[PASSOU] JobEmExecucaoEmOutroProcessoComSinalDeVida_NaoEReconciliado (controle) [6 s]
+         o executor do outro processo renova a Versao com o sinal de vida; o job passa 6 s (2x o limite) sem progresso
+         e continua Processando, depois conclui com uma única geração
+
+Achado 5 [baixo] — pasta compartilhada entre instâncias
+------------------------------------------------------------------------------------------
+[PASSOU] PastaVaziaForaDeDesenvolvimento_WorkerELimpezaNaoSobem_EJobFicaPendente [303 ms]
+         Production com Exportacao:Pasta vazio: ExecuteTask nulo no worker e na limpeza; job enfileirado fica Pendente
+[PASSOU] PastaVaziaForaDeDesenvolvimento_ApiRecusaNovaExportacaoCom503 [1 s]
+         POST api/exportacao → 503 com "A exportação está indisponível neste servidor por falta de configuração.
+         Acione o suporte."; nenhum job criado
+
+Achado 6 [baixo] — espaço em disco só no início
+------------------------------------------------------------------------------------------
+[PASSOU] EspacoCaiAbaixoDoMinimoDuranteAGeracao_ViraFalhouComMensagemDeEspacoEApagaParcial [2 s]
+         espaço livre cai de 50 GB para 100 MB (mínimo 2048 MB) durante a geração: a conferência do acompanhamento
+         interrompe, Falhou com MensagemEspacoInsuficiente, sem .parcial e sem .zip
+[PASSOU] DiscoCheioDuranteAGeracao_ViraFalhouComMensagemDeEspaco [39 ms]
+         IOException de disco cheio (HResult 0x80070070) → MensagemEspacoInsuficiente em vez da mensagem genérica
+[PASSOU] EspacoNaoMensuravel_GeracaoSegueEConclui (controle) [93 ms]
+
+Cenários já existentes (E6), todos aprovados nas 3 execuções
+------------------------------------------------------------------------------------------
+[PASSOU] DoisJobsNaFila_GeradorNuncaRodaDoisAoMesmoTempo_EAmbosConcluem
+[PASSOU] DoisWorkersNoMesmoBanco_JobPendenteEGeradoExatamenteUmaVez
+[PASSOU] Inicio_ProcessandoViraFalhou_ParciaisApagados_PendentesProcessadosPorDataDeCriacao
+[PASSOU] CancelamentoDePendente_ViraCanceladoSemChamarOGerador
+[PASSOU] CancelamentoEmProcessando_PelaFila_ViraCanceladoEApagaParcial
+[PASSOU] CancelamentoEmProcessando_SoPeloBanco_ViraCanceladoEApagaParcial
+[PASSOU] ParadaDoHostDuranteAGeracao_ViraFalhouComMensagemDeInterrupcao
+[PASSOU] ExportacaoException_ViraFalhouComAMensagemDela
+[PASSOU] ExcecaoGenerica_ViraFalhouComMensagemGenericaSemOTextoDaExcecao
+[PASSOU] EspacoLivreAbaixoDoMinimo_ViraFalhouComMensagemAmigavelSemChamarOGerador
+[PASSOU] Limpeza_ExpiraConcluidoVencido_ApagaOrfaoVelho_MantemArquivoDeJobValido
+[PASSOU] Sucesso_ArquivoFinalSemParcial_TamanhoEExpiracaoGravados
+[PASSOU] Progresso_EGravadoDuranteAGeracao
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: True)
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: False)
+[PASSOU] Factory_RegistraWorkerELimpeza_UsaPastaPropria_EApagaAPastaNoDispose
+[PASSOU] FactoryComWorkerDesabilitado_NaoRegistraWorkerNemLimpeza

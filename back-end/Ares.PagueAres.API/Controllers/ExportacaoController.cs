@@ -37,9 +37,12 @@ namespace Ares.PagueAres.API.Controllers
         ExportacaoFila fila,
         TokensDownloadExportacao tokens,
         IOptions<ExportacaoSettings> opcoes,
+        IHostEnvironment ambiente,
         ILogger<ExportacaoController> logger) : ControllerBase
     {
         private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
+        private const string MensagemIndisponivel =
+            "A exportação está indisponível neste servidor por falta de configuração. Acione o suporte.";
         private const string MensagemUsuarioNaoIdentificado = "Usuário não identificado.";
         private const string MensagemSemPermissao = "Exportação permitida apenas para os perfis Financeiro e Administrador.";
         private const string MensagemFiltroInvalido = "Filtro de exportação inválido.";
@@ -85,6 +88,15 @@ namespace Ares.PagueAres.API.Controllers
                 var recusa = VerificarAcesso(out var idUsuario);
                 if (recusa is not null)
                     return recusa;
+
+                // Sem pasta própria fora de Development e Test o worker não sobe: um job criado agora ficaria Pendente
+                // para sempre. Recusa com 503 até a configuração ser corrigida.
+                if (ArquivosExportacao.PastaObrigatoriaAusente(_settings, ambiente))
+                {
+                    logger.LogError("Exportação recusada: Exportacao:Pasta não está configurada no ambiente {Ambiente}.",
+                        ambiente.EnvironmentName);
+                    return StatusCode(StatusCodes.Status503ServiceUnavailable, Erro(MensagemIndisponivel));
+                }
 
                 if (!ModelState.IsValid || filtro is null)
                     return BadRequest(Erro(MensagemFiltroInvalido));

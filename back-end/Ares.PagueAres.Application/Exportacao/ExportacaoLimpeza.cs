@@ -13,19 +13,36 @@ namespace Ares.PagueAres.Application.Exportacao
     /// Serviço em segundo plano que, ao subir e depois a cada <c>IntervaloLimpezaMinutos</c>, apaga os pacotes vencidos
     /// (contrato C9): jobs Concluido com <c>DataExpiracao</c> vencida viram Expirado e perdem o arquivo; arquivos
     /// <c>exportacao-*.zip</c> sem job Concluido correspondente e mais velhos que <c>RetencaoHoras</c> são apagados.
+    /// Sem <c>Exportacao:Pasta</c> fora de Development e Test ela não sobe, para nunca varrer uma pasta temporária que
+    /// outra instância da API pode usar (veja <see cref="ArquivosExportacao.PastaObrigatoriaAusente"/>).
     /// </summary>
     public sealed class ExportacaoLimpeza : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ExportacaoSettings _settings;
+        private readonly IHostEnvironment _ambiente;
         private readonly ILogger<ExportacaoLimpeza> _logger;
 
         public ExportacaoLimpeza(IServiceScopeFactory scopeFactory, IOptions<ExportacaoSettings> settings,
-            ILogger<ExportacaoLimpeza> logger)
+            IHostEnvironment ambiente, ILogger<ExportacaoLimpeza> logger)
         {
             _scopeFactory = scopeFactory;
             _settings = settings.Value;
+            _ambiente = ambiente;
             _logger = logger;
+        }
+
+        public override Task StartAsync(CancellationToken cancellationToken)
+        {
+            if (ArquivosExportacao.PastaObrigatoriaAusente(_settings, _ambiente))
+            {
+                _logger.LogError(
+                    "A limpeza das exportações não foi iniciada: Exportacao:Pasta não está configurada no ambiente {Ambiente}.",
+                    _ambiente.EnvironmentName);
+                return Task.CompletedTask;
+            }
+
+            return base.StartAsync(cancellationToken);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
