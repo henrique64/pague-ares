@@ -15,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<ActiveDirectorySettings>(builder.Configuration.GetSection("ActiveDirectory"));
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.Configure<ExportacaoSettings>(builder.Configuration.GetSection("Exportacao"));
 
 // Controllers
 builder.Services.AddControllers();
@@ -76,7 +77,7 @@ builder.Services.AddDbContext<PagueAresContext>(opt =>
 });
 
 // Application Services
-builder.Services.RegisterApplicationServices();
+builder.Services.RegisterApplicationServices(builder.Configuration);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
