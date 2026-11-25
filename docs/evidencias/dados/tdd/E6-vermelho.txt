@@ -1,0 +1,46 @@
+E6 — Fila e serviço em segundo plano da exportação — fase VERMELHA (testes antes da implementação)
+Data: 2026-11-25
+Branch: feature/exportacao-anexos-e6 (base 68ca599)
+Comando: dotnet test back-end/Ares.PagueAres.sln --filter "FullyQualifiedName~ExportacaoWorker"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Exportacao/ExportacaoWorkerTests.cs
+Infraestrutura de teste: back-end/Ares.PagueAres.Tests.Integration/Infrastructure/PagueAresWebAppFactory.cs
+  (Exportacao:Pasta numa pasta temporária única por factory, apagada no Dispose)
+Banco: EF Core InMemory (mesma InMemoryDatabaseRoot para simular dois processos), só dados fictícios.
+Gerador: falso, controlado por TaskCompletionSource; pasta temporária própria por teste.
+
+Resultado: o projeto de testes de integração não compila, porque a fila, o worker e a limpeza ainda não
+existem (código novo; o vermelho é a ausência dos tipos). Nenhum dos 17 casos chega a rodar.
+
+Erros do compilador (únicos, sem caminho absoluto):
+------------------------------------------------------------------------------------------
+Exportacao\ExportacaoWorkerTests.cs(505,66) error CS0246: O nome do tipo ou do namespace "ExportacaoFila" não pode ser encontrado
+Exportacao\ExportacaoWorkerTests.cs(505,87) error CS0246: O nome do tipo ou do namespace "ExportacaoWorker" não pode ser encontrado
+(O Roslyn para nos erros de declaração; os demais usos — ExportacaoLimpeza e a sobrecarga
+RegisterApplicationServices(IConfiguration) — dependem dos mesmos tipos ausentes.)
+
+Cenários do brief (todos sem compilar, portanto vermelhos)
+------------------------------------------------------------------------------------------
+[NÃO COMPILA] 1. DoisJobsNaFila_GeradorNuncaRodaDoisAoMesmoTempo_EAmbosConcluem
+              contador de concorrência máximo do gerador = 1 e os dois jobs Concluido
+[NÃO COMPILA] 2. DoisWorkersNoMesmoBanco_JobPendenteEGeradoExatamenteUmaVez
+              dois workers (dois ServiceProviders) no mesmo banco, 8 jobs enfileirados nos dois: cada um gerado uma vez
+[NÃO COMPILA] 3. Inicio_ProcessandoViraFalhou_ParciaisApagados_PendentesProcessadosPorDataDeCriacao
+              Processando -> Falhou com a mensagem de reinício; *.parcial apagados; Pendente retomados por DataCriacao
+[NÃO COMPILA] 4. CancelamentoDePendente_ViraCanceladoSemChamarOGerador
+[NÃO COMPILA] 4. CancelamentoEmProcessando_PelaFila_ViraCanceladoEApagaParcial
+[NÃO COMPILA] 4. CancelamentoEmProcessando_SoPeloBanco_ViraCanceladoEApagaParcial
+              pedido feito em outro processo: só a coluna CancelamentoSolicitado muda
+[NÃO COMPILA] 5. ParadaDoHostDuranteAGeracao_ViraFalhouComMensagemDeInterrupcao
+[NÃO COMPILA] 6. ExportacaoException_ViraFalhouComAMensagemDela
+[NÃO COMPILA] 6. ExcecaoGenerica_ViraFalhouComMensagemGenericaSemOTextoDaExcecao
+[NÃO COMPILA] 7. EspacoLivreAbaixoDoMinimo_ViraFalhouComMensagemAmigavelSemChamarOGerador
+[NÃO COMPILA] 8. Limpeza_ExpiraConcluidoVencido_ApagaOrfaoVelho_MantemArquivoDeJobValido
+[NÃO COMPILA] 9. Sucesso_ArquivoFinalSemParcial_TamanhoEExpiracaoGravados
+
+Casos complementares (mesma classe)
+------------------------------------------------------------------------------------------
+[NÃO COMPILA] Progresso_EGravadoDuranteAGeracao
+[NÃO COMPILA] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: True)
+[NÃO COMPILA] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: False)
+[NÃO COMPILA] Factory_RegistraWorkerELimpeza_UsaPastaPropria_EApagaAPastaNoDispose
+[NÃO COMPILA] FactoryComWorkerDesabilitado_NaoRegistraWorkerNemLimpeza
