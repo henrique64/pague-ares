@@ -147,3 +147,16 @@ Playwright (`playwright-core`, instalado só numa pasta temporária fora do repo
 ### 9.6 Estado final
 
 Stack no ar (`pagueares-db`, `pagueares-api`, `pagueares-frontend`) com a semente intacta, exceto o anexo 333 de SOL-000172, que continua com os dois caracteres corrompidos. Jobs 1 a 9 no banco (5 e 7 em Falhou, os demais Concluídos).
+
+### 9.7 Semente corrigida e recriada, preview e medição de 100 títulos
+
+Data: 25/11/2026, a partir das 20:25 (relógio local). Resultado: **aprovado**.
+
+- **Defeito da semente corrigido.** O sistema real grava em `CaminhoArquivo` o tipo de mídia do arquivo enviado (o front usa `file.type` no upload, em `create-request.component.ts` e `create-rddv.component.ts`) e o `PreviewController` repassa o campo a `File(...)`. A semente (`tools/exportacao/semente/semente.cs`) passou a gravar `application/pdf` ou `image/jpeg`, conforme o conteúdo gerado (e a extensão `.pdf` ou `.jpg` dos nomes comuns), em vez de `semente/<tabela>/<id>/<índice>`. Nenhum código de produção mudou.
+- **Massa recriada com a própria ferramenta.** `semente --limpar` (removeu 629 anexos de solicitações, 447 de RDDVs, 1038 despesas, 315 solicitações, 210 RDDVs, 9 jobs de exportação e os 9 usuários fictícios) e `semente --titulos 500 --mb-por-titulo 5 --semente 42` (300 solicitações e 200 RDDVs exportáveis, 13 rascunhos e 12 cancelados, 1038 despesas, 1076 anexos, 2.622.750.237 bytes). Os anexos têm os mesmos conteúdo e nomes de antes, mas ids novos (a identidade não volta a 1), e o anexo corrompido da E14 deixou de existir.
+- **Conferência do alfabeto base64** (consulta só de leitura no SQL local, depois do prefixo `data:...;base64,` quando existe): 0 anexos inválidos em 629 de solicitações e 0 em 447 de RDDVs. `CaminhoArquivo`: 740 `application/pdf` e 336 `image/jpeg`.
+- **Preview real com a chave do próprio título** (login FIN, `POST api/Preview/generate-preview-key` e depois `GET api/Preview/{payment|rddv}/{id}/{anexo}?key=`): `payment/630/1258` 200 `application/pdf` (5.242.880 bytes); `payment/629/1255` 200 `image/jpeg` (833.481 bytes); `rddv/420/894` 200 `application/pdf` (5.242.880 bytes); `rddv/418/888` 200 `image/jpeg` (2.008.881 bytes). O 500 da seção 9.4 não ocorre mais.
+- **Medição de 100 títulos**, mesmo comando e mesmo filtro da E14 (`{"tipoTitulo":0,"dataSolicitacaoInicio":"2025-11-01","dataSolicitacaoFim":"2026-01-10"}`, login FIN, 20:30:52), saída `medicao-100-pos-revisao.json`: exportação 10 concluída, 113 títulos, 239 anexos, 592.445.339 bytes de anexos, ZIP de 625.009.461 bytes, concluída em 20,1 s, download em 3,1 s, memória da API de 280 MiB antes (a API já carregava as atividades anteriores) para 284,7 MiB no pico. Mesmos números de títulos, anexos e bytes de anexos da E14.
+- **Verificador** sobre esse ZIP: `RESULTADO: APROVADO`, código 0, as 16 regras ok.
+
+O ZIP não foi versionado. A seção 9.6 descreve o estado antes desta recriação; o estado final agora é: stack no ar com a semente nova e íntegra, e o job 10 (Concluído) como único job de exportação.
