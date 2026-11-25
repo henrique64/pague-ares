@@ -7,12 +7,20 @@ import { CreateRequestComponent } from "app/create-request/create-request.compon
 import { CreateUserComponent } from "app/create-user/create-user.component";
 import { CreateRddvComponent } from "app/create-rddv/create-rddv.component";
 import { ConfigurationComponent } from "app/configuration/configuration.component";
+import { ExportacoesComponent } from "app/exportacoes/exportacoes.component";
+import { papelGuard } from "app/guards/papel.guard";
+import { EnumFuncao } from "app/models/authentication/EnumFuncao.model";
 
 export const AdminLayoutRoutes: Routes = [
   { path: "home", component: HomeComponent },
   { path: "payments", component: PaymentsComponent },
   { path: "config", component: ConfigurationComponent },
   { path: "rddv", component: RddvComponent },
+  {
+    path: "exportacoes",
+    component: ExportacoesComponent,
+    canActivate: [papelGuard(EnumFuncao.Financeiro, EnumFuncao.Administrador)],
+  },
   { path: "icons", component: IconsComponent },
   { path: "create-request", component: CreateRequestComponent },
   { path: "create-request/:id", component: CreateRequestComponent },

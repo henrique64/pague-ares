@@ -26,6 +26,7 @@ import { CurrencyMaskModule } from "ng2-currency-mask";
 import { CreateRddvComponent } from "app/create-rddv/create-rddv.component";
 import { ConfigurationComponent } from "app/configuration/configuration.component";
 import { TravelTypeListComponent } from "app/configuration/travel-type-list/travel-type-list.component";
+import { ExportacoesComponent } from "app/exportacoes/exportacoes.component";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
 import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginator";
 
@@ -64,7 +65,8 @@ import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginato
     CreateRequestComponent,
     CreateRddvComponent,
     CreateUserComponent,
-    TravelTypeListComponent
+    TravelTypeListComponent,
+    ExportacoesComponent
   ]
 })
 export class AdminLayoutModule {}
