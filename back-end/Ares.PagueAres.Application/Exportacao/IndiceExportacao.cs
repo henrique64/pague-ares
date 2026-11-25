@@ -73,12 +73,27 @@ namespace Ares.PagueAres.Application.Exportacao
             }
         }
 
-        /// <summary>Campo do CSV: entre aspas duplas (com aspas internas dobradas) se contém <c>;</c>, <c>"</c> ou quebra de linha.</summary>
+        /// <summary>
+        /// Caracteres que, no início de uma célula, fazem o Excel interpretar o texto como fórmula (injeção de fórmula
+        /// por nomes de arquivo ou tipos de documento digitados pelo usuário).
+        /// </summary>
+        private static bool ComecaComoFormula(char c) => c is '=' or '+' or '-' or '@' or '\t' or '\r';
+
+        /// <summary>
+        /// Campo de texto do CSV. Valor que começa com <c>=</c>, <c>+</c>, <c>-</c>, <c>@</c>, tabulação ou CR recebe o prefixo
+        /// <c>'</c> para o Excel não tratá-lo como fórmula (só no CSV: o JSON e a planilha guardam o valor original).
+        /// Fica entre aspas duplas (com aspas internas dobradas) se contém <c>;</c>, <c>"</c> ou quebra de linha.
+        /// </summary>
         public static string CampoCsv(string? valor)
         {
             if (string.IsNullOrEmpty(valor))
             {
                 return "";
+            }
+
+            if (ComecaComoFormula(valor[0]))
+            {
+                valor = "'" + valor;
             }
 
             if (valor.AsSpan().IndexOfAny(";\"\r\n") < 0)

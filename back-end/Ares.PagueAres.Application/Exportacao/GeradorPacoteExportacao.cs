@@ -323,15 +323,15 @@ namespace Ares.PagueAres.Application.Exportacao
             if (f.IdSolicitante is > 0) yield return $"Solicitante (Id do usuário): {f.IdSolicitante}";
             if (f.IdAtribuido is > 0) yield return $"Atribuído a (Id do usuário): {f.IdAtribuido}";
             if (f.IdDepartamento is > 0) yield return $"Departamento (Id): {f.IdDepartamento}";
-            if (f.StatusGestor is > 0) yield return $"Status gestor (código): {f.StatusGestor}";
-            if (f.StatusFinanceiro is > 0) yield return $"Status financeiro (código): {f.StatusFinanceiro}";
-            if (f.StatusContabil is > 0) yield return $"Status contábil (código): {f.StatusContabil}";
+            if (f.StatusGestor is > 0) yield return $"Status gestor: {RotulosExportacao.StatusGestor(f.StatusGestor)}";
+            if (f.StatusFinanceiro is > 0) yield return $"Status financeiro: {RotulosExportacao.StatusFinanceiro(f.StatusFinanceiro)}";
+            if (f.StatusContabil is > 0) yield return $"Status contábil: {RotulosExportacao.StatusContabil(f.StatusContabil)}";
             if (!string.IsNullOrWhiteSpace(f.NomeParceiro)) yield return $"Parceiro ou funcionário contém: {TextoEmLinha(f.NomeParceiro)}";
             if (!string.IsNullOrWhiteSpace(f.DocumentoParceiro)) yield return $"Documento do parceiro ou CPF contém: {TextoEmLinha(f.DocumentoParceiro)}";
-            if (f.TipoSolicitacao is > 0) yield return $"Tipo de solicitação (código): {f.TipoSolicitacao}";
-            if (f.TipoPagamento is > 0) yield return $"Tipo de pagamento (código): {f.TipoPagamento}";
-            if (f.FormaPagamento is > 0) yield return $"Forma de pagamento (código): {f.FormaPagamento}";
-            if (f.TipoRelatorio is > 0) yield return $"Tipo de relatório do RDDV (código): {f.TipoRelatorio}";
+            if (f.TipoSolicitacao is > 0) yield return $"Tipo de solicitação: {RotulosExportacao.TipoSolicitacao(f.TipoSolicitacao.Value)}";
+            if (f.TipoPagamento is > 0) yield return $"Tipo de pagamento: {RotulosExportacao.TipoPagamento(f.TipoPagamento.Value)}";
+            if (f.FormaPagamento is > 0) yield return $"Forma de pagamento: {RotulosExportacao.FormaPagamento(f.FormaPagamento.Value)}";
+            if (f.TipoRelatorio is > 0) yield return $"Tipo de relatório do RDDV: {RotulosExportacao.TipoRelatorio(f.TipoRelatorio.Value)}";
 
             yield return "Anexos incluídos: " + (f.IncluirAnexos ? "sim" : "não");
         }
