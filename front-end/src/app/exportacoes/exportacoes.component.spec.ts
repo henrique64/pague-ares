@@ -81,7 +81,6 @@ describe('ExportacoesComponent', () => {
   function montarTela() {
     fixture = TestBed.createComponent(ExportacoesComponent);
     component = fixture.componentInstance;
-    spyOn<any>(component, 'navegarPara');
     spyOn<any>(component, 'confirmar').and.returnValue(true);
     fixture.detectChanges();
   }
@@ -300,10 +299,10 @@ describe('ExportacoesComponent', () => {
       jobsAtuais = [job(1, EnumStatusExportacao.Pendente)];
       montarTela();
       tick();
+      component.gerarExportacao();
       component.ngOnDestroy();
       exportacao.listar.calls.reset();
 
-      component.gerarExportacao();
       resposta.next(envelope(job(2, EnumStatusExportacao.Pendente)));
       resposta.complete();
 
@@ -332,17 +331,6 @@ describe('ExportacoesComponent', () => {
   });
 
   describe('ações', () => {
-    it('Baixar gera o link e navega para a URL do token', () => {
-      jobsAtuais = [job(5, EnumStatusExportacao.Concluido)];
-      exportacao.gerarLinkDownload.and.returnValue(of(envelope({ token: 'tok-abc', expiraEm: '2026-11-25T15:00:00Z' })));
-      montarTela();
-
-      component.baixar(jobsAtuais[0]);
-
-      expect(exportacao.gerarLinkDownload).toHaveBeenCalledOnceWith(5);
-      expect((component as any).navegarPara).toHaveBeenCalledOnceWith('http://api/exportacao/download?token=tok-abc');
-    });
-
     describe('download sem sair da aplicação', () => {
       let frames: HTMLIFrameElement[];
       let janelaAberta: jasmine.Spy;
@@ -368,7 +356,7 @@ describe('ExportacoesComponent', () => {
       it('Baixar cria um iframe oculto com a URL do token, sem navegar nem abrir janela', () => {
         component.baixar(jobsAtuais[0]);
 
-        expect((component as any).navegarPara).not.toHaveBeenCalled();
+        expect(exportacao.gerarLinkDownload).toHaveBeenCalledOnceWith(5);
         expect(janelaAberta).not.toHaveBeenCalled();
         expect(frames.length).toBe(1);
         expect(frames[0].src).toBe('http://api/exportacao/download?token=tok-abc');
@@ -401,7 +389,7 @@ describe('ExportacoesComponent', () => {
       });
     });
 
-    it('Baixar com falha mostra mensagem e não navega', () => {
+    it('Baixar com falha ao gerar o link mostra a mensagem e não cria iframe', () => {
       jobsAtuais = [job(5, EnumStatusExportacao.Concluido)];
       exportacao.gerarLinkDownload.and.returnValue(throwError(new HttpErrorResponse({
         status: 410, error: { success: false, message: 'O arquivo expirou. Gere a exportação de novo.' },
@@ -410,7 +398,7 @@ describe('ExportacoesComponent', () => {
 
       component.baixar(jobsAtuais[0]);
 
-      expect((component as any).navegarPara).not.toHaveBeenCalled();
+      expect(document.querySelector('iframe')).toBeNull();
       expect(snackbar.open).toHaveBeenCalledWith('O arquivo expirou. Gere a exportação de novo.', 'OK', jasmine.anything());
     });
 

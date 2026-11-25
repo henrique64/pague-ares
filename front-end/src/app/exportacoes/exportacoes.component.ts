@@ -1,8 +1,8 @@
 import { Component, OnDestroy, OnInit } from "@angular/core";
 import { HttpErrorResponse } from "@angular/common/http";
 import { MatSnackBar } from "@angular/material/snack-bar";
-import { Subscription, interval, of } from "rxjs";
-import { catchError, exhaustMap } from "rxjs/operators";
+import { Subject, Subscription, interval, of } from "rxjs";
+import { catchError, exhaustMap, takeUntil } from "rxjs/operators";
 import { ExportacaoService } from "app/services/exportacao.service";
 import { UsersService } from "app/services/users.service";
 import { DepartmentService } from "app/services/department.service";
@@ -60,6 +60,10 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   departamentos: DepartamentoModel[] = [];
 
   private pollingSub: Subscription | null = null;
+  // Emite uma vez ao destruir o componente: nenhuma resposta tardia pode mexer na tela nem ligar o polling.
+  private readonly destroy$ = new Subject<void>();
+  private destruido = false;
+  private iframeDownload: HTMLIFrameElement | null = null;
 
   listStatusGestor: any[] = [
     { id: 1, name: "Aguardando Autorização" },
@@ -142,7 +146,11 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.destruido = true;
+    this.destroy$.next();
+    this.destroy$.complete();
     this.pararPolling();
+    this.removerIframeDownload();
   }
 
   // ---------- Formulário ----------
@@ -249,7 +257,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
     this.isBusy = true;
 
-    this.exportacao.criar(this.montarFiltro()).subscribe({
+    this.exportacao.criar(this.montarFiltro()).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
         this.isBusy = false;
 
@@ -280,16 +288,19 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   carregarLista() {
     this.isLoadingLista = true;
 
-    this.exportacao.listar().subscribe({
-      next: (res) => {
-        this.isLoadingLista = false;
-        this.aplicarLista(res);
-      },
-      error: () => {
-        this.isLoadingLista = false;
-        this.snackbar.open("Não foi possível carregar as exportações. Tente novamente.", "OK", { duration: 4000 });
-      },
-    });
+    this.exportacao
+      .listar()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isLoadingLista = false;
+          this.aplicarLista(res);
+        },
+        error: () => {
+          this.isLoadingLista = false;
+          this.snackbar.open("Não foi possível carregar as exportações. Tente novamente.", "OK", { duration: 4000 });
+        },
+      });
   }
 
   private aplicarLista(res: GenericResponse<ExportacaoJobModel[]> | null) {
@@ -319,11 +330,14 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   }
 
   private iniciarPolling() {
-    if (this.pollingSub) return;
+    if (this.pollingSub || this.destruido) return;
 
     // exhaustMap: se uma consulta ainda não voltou, o tique seguinte é ignorado.
     this.pollingSub = interval(ExportacoesComponent.INTERVALO_POLLING_MS)
-      .pipe(exhaustMap(() => this.exportacao.listar().pipe(catchError(() => of(null)))))
+      .pipe(
+        exhaustMap(() => this.exportacao.listar().pipe(catchError(() => of(null)))),
+        takeUntil(this.destroy$)
+      )
       .subscribe((res) => this.aplicarLista(res));
   }
 
@@ -351,12 +365,12 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
     this.isBusy = true;
 
-    this.exportacao.gerarLinkDownload(job.id).subscribe({
+    this.exportacao.gerarLinkDownload(job.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
         this.isBusy = false;
 
         if (res?.success && res.data?.token) {
-          this.navegarPara(this.exportacao.urlDownload(res.data.token));
+          this.baixarArquivo(this.exportacao.urlDownload(res.data.token));
         } else {
           this.snackbar.open(res?.message || "Não foi possível iniciar o download.", "OK", { duration: 5000 });
         }
@@ -395,7 +409,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
     this.isBusy = true;
 
-    this.exportacao.cancelar(job.id).subscribe({
+    this.exportacao.cancelar(job.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.isBusy = false;
         this.snackbar.open(sucesso, "OK", { duration: 3000 });
@@ -409,9 +423,47 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Isolados para os testes poderem substituí-los (window.location não é espionável).
-  protected navegarPara(url: string) {
-    window.location.assign(url);
+  // O download vai por um iframe oculto, e não por navegação da aba: se o token for recusado
+  // (reciclagem do pool, 401/410), o JSON de erro aparece dentro do iframe e a tela segue intacta.
+  // Um arquivo aceito (Content-Disposition: attachment) vira download e não dispara "load"; já um
+  // documento devolvido pelo servidor dispara, e é assim que a falha é detectada. Nada passa pela
+  // memória do app: o navegador baixa em streaming.
+  protected baixarArquivo(url: string) {
+    this.removerIframeDownload();
+
+    const frame = document.createElement("iframe");
+    frame.style.display = "none";
+    frame.tabIndex = -1;
+    frame.title = "Download da exportação";
+    frame.setAttribute("aria-hidden", "true");
+    frame.src = url;
+    frame.addEventListener("load", () => {
+      if (this.iframeDownload !== frame || ExportacoesComponent.ehPaginaEmBranco(frame)) return;
+
+      this.removerIframeDownload();
+      this.snackbar.open(
+        "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.",
+        "OK",
+        { duration: 8000 }
+      );
+    });
+
+    this.iframeDownload = frame;
+    document.body.appendChild(frame);
+  }
+
+  // Alguns navegadores disparam um "load" inicial do about:blank; ele não é resposta do servidor.
+  private static ehPaginaEmBranco(frame: HTMLIFrameElement): boolean {
+    try {
+      return frame.contentWindow?.location.href === "about:blank";
+    } catch {
+      return false; // origem diferente: é resposta do servidor
+    }
+  }
+
+  private removerIframeDownload() {
+    this.iframeDownload?.remove();
+    this.iframeDownload = null;
   }
 
   protected confirmar(pergunta: string): boolean {

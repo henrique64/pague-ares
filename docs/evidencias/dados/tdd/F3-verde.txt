@@ -1,0 +1,12 @@
+F3 verde (achados 4 e 7) - ng test no front-end, depois da correcao
+Comando: npx ng test --watch=false --browsers=ChromeHeadless (Edge headless)
+Executed 120 of 120 SUCCESS (1.665 secs / 1.336 secs)
+Falhas: nenhuma. (120 specs = 121 do vermelho, menos o spec antigo 'Baixar navega para a URL do token', substituido pelos de iframe)
+Comando: npx ng build -> Application bundle generation complete (EXIT=0)
+Specs novos que passam:
+ - resposta de listar() que chega depois do ngOnDestroy com job Pendente nao liga o polling
+ - criar() que responde depois do ngOnDestroy nao recarrega a lista nem liga o polling
+ - Baixar cria um iframe oculto com a URL do token, sem navegar nem abrir janela
+ - se o servidor devolve um documento (token recusado), o usuario e orientado a gerar o link de novo
+ - download que o navegador aceita como arquivo (sem load) nao mostra erro
+ - um novo Baixar descarta o iframe anterior
