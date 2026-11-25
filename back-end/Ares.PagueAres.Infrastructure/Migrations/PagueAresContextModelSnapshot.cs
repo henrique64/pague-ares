@@ -232,6 +232,82 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
+            modelBuilder.Entity("Ares.PagueAres.Infrastructure.Models.ExportacaoJob", b =>
+                {
+                    b.Property<int>("IdExportacaoJob")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdExportacaoJob"));
+
+                    b.Property<bool>("CancelamentoSolicitado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("DataConclusao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataExpiracao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FiltrosJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MensagemErro")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NomeArquivo")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("TamanhoBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TitulosProcessados")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("TotalAnexos")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("TotalTitulos")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid>("Versao")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("IdExportacaoJob");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_ExportacaoJob_Status");
+
+                    b.HasIndex("IdUsuario", "DataCriacao")
+                        .HasDatabaseName("IX_ExportacaoJob_IdUsuario_DataCriacao");
+
+                    b.ToTable("ExportacaoJob", (string)null);
+                });
+
             modelBuilder.Entity("Ares.PagueAres.Infrastructure.Models.Fornecedor", b =>
                 {
                     b.Property<int>("IdFornecedor")
@@ -972,6 +1048,16 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                     b.ToTable((string)null);
 
                     b.ToView("vDespesasRddv", (string)null);
+                });
+
+            modelBuilder.Entity("Ares.PagueAres.Infrastructure.Models.ExportacaoJob", b =>
+                {
+                    b.HasOne("Ares.PagueAres.Infrastructure.Models.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_ExportacaoJob_Usuario");
                 });
 #pragma warning restore 612, 618
         }
