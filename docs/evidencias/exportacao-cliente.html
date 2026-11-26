@@ -41,20 +41,20 @@
   <h1>Exportação de títulos com anexos</h1>
   <p class="sub">PagueAres · Documento de entrega para a equipe do Financeiro · Novembro de 2026</p>
 
-  <p>Este documento mostra o que foi pedido, o que foi entregue e como usar a nova tela <strong>Exportações</strong>. A funcionalidade foi criada para reunir, num único arquivo, os títulos e os anexos que serão compartilhados com a auditoria externa.</p>
+  <p>Este documento mostra o que foi pedido, o que foi entregue e como usar a nova tela <strong>Exportações</strong>. A funcionalidade foi criada para reunir, num único arquivo, os títulos e os anexos que serão compartilhados com a auditoria externa. Uma sigla aparece várias vezes: <strong>RDDV</strong> significa Relatório de Despesas com Deslocamento e Viagem, a prestação de contas de uma viagem.</p>
 
   <div class="info">
-    <strong>Em uma frase:</strong> o Financeiro escolhe um período e alguns filtros, o PagueAres prepara um arquivo ZIP em segundo plano, e esse arquivo traz uma planilha de Excel, uma pasta com os anexos de cada título e um índice para conferência.
+    <strong>Em uma frase:</strong> o Financeiro escolhe um período e alguns filtros, o PagueAres prepara um <strong>arquivo ZIP (uma pasta compactada)</strong> em segundo plano, e esse arquivo traz uma planilha de Excel, uma pasta com os anexos de cada título e um índice para conferência.
   </div>
 
   <h2>O que foi pedido e o que foi entregue</h2>
   <table>
     <tr><th style="width:30%">Pedido</th><th>Entregue</th></tr>
-    <tr><td>Excel com as informações dos títulos e as datas de aprovação</td><td><span class="ok">Entregue.</span> A planilha <em>titulos.xlsx</em> tem quatro abas: Solicitações, RDDVs, Despesas dos RDDVs e Anexos. Para cada título há a situação e a data e hora de aprovação do Gestor, do Financeiro e da Contabilidade, com as observações de cada setor.</td></tr>
+    <tr><td>Excel com as informações dos títulos e as datas de aprovação</td><td><span class="ok">Entregue.</span> A planilha <em>titulos.xlsx</em> tem quatro abas: Solicitações, RDDVs, Despesas dos RDDVs e Anexos. Para cada título há a situação e a data e hora de aprovação do Gestor, do Financeiro e da Contabilidade, com as observações do Gestor e do Financeiro (a Contabilidade tem só a situação e a data).</td></tr>
     <tr><td>Anexos de cada título</td><td><span class="ok">Entregue.</span> Todos os anexos do título vão dentro do pacote, com o mesmo conteúdo enviado no PagueAres.</td></tr>
-    <tr><td>Uma pasta por título, com o código do PagueAres</td><td><span class="ok">Entregue.</span> Cada título com anexo ganha uma pasta com o seu código, por exemplo <em>SOL-000631</em> (solicitação) ou <em>RDDV-000421</em> (relatório de despesas de viagem). Cada anexo recebe o nome do tipo de documento seguido do nome original, como <em>Nota Fiscal - boleto março.pdf</em>.</td></tr>
-    <tr><td>Ligação entre a planilha e os arquivos</td><td><span class="ok">Entregue.</span> O código do título na planilha é um link para a pasta, e a aba Anexos tem um link para cada arquivo. Os links só funcionam depois de extrair o ZIP.</td></tr>
-    <tr><td>Índice para conferência e análises futuras</td><td><span class="ok">Entregue.</span> O pacote traz o <em>indice.csv</em> (abre no Excel) e o <em>indice.json</em> (para análises por programa). Os dois listam cada arquivo com o tamanho e um <strong>código de conferência</strong>: se o arquivo mudar um único byte, o código muda. Assim a auditoria confere que nada foi alterado.</td></tr>
+    <tr><td>Uma pasta por título, com o código do PagueAres</td><td><span class="ok">Entregue.</span> Cada título com anexo ganha uma pasta com o seu código, por exemplo <em>SOL-000631</em> (solicitação) ou <em>RDDV-000421</em> (RDDV: Relatório de Despesas com Deslocamento e Viagem). Cada anexo recebe o nome do tipo de documento seguido do nome original, como <em>Nota Fiscal - boleto março.pdf</em>.</td></tr>
+    <tr><td>Ligação entre a planilha e os arquivos</td><td><span class="ok">Entregue.</span> A planilha traz links para as pastas e para os arquivos: o código do título é um link para a pasta, e a aba Anexos tem um link para cada arquivo. Os links funcionam com o ZIP extraído (orientação de uso: extraia o ZIP antes de abrir a planilha).</td></tr>
+    <tr><td>Índice para conferência e análises futuras</td><td><span class="ok">Entregue.</span> O pacote traz o <em>indice.csv</em> (abre no Excel) e o <em>indice.json</em> (para sistemas de análise). Os dois listam cada arquivo com o tamanho e um <strong>código de conferência</strong>: se o arquivo mudar um único byte, o código muda. Assim a auditoria confere que nada foi alterado.</td></tr>
     <tr><td>Funcionar mesmo com muitos anexos</td><td><span class="ok">Entregue.</span> O arquivo é preparado em segundo plano, sem travar a tela, e a pessoa acompanha o andamento na própria tela.</td></tr>
     <tr><td>Quem pode usar</td><td><span class="ok">Entregue.</span> Somente os perfis <strong>Financeiro</strong> e <strong>Administrador</strong>.</td></tr>
     <tr><td>Dados completos</td><td><span class="ok">Entregue.</span> CPF, banco, agência e conta saem completos na planilha, como o pedido previa.</td></tr>
@@ -120,17 +120,17 @@
 
 <section>
   <h2>O que vem no pacote e como abrir</h2>
-  <p>Ao baixar, você recebe um único arquivo ZIP. Dentro dele:</p>
+  <p>Ao baixar, você recebe um único arquivo ZIP (uma pasta compactada). Dentro dele:</p>
   <table>
-    <tr><th style="width:26%">Item</th><th>O que é</th></tr>
+    <tr><th style="width:36%">Item</th><th>O que é</th></tr>
     <tr><td><strong>LEIA-ME.txt</strong></td><td>Instruções curtas, data de geração e os filtros usados.</td></tr>
     <tr><td><strong>titulos.xlsx</strong></td><td>A planilha com as quatro abas: Solicitações, RDDVs, Despesas dos RDDVs e Anexos.</td></tr>
-    <tr><td><strong>indice.csv</strong> e <strong>indice.json</strong></td><td>Lista de todos os anexos com tamanho e código de conferência de cada arquivo.</td></tr>
+    <tr><td><strong>indice.csv</strong> (abre no Excel) e <strong>indice.json</strong> (para sistemas de análise)</td><td>Lista de todos os anexos com tamanho e código de conferência de cada arquivo.</td></tr>
     <tr><td><strong>SOL-000631/</strong>, <strong>RDDV-000421/</strong> ...</td><td>Uma pasta por título que tenha anexos, com os arquivos dentro.</td></tr>
   </table>
 
   <div class="nota">
-    <strong>Importante:</strong> extraia (descompacte) todo o ZIP numa pasta do computador <strong>antes</strong> de abrir o Excel. Se abrir o <em>titulos.xlsx</em> direto de dentro do ZIP, os links para as pastas e os anexos não funcionam.
+    <strong>Importante:</strong> extraia (descompacte) todo o ZIP numa pasta do computador <strong>antes</strong> de abrir o Excel. Se abrir o <em>titulos.xlsx</em> direto de dentro do ZIP, os links para as pastas e os anexos podem não funcionar.
   </div>
 
   <figure>
@@ -198,18 +198,20 @@
     <div><span class="grande">500</span><small>títulos exportados<br>(300 solicitações e 200 RDDVs)</small></div>
     <div><span class="grande">995</span><small>anexos, somando<br>cerca de 2,6 GB</small></div>
     <div><span class="grande">1 min 32 s</span><small>até o pacote ficar pronto</small></div>
-    <div><span class="grande">12 s</span><small>para baixar o ZIP<br>(cerca de 2,8 GB)</small></div>
+    <div><span class="grande">12 s</span><small>para baixar o ZIP<br>(cerca de 2,6 GB)</small></div>
   </div>
+
+  <p class="rodape" style="margin-top:0">O pacote de 500 títulos tem cerca de 2,6 GB. A tela mostra o tamanho em outra unidade de medida, por isso os números podem diferir um pouco.</p>
 
   <table>
     <tr><th style="width:42%">O que foi testado</th><th>Resultado</th></tr>
-    <tr><td>500 títulos com 2,6 GB de anexos</td><td>Pacote pronto em cerca de 1 min 32 s e baixado em cerca de 12 s.</td></tr>
+    <tr><td>500 títulos com cerca de 2,6 GB de anexos</td><td>Pacote pronto em cerca de 1 min 32 s e baixado em cerca de 12 s.</td></tr>
     <tr><td>100 títulos (98 encontrados, 194 anexos, 514 MB)</td><td>Pacote pronto em cerca de 20 s e baixado em cerca de 3 s.</td></tr>
-    <tr><td>Uso de memória do servidor</td><td>No máximo cerca de 375 MB mesmo com 2,6 GB de anexos, porque os anexos são lidos um de cada vez. O uso de memória fica estável mesmo em exportações grandes.</td></tr>
+    <tr><td>Uso de memória do servidor</td><td>No máximo cerca de 375 MB de memória. O uso cresceu pouco quando o volume quintuplicou, porque os anexos são lidos um de cada vez.</td></tr>
     <tr><td>Conferência do pacote de 500 títulos</td><td><span class="ok">Aprovado.</span> Foram conferidas 16 regras, entre elas estrutura de pastas, nomes dos arquivos, abas e colunas da planilha, links e totais. O tamanho e o código de conferência dos 995 anexos foram recalculados e batem com o índice.</td></tr>
     <tr><td>Reinício do servidor no meio de uma exportação</td><td><span class="ok">Aprovado.</span> A exportação ficou como Falhou com mensagem clara, não sobrou arquivo pela metade, e uma nova exportação foi concluída normalmente.</td></tr>
     <tr><td>Segurança com usuários de cada perfil</td><td><span class="ok">Aprovado.</span> Sem login ou com perfil Contabilidade, Gestor ou Solicitante, o acesso é negado. Um Administrador não enxerga a exportação de outra pessoa. O link de download funciona uma vez; na segunda tentativa é recusado.</td></tr>
-    <tr><td>Testes automáticos do sistema</td><td><span class="ok">Aprovado.</span> Mais de 350 testes automáticos do servidor e mais de 110 da tela, sem falhas na rodada completa de verificação. Os testes de segurança foram escritos antes da correção e primeiro mostraram a falha.</td></tr>
+    <tr><td>Testes automáticos do sistema</td><td><span class="ok">Aprovado.</span> 385 testes automáticos do servidor e 138 da tela, sem nenhuma falha. Os testes de segurança foram escritos antes da correção e primeiro mostraram a falha.</td></tr>
   </table>
   <p class="rodape">Os tempos foram medidos num computador de testes. No servidor do cliente podem variar um pouco, conforme a máquina e a rede.</p>
 

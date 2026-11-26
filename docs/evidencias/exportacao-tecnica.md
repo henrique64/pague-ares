@@ -2,7 +2,7 @@
 
 Documento para o desenvolvedor responsável auditar o que foi feito. Cada afirmação aponta para o arquivo do repositório que a sustenta (saídas de teste, medições, relatórios do verificador, capturas). Onde um número não está em nenhum arquivo de dados, o documento diz isso em vez de estimar.
 
-- Branch: `feature/exportacao-anexos`, ponta no commit `8f9bf57` (55 commits em relação à `main`, 39 sem contar os merges). Nada foi enviado ao remoto.
+- Branch: `feature/exportacao-anexos`, ponta do código em `8f9bf57` (55 commits em relação à `main`, 39 sem contar os merges); os documentos de evidência entraram depois (`cddc2d9`, `e3604e6` e este commit). Nada foi enviado ao remoto.
 - Todos os dados são fictícios (semente em `tools/exportacao/`, e-mails `@exemplo.invalid`). Nenhum banco de produção foi acessado: os testes usam EF InMemory e a verificação ponta a ponta usou o SQL Server local do Docker.
 - Nenhum segredo está gravado neste documento nem nos arquivos de dados.
 
@@ -22,7 +22,7 @@ Documento para o desenvolvedor responsável auditar o que foi feito. Cada afirma
 
 ## 1. Resumo do que mudou
 
-O Financeiro (papéis FIN e ADM, e só eles) escolhe filtros na tela **Exportações**, dispara a exportação e o servidor gera, em segundo plano, um pacote ZIP para download manual: `titulos.xlsx` (abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos), uma pasta por título (`SOL-000123/`, `RDDV-000045/`) com os anexos renomeados pelo tipo de documento, e os índices `indice.csv` e `indice.json` com o SHA-256 de cada arquivo. Mudança total contra a `main`: 123 arquivos, +18.815 e -215 linhas (83 arquivos e +16.528 e -189 linhas em `back-end/`, `front-end/`, `tools/` e `docker-compose.yml`; o resto é documentação e evidência).
+O Financeiro (papéis FIN e ADM, e só eles) escolhe filtros na tela **Exportações**, dispara a exportação e o servidor gera, em segundo plano, um pacote ZIP para download manual: `titulos.xlsx` (abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos), uma pasta por título (`SOL-000123/`, `RDDV-000045/`) com os anexos renomeados pelo tipo de documento, e os índices `indice.csv` e `indice.json` com o SHA-256 de cada arquivo. Mudança total contra a `main`, medida na ponta do código `8f9bf57` (os documentos de evidência entraram depois: `cddc2d9`, `e3604e6` e este commit): 123 arquivos, +18.815 e -215 linhas (83 arquivos e +16.528 e -189 linhas em `back-end/`, `front-end/`, `tools/` e `docker-compose.yml`; o resto é documentação e evidência).
 
 ### Back-end (.NET 10)
 
@@ -133,7 +133,7 @@ Resultado verde: 63/63 em 4 execuções seguidas. Mutação temporária (desfeit
 
 ### 3.3 Mesmos controles contra a stack real
 
-Verificados no Docker local com os usuários fictícios da semente (ADM, FIN, CON, GES e SOL), em [`e2e.md`](dados/e2e.md) seção 7 e repetidos nas seções 9.4 e 10: `POST api/exportacao` sem token 401, como CON 403, como SOL 403; `GET api/exportacao` e `GET api/exportacao/{id}` como CON 403; job do FIN visto pelo ADM 404 (id e link-download); chave de preview de Exportação 403 para CON, SOL e GES e 200 para FIN e ADM; download pelo front (Nginx) 200 `application/zip` com `Content-Disposition: attachment`, segundo download com o mesmo token 401, terceiro direto na API 401, download sem token 401.
+Verificados no Docker local com os usuários fictícios da semente (ADM, FIN, CON, GES e SOL), em [`e2e.md`](dados/e2e.md) seção 7 e repetidos na seção 9.4 de `e2e.md` (commit `c786890`, antes da F4, que só mexeu no worker e na pasta); a seção 10 só confirma o 401 sem login: `POST api/exportacao` sem token 401, como CON 403, como SOL 403; `GET api/exportacao` e `GET api/exportacao/{id}` como CON 403; job do FIN visto pelo ADM 404 (id e link-download); chave de preview de Exportação 403 para CON, SOL e GES e 200 para FIN e ADM; download pelo front (Nginx) 200 `application/zip` com `Content-Disposition: attachment`, segundo download com o mesmo token 401, terceiro direto na API 401, download sem token 401.
 
 As correções F1 (preview de anexo de outro título e zip-slip nos ZIPs legados) também foram exercitadas contra a API real: [seção 5](#5-revisões-independentes) e `e2e.md` seção 9.4.
 
@@ -167,7 +167,7 @@ Outros pontos de concorrência cobertos fora da E6:
 
 ## 5. Revisões independentes
 
-Três rodadas de revisão independente (revisor de risco alto) mais os achados da fase de capturas. Cada achado foi corrigido com teste: vermelho antes, verde depois, saída em [`dados/tdd/`](dados/tdd/F1-vermelho.txt).
+Duas rodadas de revisão independente (revisor Fable): a revisão do código, com 7 achados, e a reconferência do mecanismo de concorrência da F2; F5 e F6 vieram de achados da fase de capturas. Cada achado foi corrigido com teste: vermelho antes, verde depois, saída em [`dados/tdd/`](dados/tdd/F1-vermelho.txt).
 
 ### 5.1 Primeira revisão: aprovado com ressalvas, 7 achados (1 alto, 2 médios, 4 baixos)
 
@@ -439,3 +439,7 @@ Conhecidos e **não corrigidos** nesta entrega.
 10. **Testes do worker dependentes de tempo** (cerca de 1,5 minuto só nessa classe, com esperas reais de reconciliação e de sinal de vida). Passaram 3 em 3 execuções seguidas na F4, mas testes com tempo real podem ficar intermitentes em máquina sobrecarregada.
 11. **Fuso do nome do arquivo de download**: o nome sugerido usa a hora local do servidor da conclusão. No contêiner Docker é UTC (3 horas à frente de São Paulo); no IIS do cliente será a hora do Windows (`e2e.md` seção 7).
 12. **Medições só em ambiente local**, com o banco no mesmo computador. O desempenho no servidor do cliente (disco, rede, SQL remoto) não foi medido.
+
+13. **Excel real e hiperlinks não testados.** Nenhum teste abriu `titulos.xlsx` num Excel real nem clicou nos hiperlinks: o arquivo foi conferido pela estrutura (o verificador `verificar.cs`: abas, colunas, células e relações de hiperlink).
+14. **Implantação no IIS e extração do ZIP grande não testadas.** O guia do IIS não foi executado num IIS real. A extração do ZIP de cerca de 2,7 GB (Zip64) no Explorer do Windows e no 7-Zip, e o efeito dos caminhos longos do Windows, não foram testados. A verificação ponta a ponta foi em Docker/Linux, com Nginx.
+15. **Concorrência por `Versao` entre dois processos só em EF InMemory.** A disputa pelo token `Versao` entre dois processos foi testada apenas no EF InMemory. No SQL Server real só foi testado o reinício com um único processo.
