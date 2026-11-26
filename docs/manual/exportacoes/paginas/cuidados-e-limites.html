@@ -34,7 +34,8 @@
       <tr><td>Anexos por pacote</td><td>até 20 GB</td></tr>
       <tr><td>Espaço livre no disco do servidor</td><td>no mínimo 2048 MB para gerar uma exportação</td></tr>
       <tr><td>Validade do link de download</td><td>120 segundos, e uma única vez</td></tr>
-      <tr><td>Exportações na lista</td><td>as dos últimos 30 dias</td></tr>
+      <tr><td>Exportações na lista</td><td>as dos últimos 30 dias, menos as que foram removidas da lista</td></tr>
+      <tr><td>Fuso do nome do ZIP e da hora do <code>LEIA-ME.txt</code></td><td>horário de Brasília</td></tr>
     </tbody>
   </table></div>
   <div class="dica">
@@ -42,7 +43,7 @@
   </div>
 
   <h2>Quando o pedido é recusado</h2>
-  <p>Ao clicar em <span class="tela">Gerar exportação</span>, o servidor pode recusar o pedido. Nesse caso nenhuma linha nova entra na lista, e um aviso de poucos segundos traz o motivo.</p>
+  <p>Antes de enviar o pedido, a própria tela confere o campo <span class="tela">Código</span>; o que ela recusa está em <a href="#gerar-exportacao--codigo-recusado-e-prefixo">Código recusado e prefixo</a>. Ao clicar em <span class="tela">Gerar exportação</span>, o servidor pode recusar o pedido. Nesse caso nenhuma linha nova entra na lista, e um aviso de poucos segundos traz o motivo.</p>
 
   <figure class="captura"><img src="img/exportacoes-aviso-sem-titulos.webp" alt="Formulário preenchido com o código 999999 e o aviso de que nenhum título foi encontrado" loading="lazy">
     <figcaption>Aviso de recusa quando os filtros não encontram nenhum título, sobre o formulário preenchido com o código 999999.</figcaption></figure>
@@ -52,7 +53,7 @@
     <tbody>
       <tr><td><span class="tela">Nenhum título encontrado com os filtros informados.</span></td><td>Ampliar os filtros. Lembrar que só entram títulos aprovados pelo Gestor, que não são rascunho nem cancelados.</td></tr>
       <tr><td>Os filtros trazem mais títulos que o máximo por exportação. A mensagem informa o total e o máximo e termina com <span class="tela">Refine os filtros, por exemplo por período.</span></td><td>Restringir o período ou outro filtro até ficar dentro do limite.</td></tr>
-      <tr><td><span class="tela">A data final da solicitação é anterior à data inicial.</span></td><td>Corrigir o <span class="tela">Período da Solicitação (RDDV: cadastro)</span>. O mesmo vale para vencimento e para aprovação do Financeiro, com as mensagens <span class="tela">A data final de vencimento é anterior à data inicial.</span> e <span class="tela">A data final de aprovação do financeiro é anterior à data inicial.</span></td></tr>
+      <tr><td><span class="tela">A data final da solicitação é anterior à data inicial.</span></td><td>Corrigir o <span class="tela">Período da solicitação (RDDV: cadastro)</span>. O mesmo vale para vencimento e para aprovação do Financeiro, com as mensagens <span class="tela">A data final de vencimento é anterior à data inicial.</span> e <span class="tela">A data final de aprovação do financeiro é anterior à data inicial.</span></td></tr>
       <tr><td>A mensagem informa a quantidade de <span class="tela">exportações em andamento, o máximo permitido.</span> e segue com <span class="tela">Aguarde uma terminar ou cancele uma delas.</span></td><td>Esperar uma exportação terminar ou cancelá-la na lista, com o botão <span class="tela">Cancelar</span>.</td></tr>
       <tr><td><span class="tela">A exportação está indisponível neste servidor por falta de configuração. Acione o suporte.</span></td><td>Acionar o suporte. A exportação não funciona neste servidor até a configuração ser corrigida.</td></tr>
       <tr><td><span class="tela">Filtro de exportação inválido.</span> ou <span class="tela">Tipo de título inválido.</span></td><td>A mensagem não indica outra ação.</td></tr>
@@ -65,7 +66,7 @@
     <figcaption>Aviso de recusa por excesso de exportações em andamento (o máximo é 2), com o botão OK, sobre o formulário no padrão.</figcaption></figure>
 
   <h2>Quando a exportação falha</h2>
-  <p>Se a geração termina com erro, a linha mostra a situação <span class="tela">Falhou</span> e, abaixo do selo, a mensagem do erro em vermelho. A linha não tem ações; a saída é gerar a exportação de novo.</p>
+  <p>Se a geração termina com erro, a linha mostra a situação <span class="tela">Falhou</span> e, abaixo do selo, a mensagem do erro em vermelho. A única ação da linha é <span class="tela">Remover da lista</span>; a saída é gerar a exportação de novo.</p>
   <div class="tabela"><table>
     <thead><tr><th>Mensagem na linha</th><th>O que fazer</th></tr></thead>
     <tbody>
@@ -78,5 +79,5 @@
   </table></div>
 
   <h2>Dados pessoais no pacote</h2>
-  <p>A planilha <code>titulos.xlsx</code> traz sem máscara o documento do parceiro (CPF ou CNPJ) nas solicitações, o CPF do funcionário nos RDDVs, e banco, agência e conta. Compartilhar o pacote só com quem precisa, por um canal seguro, e apagar as cópias quando o uso terminar reduz o risco de vazamento. Excluir o arquivo na lista (botão <span class="tela">Excluir</span>) apaga o arquivo guardado no servidor, e depois disso não é possível baixá-lo de novo. As cópias que já foram baixadas continuam nos computadores onde foram salvas.</p>
+  <p>A planilha <code>titulos.xlsx</code> traz sem máscara o documento do parceiro (CPF ou CNPJ) nas solicitações, o CPF do funcionário nos RDDVs, e banco, agência e conta. Compartilhar o pacote só com quem precisa, por um canal seguro, e apagar as cópias quando o uso terminar reduz o risco de vazamento. Excluir o arquivo na lista (botão <span class="tela">Excluir</span>) apaga o arquivo guardado no servidor, a linha passa a <span class="tela">Excluída</span> e depois disso não é possível baixá-lo de novo. As cópias que já foram baixadas continuam nos computadores onde foram salvas.</p>
 </article>

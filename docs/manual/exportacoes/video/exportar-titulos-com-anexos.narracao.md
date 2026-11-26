@@ -31,7 +31,7 @@ O campo **Tipo de título** define o que entra no pacote: solicitações, RDDVs 
 
 > O cursor aponta para o período da solicitação; as datas de início e de fim são digitadas nos dois campos.
 
-O período limita a exportação. Em **Período da Solicitação (RDDV: cadastro)**, as datas de **Início** e de **Fim** são digitadas no formato dia, mês e ano. Um período mais curto reduz o número de títulos e o tamanho do pacote.
+O período limita a exportação. Em **Período da solicitação (RDDV: cadastro)**, as datas de **Início** e de **Fim** são digitadas no formato dia, mês e ano. Um período mais curto reduz o número de títulos e o tamanho do pacote.
 
 ## p06 — Os anexos
 

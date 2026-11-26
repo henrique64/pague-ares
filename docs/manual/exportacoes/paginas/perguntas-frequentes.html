@@ -13,10 +13,13 @@
   <p>Nenhum. Campo em branco ou lista em <span class="tela">Todos</span> não restringe o resultado. Ver <a href="#gerar-exportacao--os-campos-do-formulario">Gerar uma exportação</a>.</p>
 
   <h3>Por que alguns campos ficam desabilitados?</h3>
-  <p>Cada campo cujo rótulo traz <span class="tela">(só Solicitação)</span> ou <span class="tela">(só RDDV)</span> existe para um único tipo de título. Ao escolher o outro tipo em <span class="tela">Tipo de título</span>, o campo é desabilitado e não entra no filtro. Ver <a href="#gerar-exportacao--tipo-de-titulo-e-campos-desabilitados">Tipo de título e campos desabilitados</a>.</p>
+  <p>Cada campo cujo rótulo traz <span class="tela">(só Solicitação)</span> ou <span class="tela">(só RDDV)</span> existe para um único tipo de título. Ao escolher o outro tipo em <span class="tela">Tipo de título</span>, o campo é desabilitado e não entra no filtro. Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, o mesmo acontece quando o <span class="tela">Código</span> tem prefixo: o prefixo define o tipo. Ver <a href="#gerar-exportacao--tipo-de-titulo-e-campos-desabilitados">Tipo de título e campos desabilitados</a>.</p>
 
   <h3>O que o filtro Código aceita?</h3>
-  <p>Aceita o número do título, sem prefixo e sem zeros à esquerda. A planilha e as pastas do pacote mostram o código com prefixo, como <code>SOL-000123</code> para a solicitação de número 123.</p>
+  <p>Aceita o número do título (<code>123</code>, ou <code>000123</code> com zeros à esquerda) e o código com prefixo (<code>SOL-000123</code> para a solicitação de número 123, <code>RDDV-45</code> para o RDDV de número 45). O prefixo define o tipo do título. Zero e número decimal são recusados, com uma mensagem sob o campo, e a exportação não é enviada. Ver <a href="#gerar-exportacao--codigo-recusado-e-prefixo">Código recusado e prefixo</a>.</p>
+
+  <h3>Por que apareceu um aviso dizendo que os RDDVs (ou as solicitações) ficam de fora?</h3>
+  <p>Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, preencher um campo que só existe em solicitações tira os RDDVs do pacote, e preencher <span class="tela">Tipo de relatório (só RDDV)</span> tira as solicitações. O mesmo vale para um <span class="tela">Código</span> com prefixo. O aviso só informa e não impede a exportação. Ver <a href="#gerar-exportacao--avisos-do-tipo-ambos">Avisos do tipo Ambos</a>.</p>
 
   <h3>O que muda ao desmarcar Incluir anexos?</h3>
   <p>O pacote sai sem pastas de títulos. A planilha e o <code>LEIA-ME.txt</code> continuam no pacote, e a aba <span class="tela">Anexos</span> e o <code>indice.csv</code> ficam só com o cabeçalho, e o <code>indice.json</code> traz a lista de arquivos vazia.</p>
@@ -35,18 +38,27 @@
   <p>Pelo valor padrão do sistema, 48 horas depois de concluído; a equipe de TI pode alterar o prazo. A coluna <span class="tela">Expira em</span> mostra a data e a hora de cada exportação. Passado o prazo, o arquivo deixa de poder ser baixado e a situação passa a <span class="tela">Expirada</span> em até 30 minutos (a limpeza roda a cada 30 minutos, valor padrão). É preciso gerar de novo.</p>
 
   <h3>O botão Baixar não funcionou na segunda vez. Por quê?</h3>
-  <p>O link gerado pelo botão <span class="tela">Baixar</span> vale uma vez e por 120 segundos. Clicar em <span class="tela">Baixar</span> de novo gera um link novo. Ver <a href="#acompanhar-e-baixar--baixar-o-arquivo">Acompanhar e baixar</a>.</p>
+  <p>O link gerado pelo botão <span class="tela">Baixar</span> vale uma vez e por 120 segundos. Clicar em <span class="tela">Baixar</span> de novo gera um link novo. O aviso que aparece traz a mensagem do servidor, quando a tela consegue lê-la. Ver <a href="#acompanhar-e-baixar--baixar-o-arquivo">Acompanhar e baixar</a>.</p>
 
   <h3>Como cancelar uma exportação?</h3>
   <p>Pelo botão <span class="tela">Cancelar</span>, nas linhas <span class="tela">Pendente</span> e <span class="tela">Em processamento</span>. A linha <span class="tela">Em processamento</span> só muda para <span class="tela">Cancelada</span> quando o servidor para de gerar o pacote.</p>
+
+  <h3>O que acontece ao clicar em Excluir?</h3>
+  <p>O botão <span class="tela">Excluir</span>, nas linhas <span class="tela">Concluída</span>, apaga o arquivo do servidor, e a linha passa a <span class="tela">Excluída</span>, com a coluna <span class="tela">Expira em</span> ainda mostrando o prazo original. Ver <a href="#acompanhar-e-baixar--excluir-o-arquivo">Acompanhar e baixar</a>.</p>
+
+  <h3>Como tirar uma exportação da lista?</h3>
+  <p>Pelo botão <span class="tela">Remover da lista</span>, nas linhas <span class="tela">Falhou</span>, <span class="tela">Cancelada</span>, <span class="tela">Expirada</span> e <span class="tela">Excluída</span>. As linhas <span class="tela">Pendente</span>, <span class="tela">Em processamento</span> e <span class="tela">Concluída</span> não têm o botão. Ver <a href="#acompanhar-e-baixar--remover-da-lista">Remover da lista</a>.</p>
 
   <h3>Quantas exportações podem ficar em andamento ao mesmo tempo?</h3>
   <p>Até 2 por usuário, contando as linhas <span class="tela">Pendente</span> e <span class="tela">Em processamento</span>. Para pedir outra, é preciso esperar uma terminar ou cancelá-la.</p>
 
   <h3>Onde aparece o número da exportação?</h3>
-  <p>A lista <span class="tela">Minhas exportações</span> não mostra o número. Ele aparece no nome do arquivo baixado, depois de <code>exportacao-titulos-</code>, e na segunda linha do <code>LEIA-ME.txt</code>.</p>
+  <p>Na coluna <span class="tela">Nº</span> da lista <span class="tela">Minhas exportações</span>. O mesmo número aparece no nome do arquivo baixado, depois de <code>exportacao-titulos-</code>, e na segunda linha do <code>LEIA-ME.txt</code>.</p>
 
   <h2>O pacote</h2>
+  <h3>Em que fuso ficam o nome do arquivo e a hora do LEIA-ME?</h3>
+  <p>No horário de Brasília, que é o padrão do sistema; a equipe de TI pode configurar outro fuso. As colunas <span class="tela">Solicitada em</span> e <span class="tela">Expira em</span> da lista seguem o fuso do navegador.</p>
+
   <h3>Por que os links da planilha não abrem?</h3>
   <p>Os links só funcionam com o ZIP extraído por inteiro. Abrir o <code>titulos.xlsx</code> de dentro do ZIP quebra os links. Extrair o ZIP numa pasta do computador e abrir a planilha dessa pasta. Ver <a href="#o-que-vem-no-pacote--extrair-antes-de-abrir">O que vem no pacote</a>.</p>
 
@@ -57,6 +69,12 @@
   <p>Não se perde. O segundo ganha <code>(2)</code> antes da extensão, o terceiro ganha <code>(3)</code>, e assim por diante.</p>
 
   <h2>Lista de pagamentos</h2>
-  <h3>O botão Exportar da tela Solicitações gera o mesmo pacote?</h3>
-  <p>Gera outro arquivo: uma planilha <code>Pagamentos.xlsx</code>, sem anexos, baixada na hora. A comparação completa está em <a href="#exportar-lista-de-pagamentos--diferencas-para-a-exportacao-de-titulos">Exportar a lista de pagamentos</a>.</p>
+  <h3>O botão Exportar planilha da tela Solicitações gera o mesmo pacote?</h3>
+  <p>Gera outro arquivo: uma planilha <code>Pagamentos.xlsx</code>, sem anexos, baixada na hora. A dica do botão lembra que os anexos ficam no menu <span class="tela">Exportações</span>. A comparação completa está em <a href="#exportar-lista-de-pagamentos--diferencas-para-a-exportacao-de-titulos">Exportar a lista de pagamentos</a>.</p>
+
+  <h3>A planilha traz os mesmos títulos da lista da tela?</h3>
+  <p>Sim. A planilha usa as mesmas regras de filtro da lista, inclusive para um período com só um dos lados preenchido. Com número do documento ou parceiro preenchidos, os RDDVs ficam de fora, porque esses filtros existem só nas solicitações. Ver <a href="#exportar-lista-de-pagamentos--o-que-a-planilha-traz">O que a planilha traz</a>.</p>
+
+  <h3>O Administrador vê a aba Financeiro/Contábil inteira?</h3>
+  <p>Sim. Na aba <span class="tela">Financeiro/Contábil</span>, o Administrador vê o mesmo conjunto de títulos que o Financeiro: todos os aprovados pelo Gestor, sem rascunho e sem cancelados. O usuário da Contabilidade vê só os atribuídos a ele.</p>
 </article>
