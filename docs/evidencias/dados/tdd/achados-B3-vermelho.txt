@@ -1,0 +1,70 @@
+B3 — Pagamentos: Administrador na aba Financeiro/Contábil e Pagamentos.xlsx (back-end, crítica) — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-back (base 8d77c4e)
+Comando: dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~VisaoFinanceiraTests|FullyQualifiedName~ExportLegadoExcelTests|FullyQualifiedName~ExportLegadoFiltrosTests|FullyQualifiedName~ExportLegadoSecurityTests"
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/VisaoFinanceiraTests.cs (novo)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportLegadoFiltrosTests.cs (novo)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportLegadoExcelTests.cs
+                   back-end/Ares.PagueAres.Tests.Integration/Infrastructure/PagueAresContextTeste.cs (novo, infraestrutura)
+                   back-end/Ares.PagueAres.Tests.Integration/Infrastructure/PagueAresWebAppFactory.cs (infraestrutura)
+Banco: EF Core InMemory (PagueAresWebAppFactory), só dados fictícios.
+
+Passo 1 — testes escritos e infraestrutura de teste, sem nenhuma mudança no código de produção
+------------------------------------------------------------------------------------------
+Infraestrutura: o EF InMemory não tem views, e a view vListagemSolicitacoes, de onde a lista (GET /api/listing) lê,
+voltava vazia nos testes de integração. O contexto de teste PagueAresContextTeste lhe dá a mesma montagem da view real
+(solicitações e RDDVs juntos, "#" no número do documento e no parceiro do RDDV), e a PagueAresWebAppFactory passa a
+usá-lo. Nenhum teste que já existia dependia da view vazia.
+
+Resultado: 49 testes — 12 com falha, 37 aprovados.
+
+Cenários novos que falharam (esperado antes da correção)
+------------------------------------------------------------------------------------------
+[FALHOU] VisaoFinanceiraTests.VisaoFinanceira_Administrador_VeOsAprovadosAtribuidosAOutroUsuario
+         esperado 5 títulos aprovados (3 solicitações e 2 RDDVs atribuídos ao FIN, à CON ou a ninguém); recebido lista vazia
+         (o ADM só via os atribuídos a ele)
+[FALHOU] ExportLegadoExcelTests.ExcelLegado_TemAs11ColunasNaMesmaOrdemComOsRotulosDaPlanilhaNova
+         esperado {"Código", "Tipo", "Data de inclusão", "Data de vencimento", "Nº do documento", "Solicitante", "Parceiro",
+         "Valor", "Status gestor", "Status contábil", "Status financeiro"}; recebido {"Codigo", "Tipo", "Data de Inclusao",
+         "Data de Vencimento", "Doc. Número", "Solicitante", "Parceiro", "Valor", "Status Gestor", "Status Contábil",
+         "Status Financeiro"} (difere no índice 0)
+[FALHOU] ExportLegadoExcelTests.ExcelLegado_Rddv_NumeroDoDocumentoFicaVazio
+         esperado célula vazia; recebido "#"
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(requestStart=2026-11-01)
+         lista: S701, R711; planilha: S700, S701, R710, R711 (período com um lado só era ignorado)
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(requestEnd=2026-10-31)
+         lista: S700, R710; planilha: S700, S701, R710, R711
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(dueStart=2026-12-01)
+         lista: S701, R711; planilha: S700, S701, R710, R711
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(dueEnd=2026-10-31)
+         lista: S700, R710; planilha: S700, S701, R710, R711
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(documentNumber=NF-700)
+         lista: S700; planilha: S700, R710, R711 (o filtro não valia para os RDDVs)
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(partnerName=ALFA)
+         esperado S700 na lista; a lista devolveu vazio (IndexOf diferencia maiúsculas no InMemory, e a planilha não)
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(isAssigned=true)
+         lista: S701, R711; planilha: S700, S701, R710, R711 (a planilha não lia o filtro "atribuído")
+[FALHOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(documentId=0)
+         lista: S700, S701, R710, R711 (código zero é filtro vazio); planilha: vazia
+[FALHOU] ExportLegadoFiltrosTests.Planilha_FiltroDocumentoDoParceiro_DeixaOsRddvsDeFora
+         esperado S700; recebido S700, R710, R711 (o filtro não valia para os RDDVs)
+
+Controles (passam antes e depois; fixam um comportamento que já estava certo)
+------------------------------------------------------------------------------------------
+[PASSOU] VisaoFinanceiraTests.VisaoFinanceira_Financeiro_VeTodosOsAprovados
+[PASSOU] VisaoFinanceiraTests.VisaoFinanceira_Contabilidade_SoVeOsAtribuidosAEla
+         a CON vê só S601 e R611, os atribuídos a ela
+[PASSOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos({} sem filtro)
+[PASSOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(requestStart=2026-10-01 e requestEnd=2026-10-31)
+[PASSOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(requesterId=6)
+[PASSOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos(documentId=710)
+[PASSOU] ExportLegadoExcelTests.ExcelLegado_Rddv_TemTipoRotuladoEValorNumerico
+         com a asserção nova "Parceiro = Solicitante" no RDDV (decisão 22, mantida)
+[PASSOU] os demais testes de ExportLegadoExcelTests e ExportLegadoSecurityTests (escopo FIN/ADM, chave de uso único,
+         filtro de parceiro e de documento do parceiro sem diferenciar maiúsculas nas solicitações)
+
+Resumo do console
+------------------------------------------------------------------------------------------
+Total de testes: 49
+     Aprovados: 37
+     Com falha: 12

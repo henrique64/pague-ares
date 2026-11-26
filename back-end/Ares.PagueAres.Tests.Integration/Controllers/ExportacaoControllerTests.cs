@@ -30,6 +30,12 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         private const string Rota = "/api/exportacao";
         private const string RotaDownload = "/api/exportacao/download";
 
+        // Mensagens do contrato C1 que os testes conferem palavra por palavra.
+        private const string MensagemNaoEncontrada = "Exportação não encontrada.";
+        private const string MensagemArquivoExcluido = "O arquivo desta exportação foi excluído. Gere a exportação de novo.";
+        private const string MensagemSoEncerradasSaemDaLista =
+            "Só exportações encerradas (Falhou, Cancelada, Expirada ou Excluída) podem ser removidas da lista.";
+
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
         // Ids dos usuários fictícios criados pelos testes (os de SeedBaseData vão de 1 a 7).
@@ -87,6 +93,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             { "GET", Rota + "/1" },
             { "POST", Rota + "/1/link-download" },
             { "DELETE", Rota + "/1" },
+            { "DELETE", Rota + "/1/lista" },
         };
 
         [Theory]
@@ -118,7 +125,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         {
             var dados = new TheoryData<string, string>();
             foreach (var papel in new[] { Funcoes.Solicitante, Funcoes.Gestor, Funcoes.Contabilidade })
-            foreach (var rota in new[] { "POST lista", "GET lista", "GET id", "POST link-download", "DELETE id" })
+            foreach (var rota in new[] { "POST lista", "GET lista", "GET id", "POST link-download", "DELETE id", "DELETE lista" })
                 dados.Add(papel, rota);
             return dados;
         }
@@ -131,6 +138,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             var idUsuario = NovoUsuario(_factory);
             var concluido = SemearConcluidoComPacote(_factory, idUsuario, out _);
             var pendente = SemearJob(_factory, idUsuario, StatusExportacao.Pendente);
+            var falhou = SemearJob(_factory, idUsuario, StatusExportacao.Falhou);
             var client = _factory.GetAuthenticatedClient(idUsuario, "Usuário sem papel", papel);
 
             var resposta = rota switch
@@ -140,13 +148,15 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
                 "GET id" => await client.GetAsync($"{Rota}/{concluido}"),
                 "POST link-download" => await client.PostAsync($"{Rota}/{concluido}/link-download", null),
                 "DELETE id" => await client.DeleteAsync($"{Rota}/{pendente}"),
+                "DELETE lista" => await client.DeleteAsync($"{Rota}/{falhou}/lista"),
                 _ => throw new ArgumentOutOfRangeException(nameof(rota)),
             };
 
             await AfirmarErroAsync(resposta, HttpStatusCode.Forbidden);
-            JobsDoUsuario(_factory, idUsuario).Should().HaveCount(2, "nenhum job pode ser criado");
+            JobsDoUsuario(_factory, idUsuario).Should().HaveCount(3, "nenhum job pode ser criado");
             Status(LerJob(_factory, pendente)).Should().Be(StatusExportacao.Pendente);
             Status(LerJob(_factory, concluido)).Should().Be(StatusExportacao.Concluido);
+            LerJob(_factory, falhou).DataRemocaoDaLista.Should().BeNull("nenhum job pode sair da lista");
         }
 
         // ─── Criação ─────────────────────────────────────────────────────────────
@@ -302,6 +312,31 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             envelope.Data.Percentual.Should().Be(25);
         }
 
+        [Fact]
+        public async Task GetPorId_DeJobExcluido_DescricaoExcluidaPercentual100EPrazoOriginal()
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var prazo = new DateTime(2026, 11, 27, 18, 30, 0, DateTimeKind.Utc);
+            // Contagem incompleta de propósito: o percentual de uma Excluída é 100 como o de Concluída e Expirada.
+            var id = SemearJob(_factory, idUsuario, StatusExportacao.Excluido, j =>
+            {
+                j.TotalTitulos = 4;
+                j.TitulosProcessados = 3;
+                j.DataExpiracao = prazo;
+            });
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
+
+            var resposta = await client.GetAsync($"{Rota}/{id}");
+
+            resposta.StatusCode.Should().Be(HttpStatusCode.OK);
+            var envelope = await resposta.Content.ReadFromJsonAsync<GenericResponse<ExportacaoJobDto>>(Json);
+            envelope!.Data!.Status.Should().Be(StatusExportacao.Excluido);
+            ((int)envelope.Data.Status).Should().Be(6);
+            envelope.Data.StatusDescricao.Should().Be("Excluída");
+            envelope.Data.Percentual.Should().Be(100);
+            envelope.Data.DataExpiracao.Should().Be(prazo);
+        }
+
         [Theory]
         [InlineData("GET id")]
         [InlineData("POST link-download")]
@@ -374,6 +409,23 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         }
 
         [Fact]
+        public async Task LinkDownload_DeJobExcluido_Responde410ComMensagemDeExcluido()
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var id = SemearJob(_factory, idUsuario, StatusExportacao.Excluido, j =>
+            {
+                j.NomeArquivo = ArquivosExportacao.NomeArquivo(j.IdExportacaoJob);
+                j.DataConclusao = DateTime.UtcNow.AddHours(-1);
+                j.DataExpiracao = DateTime.UtcNow.AddHours(47);
+            });
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
+
+            var resposta = await client.PostAsync($"{Rota}/{id}/link-download", null);
+
+            (await AfirmarErroAsync(resposta, HttpStatusCode.Gone)).Should().Be(MensagemArquivoExcluido);
+        }
+
+        [Fact]
         public async Task LinkDownload_DeConcluidoComPrazoVencidoOuSemArquivo_Responde410()
         {
             var idUsuario = NovoUsuario(_factory);
@@ -417,7 +469,8 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             resposta.Content.Headers.ContentType!.MediaType.Should().Be("application/zip");
             var disposicao = resposta.Content.Headers.ContentDisposition!;
             disposicao.DispositionType.Should().Be("attachment");
-            var nomeEsperado = $"exportacao-titulos-{id}-{conclusao.ToLocalTime():yyyyMMdd-HHmm}.zip";
+            // 17:04 UTC é 14:04 em Brasília, qualquer que seja o fuso do servidor de testes.
+            var nomeEsperado = $"exportacao-titulos-{id}-20261125-1404.zip";
             (disposicao.FileNameStar ?? disposicao.FileName!.Trim('"')).Should().Be(nomeEsperado);
             resposta.Headers.AcceptRanges.Should().BeEmpty("o download não aceita intervalos");
             (await resposta.Content.ReadAsByteArrayAsync()).Should().Equal(File.ReadAllBytes(caminho));
@@ -488,6 +541,20 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             await AfirmarErroAsync(resposta, HttpStatusCode.Gone);
         }
 
+        [Fact]
+        public async Task Download_JobExcluidoDepoisDoLink_Responde410ComMensagemDeExcluido()
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var id = SemearConcluidoComPacote(_factory, idUsuario, out _);
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
+            var link = await GerarLinkAsync(client, id);
+            (await client.DeleteAsync($"{Rota}/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var resposta = await _factory.CreateClient().GetAsync($"{RotaDownload}?token={Uri.EscapeDataString(link.Token)}");
+
+            (await AfirmarErroAsync(resposta, HttpStatusCode.Gone)).Should().Be(MensagemArquivoExcluido);
+        }
+
         // ─── Cancelamento e exclusão ─────────────────────────────────────────────
 
         [Fact]
@@ -520,16 +587,22 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         }
 
         [Fact]
-        public async Task Delete_DeConcluido_Responde204ApagaOArquivoEExpira()
+        public async Task Delete_DeConcluido_Responde204GravaExcluidaPreservaOPrazoEApagaOArquivo()
         {
             var idUsuario = NovoUsuario(_factory);
-            var id = SemearConcluidoComPacote(_factory, idUsuario, out var caminho);
+            // Prazo ainda no futuro: antes, a exclusão o trazia para o momento da exclusão.
+            var prazo = DateTime.UtcNow.AddHours(40);
+            var id = SemearConcluidoComPacote(_factory, idUsuario, out var caminho, j => j.DataExpiracao = prazo);
             var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
 
             var resposta = await client.DeleteAsync($"{Rota}/{id}");
 
             resposta.StatusCode.Should().Be(HttpStatusCode.NoContent);
-            Status(LerJob(_factory, id)).Should().Be(StatusExportacao.Expirado);
+            var job = LerJob(_factory, id);
+            Status(job).Should().Be(StatusExportacao.Excluido);
+            job.Status.Should().Be(6, "o valor guardado na coluna Status é o inteiro do contrato C1");
+            job.DataExpiracao.Should().Be(prazo, "a Excluída mantém o \"Expira em\" original");
+            job.DataRemocaoDaLista.Should().BeNull("excluir o arquivo não tira o job da lista");
             File.Exists(caminho).Should().BeFalse();
         }
 
@@ -537,6 +610,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         [InlineData(StatusExportacao.Falhou)]
         [InlineData(StatusExportacao.Expirado)]
         [InlineData(StatusExportacao.Cancelado)]
+        [InlineData(StatusExportacao.Excluido)]
         public async Task Delete_DeJobJaEncerrado_Responde409(StatusExportacao status)
         {
             var idUsuario = NovoUsuario(_factory);
@@ -547,6 +621,114 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 
             await AfirmarErroAsync(resposta, HttpStatusCode.Conflict);
             Status(LerJob(_factory, id)).Should().Be(status);
+        }
+
+        // ─── Remoção da lista ────────────────────────────────────────────────────
+
+        [Theory]
+        [InlineData(StatusExportacao.Falhou)]
+        [InlineData(StatusExportacao.Cancelado)]
+        [InlineData(StatusExportacao.Expirado)]
+        [InlineData(StatusExportacao.Excluido)]
+        public async Task RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(StatusExportacao status)
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var encerrado = SemearJob(_factory, idUsuario, status);
+            var outro = SemearJob(_factory, idUsuario, StatusExportacao.Falhou);
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
+            (await IdsDaListaAsync(client)).Should().Contain(encerrado);
+
+            var resposta = await client.DeleteAsync($"{Rota}/{encerrado}/lista");
+
+            resposta.StatusCode.Should().Be(HttpStatusCode.NoContent, await resposta.Content.ReadAsStringAsync());
+            (await resposta.Content.ReadAsByteArrayAsync()).Should().BeEmpty();
+            var job = LerJob(_factory, encerrado);
+            job.DataRemocaoDaLista.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+            Status(job).Should().Be(status, "remover da lista não muda a situação");
+            var ids = await IdsDaListaAsync(client);
+            ids.Should().NotContain(encerrado);
+            ids.Should().Contain(outro, "só o job pedido sai da lista");
+        }
+
+        [Fact]
+        public async Task RemoverDaLista_Repetido_Responde204SemGravarDeNovo()
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var id = SemearJob(_factory, idUsuario, StatusExportacao.Cancelado);
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Administrador", Funcoes.Administrador);
+
+            (await client.DeleteAsync($"{Rota}/{id}/lista")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+            var depoisDaPrimeira = LerJob(_factory, id);
+            var segunda = await client.DeleteAsync($"{Rota}/{id}/lista");
+
+            segunda.StatusCode.Should().Be(HttpStatusCode.NoContent, await segunda.Content.ReadAsStringAsync());
+            var depoisDaSegunda = LerJob(_factory, id);
+            depoisDaSegunda.DataRemocaoDaLista.Should().Be(depoisDaPrimeira.DataRemocaoDaLista);
+            depoisDaSegunda.Versao.Should().Be(depoisDaPrimeira.Versao, "o pedido repetido não grava o job");
+        }
+
+        [Theory]
+        [InlineData(StatusExportacao.Pendente)]
+        [InlineData(StatusExportacao.Processando)]
+        [InlineData(StatusExportacao.Concluido)]
+        public async Task RemoverDaLista_DeJobNaoEncerrado_Responde409ComMensagemENaoRemove(StatusExportacao status)
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var id = status == StatusExportacao.Concluido
+                ? SemearConcluidoComPacote(_factory, idUsuario, out _)
+                : SemearJob(_factory, idUsuario, status);
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
+
+            var resposta = await client.DeleteAsync($"{Rota}/{id}/lista");
+
+            (await AfirmarErroAsync(resposta, HttpStatusCode.Conflict)).Should().Be(MensagemSoEncerradasSaemDaLista);
+            var job = LerJob(_factory, id);
+            job.DataRemocaoDaLista.Should().BeNull();
+            Status(job).Should().Be(status);
+            (await IdsDaListaAsync(client)).Should().Contain(id);
+        }
+
+        [Fact]
+        public async Task RemoverDaLista_JobEncerradoDeOutroUsuario_Responde404ENaoRemove()
+        {
+            var idDono = NovoUsuario(_factory);
+            var idOutro = NovoUsuario(_factory);
+            var id = SemearJob(_factory, idDono, StatusExportacao.Falhou);
+            // O outro usuário também é ADM: o papel não dá acesso a job alheio.
+            var client = _factory.GetAuthenticatedClient(idOutro, "Outro administrador", Funcoes.Administrador, Funcoes.Financeiro);
+
+            var resposta = await client.DeleteAsync($"{Rota}/{id}/lista");
+
+            (await AfirmarErroAsync(resposta, HttpStatusCode.NotFound)).Should().Be(MensagemNaoEncontrada);
+            LerJob(_factory, id).DataRemocaoDaLista.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task RemoverDaLista_JobInexistente_Responde404()
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
+
+            var resposta = await client.DeleteAsync($"{Rota}/987654321/lista");
+
+            (await AfirmarErroAsync(resposta, HttpStatusCode.NotFound)).Should().Be(MensagemNaoEncontrada);
+        }
+
+        [Fact]
+        public async Task GetPorId_DeJobRemovidoDaLista_Responde200ComOJob()
+        {
+            var idUsuario = NovoUsuario(_factory);
+            var id = SemearJob(_factory, idUsuario, StatusExportacao.Expirado);
+            var client = _factory.GetAuthenticatedClient(idUsuario, "Financeiro", Funcoes.Financeiro);
+            (await client.DeleteAsync($"{Rota}/{id}/lista")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var resposta = await client.GetAsync($"{Rota}/{id}");
+
+            resposta.StatusCode.Should().Be(HttpStatusCode.OK, await resposta.Content.ReadAsStringAsync());
+            var envelope = await resposta.Content.ReadFromJsonAsync<GenericResponse<ExportacaoJobDto>>(Json);
+            envelope!.Success.Should().BeTrue();
+            envelope.Data!.Id.Should().Be(id);
+            envelope.Data.StatusDescricao.Should().Be("Expirada");
         }
 
         // ─── Validade curta e limite de títulos ──────────────────────────────────
@@ -714,6 +896,16 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 
         private static StatusExportacao Status(ExportacaoJob job) => (StatusExportacao)job.Status;
 
+        /// <summary>Ids devolvidos por <c>GET api/exportacao</c> para o usuário do cliente.</summary>
+        private static async Task<List<int>> IdsDaListaAsync(HttpClient client)
+        {
+            var resposta = await client.GetAsync(Rota);
+            resposta.StatusCode.Should().Be(HttpStatusCode.OK, await resposta.Content.ReadAsStringAsync());
+            var envelope = await resposta.Content.ReadFromJsonAsync<GenericResponse<List<ExportacaoJobDto>>>(Json);
+            envelope!.Success.Should().BeTrue();
+            return envelope.Data!.Select(j => j.Id).ToList();
+        }
+
         private static async Task<LinkDownloadExportacaoDto> GerarLinkAsync(HttpClient client, int id)
         {
             var resposta = await client.PostAsync($"{Rota}/{id}/link-download", null);
@@ -725,9 +917,10 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 
         /// <summary>
         /// Confere o status e que o corpo é o envelope <see cref="GenericResponse{T}"/> com <c>success = false</c> e uma
-        /// mensagem amigável, sem nenhum texto de exceção (tipo, pilha ou mensagem do serializador).
+        /// mensagem amigável, sem nenhum texto de exceção (tipo, pilha ou mensagem do serializador). Devolve a mensagem,
+        /// para o teste que confere o texto do contrato.
         /// </summary>
-        private static async Task AfirmarErroAsync(HttpResponseMessage resposta, HttpStatusCode esperado)
+        private static async Task<string> AfirmarErroAsync(HttpResponseMessage resposta, HttpStatusCode esperado)
         {
             var corpo = await resposta.Content.ReadAsStringAsync();
             resposta.StatusCode.Should().Be(esperado, corpo);
@@ -739,6 +932,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             envelope.Should().NotBeNull();
             envelope!.Success.Should().BeFalse();
             envelope.Message.Should().NotBeNullOrWhiteSpace();
+            return envelope.Message!;
         }
     }
 }

@@ -7,6 +7,7 @@ namespace Ares.PagueAres.Domain.Enums
         Concluido = 2,
         Falhou = 3,
         Expirado = 4,
-        Cancelado = 5
+        Cancelado = 5,
+        Excluido = 6
     }
 }

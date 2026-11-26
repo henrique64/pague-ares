@@ -45,7 +45,7 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
                 return Convert.ToBase64String(bytes);
             };
 
-            var gerador = new GeradorPacoteExportacao(fonte, Options.Create(new ExportacaoSettings()));
+            var gerador = new GeradorPacoteExportacao(fonte, Options.Create(new ExportacaoSettings()), FusoDeTeste.Criar());
             var caminho = Path.Combine(Path.GetTempPath(), $"pagueares-teste-memoria-{Guid.NewGuid():N}.zip");
 
             GC.Collect();

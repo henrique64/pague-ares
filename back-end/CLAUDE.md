@@ -163,7 +163,7 @@ dotnet test Ares.PagueAres.sln --filter "FullyQualifiedName~SecurityTests"
 | Projeto | Conteúdo |
 |---------|----------|
 | `Ares.PagueAres.Tests.Unit` | `Authentication/AuthenticationServiceTests` (BCrypt, SHA256 legado, migração), `Authentication/AuthControllerUnitTests` (lockout), `Controllers/ListingControllerFilterTests` (filtros de visão), `Preview/PreviewTokenValidationTests` |
-| `Ares.PagueAres.Tests.Integration` | `ApprovalWorkflowTests`, `AuthControllerTests`, `DataSegregationTests`, `DepartmentControllerTests`, `EndpointExposureTests`, `SecurityTests` — sobem a API inteira via `PagueAresWebAppFactory` (`WebApplicationFactory<Program>`) com EF Core **InMemory**, ambiente `Test`, `RunMigrations=false`, e geram JWTs de teste |
+| `Ares.PagueAres.Tests.Integration` | `ApprovalWorkflowTests`, `AuthControllerTests`, `DataSegregationTests`, `DepartmentControllerTests`, `EndpointExposureTests`, `SecurityTests` — sobem a API inteira via `PagueAresWebAppFactory` (`WebApplicationFactory<Program>`) com EF Core **InMemory**, ambiente `Test`, `RunMigrations=false`, e geram JWTs de teste. O contexto de teste `PagueAresContextTeste` dá ao InMemory a view `vListagemSolicitacoes` (o InMemory não tem views) |
 
 Os testes de integração **não precisam de SQL Server nem de Docker**. `Program` é exposto com `public partial class Program { }` para essa finalidade. Resultados e contagens atuais: ver `../RELATORIO_TESTES.md`.
 
@@ -220,7 +220,7 @@ Todos os controllers usam `[Route("api/[controller]")]` e `[Authorize]` (JWT Bea
 | `TravelTypeController` | `/api/traveltype` | `GET /`, `GET /{id}`, `POST /` |
 | `DepartmentController` | `/api/department` | `GET /` — lista de departamentos (substitui listas fixas no frontend) |
 | `PreviewController` | `/api/preview` | `POST /generate-preview-key?entityId=&requestType=`, `GET /payment/{id}/{attachmentId}?key=`, `GET /rddv/{id}/{attachmentId}?key=` |
-| `ExportacaoController` | `/api/exportacao` | `POST /` — cria um job de exportação de títulos (202 com o job; 400 para filtro inválido ou sem títulos, 429 ao passar de `MaxJobsAtivosPorUsuario`); `GET /` — jobs do próprio usuário dos últimos 30 dias; `GET /{id}` — um job do próprio usuário; `POST /{id}/link-download` — gera o link de download de uso único (só para job Concluido); `GET /download?token=` — baixa o ZIP pelo token, anônimo na autenticação, consumido na primeira vez; `DELETE /{id}` — cancela (Pendente vira Cancelado, Processando pede cancelamento, Concluido vira Expirado e apaga o arquivo) |
+| `ExportacaoController` | `/api/exportacao` | `POST /` — cria um job de exportação de títulos (202 com o job; 400 para filtro inválido ou sem títulos, 429 ao passar de `MaxJobsAtivosPorUsuario`); `GET /` — jobs do próprio usuário dos últimos 30 dias, menos os removidos da lista; `GET /{id}` — um job do próprio usuário (inclusive um removido da lista); `POST /{id}/link-download` — gera o link de download de uso único (só para job Concluido); `GET /download?token=` — baixa o ZIP pelo token, anônimo na autenticação, consumido na primeira vez; `DELETE /{id}` — cancela (Pendente vira Cancelado, Processando pede cancelamento, Concluido vira Excluido e apaga o arquivo, mantendo a `DataExpiracao` original; job já encerrado responde 409); `DELETE /{id}/lista` — tira da lista um job Falhou, Cancelado, Expirado ou Excluido (204, também na repetição; 409 para Pendente, Processando e Concluido) |
 
 **Exportações (`ExportacaoController`)**: exigem papel **FIN** ou **ADM** do JWT (outros perfis recebem 403), e cada usuário só enxerga e altera os próprios jobs (job de outro usuário responde 404). A identidade vem sempre do token, nunca do corpo ou da query. O download é por navegação direta do navegador, que não envia o cabeçalho `Authorization`, por isso o link de uso único (`TokensDownloadExportacao`, em `API/Services`).
 
@@ -229,7 +229,7 @@ O processamento é em segundo plano, em `Application/Exportacao/`:
 - `ExportacaoWorker`: `BackgroundService` que gera o ZIP (planilha Excel com ClosedXML e anexos) job a job, com progresso gravado em `ExportacaoJob`.
 - `ExportacaoLimpeza`: `BackgroundService` que, ao subir e a cada `IntervaloLimpezaMinutos`, expira os pacotes vencidos e apaga arquivos órfãos mais velhos que `RetencaoHoras`.
 
-Os jobs ficam na tabela `ExportacaoJob` (mapeada com `ToTable("ExportacaoJob")` em `PagueAresContext`), com o token de concorrência `Versao`. A seção `Exportacao` do `appsettings.json` traz as chaves `Pasta` (vazia = pasta temporária do sistema, `PagueAres/Exportacao`), `RetencaoHoras`, `IntervaloLimpezaMinutos`, `MaxTitulosPorExportacao`, `MaxJobsAtivosPorUsuario`, `MaxBytesPorExportacao`, `EspacoLivreMinimoMb`, `ValidadeLinkDownloadSegundos` e `WorkerHabilitado`, todas ligadas à classe `ExportacaoSettings` (`Application/Configuration`).
+Os jobs ficam na tabela `ExportacaoJob` (mapeada com `ToTable("ExportacaoJob")` em `PagueAresContext`), com o token de concorrência `Versao`. A seção `Exportacao` do `appsettings.json` traz as chaves `Pasta` (vazia = pasta temporária do sistema, `PagueAres/Exportacao`), `RetencaoHoras`, `IntervaloLimpezaMinutos`, `MaxTitulosPorExportacao`, `MaxJobsAtivosPorUsuario`, `MaxBytesPorExportacao`, `EspacoLivreMinimoMb`, `ValidadeLinkDownloadSegundos`, `WorkerHabilitado` e `FusoHorario` (fuso do nome do ZIP e da hora do LEIA-ME; padrão `America/Sao_Paulo`, aceita também o id do Windows `E. South America Standard Time`; resolvido por `FusoExportacao`, que cai em Brasília e depois em UTC, com aviso no log, se o id não existir), todas ligadas à classe `ExportacaoSettings` (`Application/Configuration`).
 
 Observações:
 - **Não existem** mais `GET /api/request` nem `GET /api/rddv` (listagem crua sem escopo de usuário foi removida; use `/api/listing`).
@@ -290,7 +290,9 @@ Regras aplicadas em `RequestController` (Solicitação):
 ### ViewModes (ListingController)
 - `MyView` — próprias solicitações (inclui rascunhos)
 - `ManagerView` — onde o usuário é gestor (sem rascunhos/cancelados)
-- `FinancialView` — aprovadas pelo gestor (todas se FIN, somente atribuídas ao usuário caso contrário; sem rascunhos/cancelados)
+- `FinancialView` — aprovadas pelo gestor (todas se FIN ou ADM, somente atribuídas ao usuário caso contrário, por exemplo CON; sem rascunhos/cancelados)
+
+Os filtros da tela (sem a visão e sem a ordenação) ficam num lugar só, `ListingController.ApplyFilters`, usado também pelo Excel `Pagamentos.xlsx` (`GET /api/export/payments`), que parte da mesma view: com o mesmo filtro, a planilha traz os títulos que a aba Financeiro/Contábil mostra ao FIN. O documento do parceiro é filtro só da planilha.
 - `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados)
 
 ---

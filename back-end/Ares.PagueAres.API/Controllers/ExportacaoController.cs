@@ -38,6 +38,7 @@ namespace Ares.PagueAres.API.Controllers
         TokensDownloadExportacao tokens,
         IOptions<ExportacaoSettings> opcoes,
         IHostEnvironment ambiente,
+        FusoExportacao fuso,
         ILogger<ExportacaoController> logger) : ControllerBase
     {
         private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
@@ -50,16 +51,23 @@ namespace Ares.PagueAres.API.Controllers
         private const string MensagemNaoConcluida = "Esta exportação não está concluída, então não há arquivo para baixar.";
         private const string MensagemArquivoIndisponivel =
             "O arquivo desta exportação expirou ou não está mais disponível. Gere a exportação de novo.";
+        private const string MensagemArquivoExcluido =
+            "O arquivo desta exportação foi excluído. Gere a exportação de novo.";
         private const string MensagemLinkInvalido =
             "Link de download inválido, já usado ou vencido. Volte à tela de exportações e baixe de novo.";
         private const string MensagemJaEncerrada = "Esta exportação já foi encerrada.";
+        private const string MensagemSoEncerradasSaemDaLista =
+            "Só exportações encerradas (Falhou, Cancelada, Expirada ou Excluída) podem ser removidas da lista.";
         private const string MensagemEstadoMudou =
             "A exportação mudou de estado durante a operação. Atualize a lista e tente de novo.";
 
         /// <summary>Janela da lista de jobs do usuário.</summary>
         private const int DiasNaLista = 30;
 
-        /// <summary>Releituras de um job alterado por outra gravação (worker ou limpeza) no meio do cancelamento.</summary>
+        /// <summary>
+        /// Releituras de um job alterado por outra gravação (worker ou limpeza) no meio do cancelamento ou da remoção da
+        /// lista.
+        /// </summary>
         private const int TentativasDeGravacao = 5;
 
         /// <summary>Mesmo formato que o <see cref="ExportacaoWorker"/> lê: camelCase, enum por nome ou por número.</summary>
@@ -166,6 +174,7 @@ namespace Ares.PagueAres.API.Controllers
         // GET api/exportacao
         // -----------------------------------------------------------------------------------------------------
 
+        /// <summary>Jobs do usuário criados nos últimos <see cref="DiasNaLista"/> dias, menos os que ele removeu da lista.</summary>
         [HttpGet]
         public async Task<ActionResult> Listar(CancellationToken ct)
         {
@@ -177,7 +186,7 @@ namespace Ares.PagueAres.API.Controllers
 
                 var desde = DateTime.UtcNow.AddDays(-DiasNaLista);
                 var jobs = await dbContext.ExportacaoJobs.AsNoTracking()
-                    .Where(j => j.IdUsuario == idUsuario && j.DataCriacao >= desde)
+                    .Where(j => j.IdUsuario == idUsuario && j.DataCriacao >= desde && j.DataRemocaoDaLista == null)
                     .OrderByDescending(j => j.DataCriacao)
                     .ThenByDescending(j => j.IdExportacaoJob)
                     .ToListAsync(ct);
@@ -278,6 +287,9 @@ namespace Ares.PagueAres.API.Controllers
                 if (job.IdUsuario != registro.IdUsuario)
                     return Unauthorized(Erro(MensagemLinkInvalido));
 
+                if (job.Status == (int)StatusExportacao.Excluido)
+                    return StatusCode(StatusCodes.Status410Gone, Erro(MensagemArquivoExcluido));
+
                 if (job.Status != (int)StatusExportacao.Concluido)
                     return StatusCode(StatusCodes.Status410Gone, Erro(MensagemArquivoIndisponivel));
 
@@ -304,8 +316,10 @@ namespace Ares.PagueAres.API.Controllers
         /// <summary>
         /// Pendente vira Cancelado na hora (o worker pula o id que continua na fila). Processando grava o pedido de
         /// cancelamento e avisa a fila; o worker grava Cancelado quando para (se o job roda em outro processo, ele
-        /// percebe o pedido no banco). Concluido vira Expirado e o arquivo é apagado. Se o worker ou a limpeza gravarem
-        /// o job no meio, a gravação falha pelo token <c>Versao</c> e a regra é reaplicada sobre o estado relido.
+        /// percebe o pedido no banco). Concluido vira Excluido e o arquivo é apagado; <c>DataExpiracao</c> fica como
+        /// estava, para a lista continuar mostrando o prazo original. Falhou, Cancelado, Expirado e Excluido já estão
+        /// encerrados e respondem 409. Se o worker ou a limpeza gravarem o job no meio, a gravação falha pelo token
+        /// <c>Versao</c> e a regra é reaplicada sobre o estado relido.
         /// </summary>
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Cancelar(int id, CancellationToken ct)
@@ -342,11 +356,10 @@ namespace Ares.PagueAres.API.Controllers
 
                         case StatusExportacao.Concluido:
                             // O status muda antes de o arquivo sumir, para que o download nunca seja oferecido sem ele.
+                            // A limpeza não mexe em job Excluido: se o arquivo ficar preso, ele sai como órfão.
                             arquivoParaApagar = ArquivosExportacao.CaminhoPacote(
                                 ArquivosExportacao.ResolverPasta(_settings), job.NomeArquivo);
-                            job.Status = (int)StatusExportacao.Expirado;
-                            if (job.DataExpiracao is null || job.DataExpiracao > agora)
-                                job.DataExpiracao = agora;
+                            job.Status = (int)StatusExportacao.Excluido;
                             break;
 
                         default:
@@ -384,6 +397,68 @@ namespace Ares.PagueAres.API.Controllers
         }
 
         // -----------------------------------------------------------------------------------------------------
+        // DELETE api/exportacao/{id}/lista
+        // -----------------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Tira da lista do usuário (<c>GET api/exportacao</c>) um job encerrado: Falhou, Cancelado, Expirado ou
+        /// Excluido. Só grava <c>DataRemocaoDaLista</c>: a situação não muda e o job continua em
+        /// <c>GET api/exportacao/{id}</c>. Repetir o pedido num job já removido responde 204 sem gravar de novo.
+        /// Pendente, Processando e Concluido respondem 409. Se o worker ou a limpeza gravarem o job no meio, a gravação
+        /// falha pelo token <c>Versao</c> e a regra é reaplicada sobre o estado relido, como no cancelamento.
+        /// </summary>
+        [HttpDelete("{id:int}/lista")]
+        public async Task<ActionResult> RemoverDaLista(int id, CancellationToken ct)
+        {
+            try
+            {
+                var recusa = VerificarAcesso(out var idUsuario);
+                if (recusa is not null)
+                    return recusa;
+
+                for (var tentativa = 1; tentativa <= TentativasDeGravacao; tentativa++)
+                {
+                    dbContext.ChangeTracker.Clear();
+                    var job = await dbContext.ExportacaoJobs
+                        .SingleOrDefaultAsync(j => j.IdExportacaoJob == id && j.IdUsuario == idUsuario, ct);
+
+                    if (job is null)
+                        return NotFound(Erro(MensagemNaoEncontrada));
+
+                    var status = (StatusExportacao)job.Status;
+                    if (!EstaEncerrado(status))
+                        return Conflict(Erro(MensagemSoEncerradasSaemDaLista));
+
+                    if (job.DataRemocaoDaLista is not null)
+                        return NoContent();
+
+                    job.DataRemocaoDaLista = DateTime.UtcNow;
+
+                    try
+                    {
+                        await dbContext.SaveChangesAsync(ct);
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        // Outra gravação no meio: relê e reaplica a regra.
+                        continue;
+                    }
+
+                    logger.LogInformation("Exportação {IdExportacao} ({Status}) removida da lista pelo usuário {IdUsuario}.",
+                        id, status, idUsuario);
+                    return NoContent();
+                }
+
+                return Conflict(Erro(MensagemEstadoMudou));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Falha ao remover da lista a exportação {IdExportacao}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, Erro(MensagemErroGenerica));
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------------------
         // Apoio
         // -----------------------------------------------------------------------------------------------------
 
@@ -413,13 +488,16 @@ namespace Ares.PagueAres.API.Controllers
                 .SingleOrDefaultAsync(j => j.IdExportacaoJob == id && j.IdUsuario == idUsuario, ct);
 
         /// <summary>
-        /// 409 se o job não está Concluido (salvo Expirado, que é 410); 410 se o prazo venceu ou o arquivo sumiu.
-        /// Devolve <c>null</c> e o caminho do pacote quando ele pode ser baixado.
+        /// 409 se o job não está Concluido (salvo Expirado e Excluido, que são 410); 410 se o prazo venceu ou o arquivo
+        /// sumiu. Devolve <c>null</c> e o caminho do pacote quando ele pode ser baixado.
         /// </summary>
         private ActionResult? VerificarPacoteDisponivel(ExportacaoJob job, out string? caminho)
         {
             caminho = null;
             var status = (StatusExportacao)job.Status;
+
+            if (status == StatusExportacao.Excluido)
+                return StatusCode(StatusCodes.Status410Gone, Erro(MensagemArquivoExcluido));
 
             if (status == StatusExportacao.Expirado)
                 return StatusCode(StatusCodes.Status410Gone, Erro(MensagemArquivoIndisponivel));
@@ -462,10 +540,10 @@ namespace Ares.PagueAres.API.Controllers
         private static bool FimAntesDoInicio(DateTime? inicio, DateTime? fim) =>
             inicio is not null && fim is not null && fim.Value.Date < inicio.Value.Date;
 
-        /// <summary>Nome sugerido no download (C2), com a hora local do servidor da conclusão.</summary>
-        private static string NomeDownload(ExportacaoJob job)
+        /// <summary>Nome sugerido no download (C2), com a hora da conclusão no fuso configurado (padrão: Brasília).</summary>
+        private string NomeDownload(ExportacaoJob job)
         {
-            var conclusao = ComoUtc(job.DataConclusao ?? job.DataCriacao).ToLocalTime();
+            var conclusao = fuso.ParaLocal(ComoUtc(job.DataConclusao ?? job.DataCriacao));
             return string.Create(CultureInfo.InvariantCulture,
                 $"exportacao-titulos-{job.IdExportacaoJob}-{conclusao:yyyyMMdd-HHmm}.zip");
         }
@@ -500,12 +578,18 @@ namespace Ares.PagueAres.API.Controllers
             StatusExportacao.Falhou => "Falhou",
             StatusExportacao.Expirado => "Expirada",
             StatusExportacao.Cancelado => "Cancelada",
+            StatusExportacao.Excluido => "Excluída",
             _ => "Desconhecido",
         };
 
+        /// <summary>Situações finais: nenhuma gravação do worker, da limpeza ou da API tira o job delas.</summary>
+        private static bool EstaEncerrado(StatusExportacao status) =>
+            status is StatusExportacao.Falhou or StatusExportacao.Cancelado
+                or StatusExportacao.Expirado or StatusExportacao.Excluido;
+
         private static int CalcularPercentual(ExportacaoJob job, StatusExportacao status)
         {
-            if (status is StatusExportacao.Concluido or StatusExportacao.Expirado)
+            if (status is StatusExportacao.Concluido or StatusExportacao.Expirado or StatusExportacao.Excluido)
                 return 100;
 
             if (job.TotalTitulos <= 0)

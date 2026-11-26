@@ -45,7 +45,7 @@ const INTERVALO_MEMORIA_MS = 5000;
 const INTERVALO_STATUS_MS = 2000;
 
 // Valores de StatusExportacao (C5).
-const STATUS = { Pendente: 0, Processando: 1, Concluido: 2, Falhou: 3, Expirado: 4, Cancelado: 5 } as const;
+const STATUS = { Pendente: 0, Processando: 1, Concluido: 2, Falhou: 3, Expirado: 4, Cancelado: 5, Excluido: 6 } as const;
 
 interface Opcoes {
   api: string;

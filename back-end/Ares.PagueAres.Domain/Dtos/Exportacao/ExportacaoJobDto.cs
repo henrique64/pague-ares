@@ -6,7 +6,7 @@ namespace Ares.PagueAres.Domain.Dtos.Exportacao
     {
         public int Id { get; set; }
         public StatusExportacao Status { get; set; }
-        public string StatusDescricao { get; set; } = "";      // Pendente | Em processamento | Concluída | Falhou | Expirada | Cancelada
+        public string StatusDescricao { get; set; } = "";      // Pendente | Em processamento | Concluída | Falhou | Expirada | Cancelada | Excluída
         public DateTime DataCriacao { get; set; }               // UTC
         public DateTime? DataInicio { get; set; }
         public DateTime? DataConclusao { get; set; }
