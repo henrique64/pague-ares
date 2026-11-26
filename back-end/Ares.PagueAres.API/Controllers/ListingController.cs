@@ -85,13 +85,60 @@ namespace Ares.PagueAres.API.Controllers
 
         private IQueryable<ViewListagemSolicitacoes> BuildQuery(ListingFilterDto filter)
         {
+            var query = ApplyFilters(dbContext.ViewListagemSolicitacoes, filter);
+
+            if (filter.ViewMode is not null && filter.ViewMode != PaymentListView.Undefined)
+            {
+                var currentUser = this.GetUserFromToken()
+                    ?? throw new Exception("Usuário não autenticado.");
+
+                query = ApplyViewModeFilter(
+                    query,
+                    filter.ViewMode.Value,
+                    currentUser.IdUsuario,
+                    veTodosNaVisaoFinanceira: this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador));
+            }
+
+            var sortField = string.IsNullOrEmpty(filter.SortField) ?
+                "DataSolicitacao" : filter.SortField;
+
+            sortField = char.ToUpper(sortField[0]) + sortField.Substring(1);
+
+            if (string.Equals(filter.SortOrder, "asc", StringComparison.CurrentCultureIgnoreCase))
+            {
+                query = query.OrderBy(e => EF.Property<object>(e, sortField));
+            }
+            else
+            {
+                query = query.OrderByDescending(e => EF.Property<object>(e, sortField));
+            }
+
+            return query;
+        }
+
+        /// <summary>
+        /// Aplica os filtros da tela de pagamentos (sem a visão e sem a ordenação). É a regra única de filtro da lista
+        /// (<see cref="GetAllAsync"/>) e do Excel <c>Pagamentos.xlsx</c> (<c>ExportController.ExportPaymentList</c>), para
+        /// que os dois tragam os mesmos títulos com o mesmo filtro.
+        /// <list type="bullet">
+        /// <item>Período da solicitação com um lado só: sem início vale desde 01/01/1753; sem fim vale até hoje + 7 dias.
+        /// A comparação é por data, sem a hora.</item>
+        /// <item>Vencimento com um lado só: cada lado informado limita o vencimento.</item>
+        /// <item>Número do documento (igual) e nome do parceiro (contém, sem diferenciar maiúsculas de minúsculas) valem
+        /// para os dois tipos de título. Na view, o RDDV tem <c>#</c> nos dois campos, então sai com esses filtros.</item>
+        /// <item>Código, solicitante, atribuído, os três status e "atribuído ou não" valem para os dois tipos. Código zero
+        /// e id zero valem como filtro vazio.</item>
+        /// </list>
+        /// </summary>
+        public static IQueryable<ViewListagemSolicitacoes> ApplyFilters(
+            IQueryable<ViewListagemSolicitacoes> query,
+            ListingFilterDto filter)
+        {
             DateTime startDate = filter.RequestStart?.Date ?? new DateTime(1753, 1, 1);
             DateTime endDate = filter.RequestEnd?.Date ?? DateTime.Now.Date.AddDays(7);
 
-            var query = (from r in dbContext.ViewListagemSolicitacoes
-                         where r.DataSolicitacao.Date >= startDate &&
-                                 r.DataSolicitacao.Date <= endDate
-                         select r);
+            query = query.Where(r => r.DataSolicitacao.Date >= startDate &&
+                r.DataSolicitacao.Date <= endDate);
 
             if(!string.IsNullOrEmpty(filter.DocumentNumber))
             {
@@ -106,8 +153,10 @@ namespace Ares.PagueAres.API.Controllers
 
             if (!string.IsNullOrEmpty(filter.PartnerName))
             {
+                var nomeParceiro = filter.PartnerName.ToLower();
+
                 query = query.Where(r => r.NomeParceiro != null &&
-                    r.NomeParceiro.IndexOf(filter.PartnerName) >= 0);
+                    r.NomeParceiro.ToLower().Contains(nomeParceiro));
             }
 
             if ((filter.AssigneeId ?? 0) > 0)
@@ -151,32 +200,6 @@ namespace Ares.PagueAres.API.Controllers
                     (r.IdUsuarioAtribuido != null && filter.IsAssigned == true));
             }
 
-            if (filter.ViewMode is not null && filter.ViewMode != PaymentListView.Undefined)
-            {
-                var currentUser = this.GetUserFromToken()
-                    ?? throw new Exception("Usuário não autenticado.");
-
-                query = ApplyViewModeFilter(
-                    query,
-                    filter.ViewMode.Value,
-                    currentUser.IdUsuario,
-                    this.CurrentUserIsInRole(Funcoes.Financeiro));
-            }
-
-            var sortField = string.IsNullOrEmpty(filter.SortField) ?
-                "DataSolicitacao" : filter.SortField;
-
-            sortField = char.ToUpper(sortField[0]) + sortField.Substring(1);
-
-            if (string.Equals(filter.SortOrder, "asc", StringComparison.CurrentCultureIgnoreCase))
-            {
-                query = query.OrderBy(e => EF.Property<object>(e, sortField));
-            }
-            else
-            {
-                query = query.OrderByDescending(e => EF.Property<object>(e, sortField));
-            }
-
             return query;
         }
 
@@ -185,11 +208,16 @@ namespace Ares.PagueAres.API.Controllers
         /// no fluxo de aprovação (Gestor / Financeiro / Dashboard); apenas a visão
         /// "Minhas Solicitações" exibe os próprios registros do usuário, inclusive rascunhos.
         /// </summary>
+        /// <param name="veTodosNaVisaoFinanceira">
+        /// Verdadeiro quando o usuário tem o perfil Financeiro ou Administrador: na visão financeira (aba
+        /// Financeiro/Contábil) ele vê todos os títulos aprovados pelo gestor. Falso nos demais perfis (Contabilidade,
+        /// por exemplo), que veem só os títulos atribuídos a eles. As outras visões não usam este parâmetro.
+        /// </param>
         public static IQueryable<ViewListagemSolicitacoes> ApplyViewModeFilter(
             IQueryable<ViewListagemSolicitacoes> query,
             PaymentListView viewMode,
             int currentUserId,
-            bool isFinanceRole)
+            bool veTodosNaVisaoFinanceira)
         {
             switch (viewMode)
             {
@@ -201,7 +229,7 @@ namespace Ares.PagueAres.API.Controllers
                         r.Rascunho != true && r.Cancelado != true);
 
                 case PaymentListView.FinancialView:
-                    return isFinanceRole
+                    return veTodosNaVisaoFinanceira
                         ? query.Where(r => r.AprovadoGestor == true &&
                             r.Rascunho != true && r.Cancelado != true)
                         : query.Where(r => r.AprovadoGestor == true && r.IdUsuarioAtribuido == currentUserId &&

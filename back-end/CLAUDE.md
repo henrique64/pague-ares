@@ -163,7 +163,7 @@ dotnet test Ares.PagueAres.sln --filter "FullyQualifiedName~SecurityTests"
 | Projeto | Conteúdo |
 |---------|----------|
 | `Ares.PagueAres.Tests.Unit` | `Authentication/AuthenticationServiceTests` (BCrypt, SHA256 legado, migração), `Authentication/AuthControllerUnitTests` (lockout), `Controllers/ListingControllerFilterTests` (filtros de visão), `Preview/PreviewTokenValidationTests` |
-| `Ares.PagueAres.Tests.Integration` | `ApprovalWorkflowTests`, `AuthControllerTests`, `DataSegregationTests`, `DepartmentControllerTests`, `EndpointExposureTests`, `SecurityTests` — sobem a API inteira via `PagueAresWebAppFactory` (`WebApplicationFactory<Program>`) com EF Core **InMemory**, ambiente `Test`, `RunMigrations=false`, e geram JWTs de teste |
+| `Ares.PagueAres.Tests.Integration` | `ApprovalWorkflowTests`, `AuthControllerTests`, `DataSegregationTests`, `DepartmentControllerTests`, `EndpointExposureTests`, `SecurityTests` — sobem a API inteira via `PagueAresWebAppFactory` (`WebApplicationFactory<Program>`) com EF Core **InMemory**, ambiente `Test`, `RunMigrations=false`, e geram JWTs de teste. O contexto de teste `PagueAresContextTeste` dá ao InMemory a view `vListagemSolicitacoes` (o InMemory não tem views) |
 
 Os testes de integração **não precisam de SQL Server nem de Docker**. `Program` é exposto com `public partial class Program { }` para essa finalidade. Resultados e contagens atuais: ver `../RELATORIO_TESTES.md`.
 
@@ -290,7 +290,9 @@ Regras aplicadas em `RequestController` (Solicitação):
 ### ViewModes (ListingController)
 - `MyView` — próprias solicitações (inclui rascunhos)
 - `ManagerView` — onde o usuário é gestor (sem rascunhos/cancelados)
-- `FinancialView` — aprovadas pelo gestor (todas se FIN, somente atribuídas ao usuário caso contrário; sem rascunhos/cancelados)
+- `FinancialView` — aprovadas pelo gestor (todas se FIN ou ADM, somente atribuídas ao usuário caso contrário, por exemplo CON; sem rascunhos/cancelados)
+
+Os filtros da tela (sem a visão e sem a ordenação) ficam num lugar só, `ListingController.ApplyFilters`, usado também pelo Excel `Pagamentos.xlsx` (`GET /api/export/payments`), que parte da mesma view: com o mesmo filtro, a planilha traz os títulos que a aba Financeiro/Contábil mostra ao FIN. O documento do parceiro é filtro só da planilha.
 - `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados)
 
 ---
