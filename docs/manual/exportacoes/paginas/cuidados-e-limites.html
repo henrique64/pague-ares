@@ -15,8 +15,10 @@
   <p>Quem tem mais de um perfil recebe o menu do primeiro que aparecer na ordem Administrador, Financeiro, Contabilidade, Gestor e Solicitante. Quem não é Financeiro nem Administrador e digita o endereço da tela de exportações é levado para a tela <span class="tela">Solicitações</span>, sem nenhum aviso.</p>
 
   <div class="galeria">
-    <!-- foto: menu-exportacoes-administrador | tela menu-exportacoes; usuário Administrador; menu lateral com Home, Solicitações, Exportações e Configurações -->
-    <!-- foto: menu-exportacoes-contabilidade | tela menu-exportacoes; usuário Contabilidade; menu lateral com Home e Solicitações, sem o item Exportações -->
+    <figure class="captura"><img src="img/menu-exportacoes-administrador.webp" alt="Menu lateral do Administrador, com Home, Solicitações, Exportações e Configurações" loading="lazy">
+    <figcaption>Menu do Administrador: Home, Solicitações, Exportações e Configurações.</figcaption></figure>
+    <figure class="captura"><img src="img/menu-exportacoes-contabilidade.webp" alt="Menu lateral da Contabilidade, com Home e Solicitações apenas" loading="lazy">
+    <figcaption>Menu da Contabilidade: Home e Solicitações, sem o item Exportações.</figcaption></figure>
   </div>
 
   <p>Cada pessoa vê, na lista <span class="tela">Minhas exportações</span>, só as exportações que ela mesma pediu. O link de download é de uso único e vale por pouco tempo.</p>
@@ -42,7 +44,8 @@
   <h2>Quando o pedido é recusado</h2>
   <p>Ao clicar em <span class="tela">Gerar exportação</span>, o servidor pode recusar o pedido. Nesse caso nenhuma linha nova entra na lista, e um aviso de poucos segundos traz o motivo.</p>
 
-  <!-- foto: exportacoes-aviso-sem-titulos | tela exportacoes; aviso de recusa com o texto Nenhum título encontrado com os filtros informados., com o botão OK, sobre o formulário preenchido -->
+  <figure class="captura"><img src="img/exportacoes-aviso-sem-titulos.webp" alt="Formulário preenchido com o código 999999 e o aviso de que nenhum título foi encontrado" loading="lazy">
+    <figcaption>Aviso de recusa quando os filtros não encontram nenhum título, sobre o formulário preenchido com o código 999999.</figcaption></figure>
 
   <div class="tabela"><table>
     <thead><tr><th>Mensagem</th><th>O que fazer</th></tr></thead>
@@ -56,6 +59,9 @@
       <tr><td><span class="tela">Não foi possível solicitar a exportação. Tente novamente.</span></td><td>Tentar de novo. Persistindo, acionar o suporte.</td></tr>
     </tbody>
   </table></div>
+
+  <figure class="captura"><img src="img/exportacoes-recusa-429.webp" alt="Formulário no padrão com o aviso de que já há duas exportações em andamento" loading="lazy">
+    <figcaption>Aviso de recusa por excesso de exportações em andamento (o máximo é 2), com o botão OK, sobre o formulário no padrão.</figcaption></figure>
 
   <h2>Quando a exportação falha</h2>
   <p>Se a geração termina com erro, a linha mostra a situação <span class="tela">Falhou</span> e, abaixo do selo, a mensagem do erro em vermelho. A linha não tem ações; a saída é gerar a exportação de novo.</p>

@@ -8,7 +8,8 @@
   <p>No menu lateral, clicar em <span class="tela">Exportações</span>. O item aparece só para o Financeiro e o Administrador. Com a tela aberta, o título do topo da página passa a ser <span class="tela">Exportações</span> e o item do menu fica destacado.</p>
   <p>No alto da tela, o título <span class="tela">Exportar títulos com anexos</span> vem seguido de um aviso fixo: o sistema prepara o ZIP em segundo plano, o botão <span class="tela">Baixar</span> aparece na lista quando o arquivo fica pronto, e a frase <span class="tela">Extraia o ZIP antes de abrir o Excel</span> lembra que os links para os anexos só funcionam depois da extração.</p>
 
-  <!-- foto: exportacoes-formulario-padrao | tela exportacoes; formulário recém-aberto no padrão: Tipo de título em Ambos (Solicitações e RDDVs), campos de lista em Todos, datas e textos em branco, Incluir anexos marcada; aviso fixo visível no topo -->
+  <figure class="captura"><img src="img/exportacoes-formulario-padrao.webp" alt="Formulário Exportar títulos com anexos recém-aberto, com os filtros em branco ou em Todos" loading="lazy">
+    <figcaption>Formulário de exportação como aparece ao abrir a tela: tipo Ambos, filtros em Todos e a caixa Incluir anexos marcada, com o aviso fixo no topo.</figcaption></figure>
 
   <h2>Os campos do formulário</h2>
   <p>Todos os filtros são opcionais. Campo em branco, ou lista em <span class="tela">Todos</span>, não restringe o resultado. Só entram na exportação títulos que já foram aprovados pelo Gestor, que não são rascunho e que não foram cancelados; os filtros apenas reduzem esse conjunto.</p>
@@ -64,13 +65,18 @@
     </tbody>
   </table></div>
 
-  <!-- foto: exportacoes-tipo-rddv | tela exportacoes; Tipo de título = RDDV; os quatro campos (só Solicitação) aparecem desabilitados (esmaecidos) -->
+  <figure class="captura"><img src="img/exportacoes-tipo-rddv.webp" alt="Formulário com o tipo RDDV e quatro campos esmaecidos, cercados por um realce" loading="lazy">
+    <figcaption>Com o tipo RDDV, os quatro campos marcados com "só Solicitação" ficam desabilitados e aparecem esmaecidos, com um realce em volta.</figcaption></figure>
 
   <h2>Períodos</h2>
   <p>Cada período tem os campos <span class="tela">Início</span> e <span class="tela">Fim</span>. As datas podem ser escolhidas no calendário, aberto pelo ícone do campo, ou digitadas no formato dd/mm/aaaa. Início e fim também podem ser preenchidos isoladamente: só o início busca de uma data em diante, e só o fim, até uma data. O dia final entra no resultado.</p>
   <p>Para volumes grandes, exportar por período, um mês de cada vez, mantém o pacote dentro dos limites descritos em <a href="#cuidados-e-limites--limites-de-uso">Cuidados e limites</a>.</p>
 
-  <!-- foto: exportacoes-formulario-preenchido | tela exportacoes; Tipo de título = Solicitação, Período da Solicitação (RDDV: cadastro) preenchido com início e fim, Status Gestor = Autorizado, Incluir anexos marcada; Tipo de relatório (só RDDV) desabilitado -->
+  <figure class="captura"><img src="img/exportacoes-seletor-de-periodo.webp" alt="Calendário de novembro de 2026 aberto sobre o formulário, a partir do campo Período de Vencimento" loading="lazy">
+    <figcaption>Calendário aberto pelo ícone do campo Período de Vencimento, com o mês de novembro de 2026 e o dia atual circulado.</figcaption></figure>
+
+  <figure class="captura"><img src="img/exportacoes-formulario-preenchido.webp" alt="Formulário preenchido para Solicitação, com período de novembro e dezembro de 2025 e Status Gestor Autorizado" loading="lazy">
+    <figcaption>Formulário preenchido para Solicitação, com período da solicitação e Status Gestor Autorizado; o campo Tipo de relatório (só RDDV) fica desabilitado.</figcaption></figure>
 
   <h2>Gerar a exportação</h2>
   <ol class="passos">
@@ -79,9 +85,10 @@
     <li>Clicar em <span class="tela">Gerar exportação</span>.</li>
     <li>Ler o aviso que aparece por alguns segundos e, se quiser, clicar em <span class="tela">OK</span> para fechá-lo.</li>
   </ol>
-  <p>Quando o pedido é aceito, o aviso diz <span class="tela">Exportação solicitada. Ela aparece na lista abaixo e você pode baixar quando ficar pronta.</span> A nova linha aparece no topo da lista <span class="tela">Minhas exportações</span>. A continuação está em <a href="#acompanhar-e-baixar">Acompanhar e baixar</a>.</p>
+  <p>Quando o pedido é aceito, o aviso diz <span class="tela">Exportação solicitada. Ela aparece na lista abaixo e você pode baixar quando ficar pronta.</span> A nova linha aparece no topo da lista <span class="tela">Minhas exportações</span>, como <span class="tela">Pendente</span> enquanto aguarda a vez no servidor ou já como <span class="tela">Em processamento</span>, com a barra de andamento ainda em 0%. A continuação está em <a href="#acompanhar-e-baixar">Acompanhar e baixar</a>.</p>
 
-  <!-- foto: exportacoes-aviso-solicitada | tela exportacoes; aviso temporário de sucesso de exportação solicitada, com o botão OK, e a nova linha no topo da lista Minhas exportações (Pendente ou Em processamento) -->
+  <figure class="captura"><img src="img/exportacoes-aviso-solicitada.webp" alt="Lista Minhas exportações com a nova linha no topo e o aviso de exportação solicitada na parte de baixo da tela" loading="lazy">
+    <figcaption>Aviso de que a exportação foi solicitada, com o botão OK, e a nova linha no topo da lista, ainda sem andamento (0 de 500 títulos).</figcaption></figure>
 
   <p>O botão <span class="tela">Limpar Filtros</span> devolve o formulário ao padrão: tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, listas em <span class="tela">Todos</span>, datas e textos em branco e <span class="tela">Incluir anexos</span> marcada. Enquanto uma operação está em andamento (gerar, baixar, cancelar ou excluir), <span class="tela">Limpar Filtros</span> e <span class="tela">Gerar exportação</span> ficam desabilitados.</p>
 

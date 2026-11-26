@@ -1,1 +1,141 @@
-[]
+[
+  {
+    "id": "exportacoes-tela-com-lista",
+    "legenda": "Tela Exportações com o item do menu em destaque, o fim do formulário e a lista Minhas exportações, com uma exportação em processamento e outra concluída.",
+    "observacao": "Tela rolada: o topo do formulário não aparece.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-formulario-padrao",
+    "legenda": "Formulário de exportação como aparece ao abrir a tela: tipo Ambos, filtros em Todos e a caixa Incluir anexos marcada, com o aviso fixo no topo.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-tipo-rddv",
+    "legenda": "Com o tipo RDDV, os quatro campos marcados com \"só Solicitação\" ficam desabilitados e aparecem esmaecidos, com um realce em volta.",
+    "observacao": "Realce nos 4 campos.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-formulario-preenchido",
+    "legenda": "Formulário preenchido para Solicitação, com período da solicitação e Status Gestor Autorizado; o campo Tipo de relatório (só RDDV) fica desabilitado.",
+    "observacao": "Período 01/11/2025 a 31/12/2025.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-aviso-solicitada",
+    "legenda": "Aviso de que a exportação foi solicitada, com o botão OK, e a nova linha no topo da lista, ainda sem andamento (0 de 500 títulos).",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-lista-em-processamento",
+    "legenda": "Linhas Pendente e Em processamento, com a barra de andamento e a contagem de títulos; as duas têm o botão Cancelar.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-lista-concluida",
+    "legenda": "Exportação concluída, com tamanho, data de expiração e os botões Baixar e Excluir, ao lado de uma exportação em processamento.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-lista-falhou-cancelada-expirada",
+    "legenda": "Linhas Falhou (com a mensagem de erro), Cancelada e Expirada: nenhuma tem botões, e a barra de cada uma fica onde parou.",
+    "observacao": "Falhou com a mensagem de interrupção por reinício; Expirada mostra tamanho e Expira em.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-aviso-sem-titulos",
+    "legenda": "Aviso de recusa quando os filtros não encontram nenhum título, sobre o formulário preenchido com o código 999999.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-recusa-429",
+    "legenda": "Aviso de recusa por excesso de exportações em andamento (o máximo é 2), com o botão OK, sobre o formulário no padrão.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-seletor-de-periodo",
+    "legenda": "Calendário aberto pelo ícone do campo Período de Vencimento, com o mês de novembro de 2026 e o dia atual circulado.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-lista-vazia",
+    "legenda": "Lista Minhas exportações sem nenhuma exportação: no lugar da tabela, a tela mostra a frase sobre os últimos 30 dias.",
+    "observacao": "Tela rolada; usuário Administrador (o menu tem Configurações).",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "pagamentos-botao-exportar",
+    "legenda": "Aba Financeiro/Contábil de Solicitações, com o botão Exportar, em destaque, antes de Limpar Filtros e Filtrar.",
+    "observacao": "Realce no botão.",
+    "grupo": "g1",
+    "tela": "pagamentos"
+  },
+  {
+    "id": "pagamentos-sem-botao-exportar",
+    "legenda": "A mesma aba para a Contabilidade: os botões do painel não incluem Exportar, e o menu não tem o item Exportações.",
+    "observacao": "Tabela vazia para a Contabilidade com a semente.",
+    "grupo": "g1",
+    "tela": "pagamentos"
+  },
+  {
+    "id": "menu-exportacoes-administrador",
+    "legenda": "Menu do Administrador: Home, Solicitações, Exportações e Configurações.",
+    "grupo": "g1",
+    "tela": "menu-exportacoes"
+  },
+  {
+    "id": "menu-exportacoes-contabilidade",
+    "legenda": "Menu da Contabilidade: Home e Solicitações, sem o item Exportações.",
+    "grupo": "g1",
+    "tela": "menu-exportacoes"
+  },
+  {
+    "id": "pacote-arvore-extraida",
+    "legenda": "Pasta do ZIP extraído: na raiz ficam titulos.xlsx, indice.csv, indice.json e LEIA-ME.txt, e cada título com anexos tem a sua pasta SOL-… ou RDDV-…; um nome de anexo repetido ganha (2).",
+    "grupo": "g2",
+    "tela": "pacote-estrutura"
+  },
+  {
+    "id": "pacote-planilha-abas",
+    "legenda": "Planilha titulos.xlsx aberta na aba Solicitações; as abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos aparecem embaixo, e o código do título é um link para a pasta.",
+    "grupo": "g2",
+    "tela": "pacote-planilha"
+  },
+  {
+    "id": "pacote-planilha-anexos",
+    "legenda": "Aba Anexos do titulos.xlsx: uma linha por anexo, com tipo de documento, nome original, caminho no pacote (link), tamanho, SHA-256 e data de envio.",
+    "grupo": "g2",
+    "tela": "pacote-planilha"
+  },
+  {
+    "id": "pacote-indice-csv",
+    "legenda": "Arquivo indice.csv: primeira linha com o cabeçalho titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256 e uma linha por anexo.",
+    "grupo": "g2",
+    "tela": "pacote-indices"
+  },
+  {
+    "id": "pacote-leia-me",
+    "legenda": "Texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados.",
+    "grupo": "g2",
+    "tela": "pacote-leia-me"
+  },
+  {
+    "id": "pagamentos-excel-previa",
+    "legenda": "Planilha Pagamentos.xlsx gerada pelo botão Exportar: uma linha por solicitação (Tipo igual a Pagamento) e uma por RDDV (Tipo igual a RDDV - Adiantamento), com datas e valor formatados.",
+    "grupo": "g2",
+    "tela": "pagamentos-excel"
+  }
+]

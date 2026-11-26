@@ -21,6 +21,9 @@
   </dl>
   <p>Sem nenhuma exportação nos últimos 30 dias, a tela mostra <span class="tela">Você ainda não gerou nenhuma exportação nos últimos 30 dias.</span> no lugar da tabela. Enquanto a lista carrega pela primeira vez, aparece o indicador <span class="tela">Carregando exportações...</span>. Se a carga falhar, um aviso temporário diz <span class="tela">Não foi possível carregar as exportações. Tente novamente.</span> e a lista fica como estava.</p>
 
+  <figure class="captura"><img src="img/exportacoes-lista-vazia.webp" alt="Lista Minhas exportações sem tabela, só com a frase sobre os últimos 30 dias" loading="lazy">
+    <figcaption>Lista Minhas exportações sem nenhuma exportação: no lugar da tabela, a tela mostra a frase sobre os últimos 30 dias.</figcaption></figure>
+
   <h2>As situações</h2>
   <div class="tabela"><table>
     <thead><tr><th>Situação</th><th>O que significa</th><th>Ações na linha</th></tr></thead>
@@ -28,14 +31,18 @@
       <tr><td><span class="tela">Pendente</span></td><td>Pedido aceito e aguardando a vez no servidor. Barra em 0%.</td><td><span class="tela">Cancelar</span></td></tr>
       <tr><td><span class="tela">Em processamento</span></td><td>Pacote em preparação. A barra mostra o percentual.</td><td><span class="tela">Cancelar</span></td></tr>
       <tr><td><span class="tela">Concluída</span></td><td>Pacote pronto. A linha mostra o tamanho e a data de expiração. Barra em 100%.</td><td><span class="tela">Baixar</span> e <span class="tela">Excluir</span></td></tr>
-      <tr><td><span class="tela">Falhou</span></td><td>A geração terminou com erro. A mensagem do erro aparece em vermelho, abaixo do selo.</td><td>Nenhuma</td></tr>
-      <tr><td><span class="tela">Cancelada</span></td><td>A exportação foi cancelada.</td><td>Nenhuma</td></tr>
-      <tr><td><span class="tela">Expirada</span></td><td>O arquivo deixou de estar disponível, pelo prazo ou porque foi excluído. Barra em 100%.</td><td>Nenhuma</td></tr>
+      <tr><td><span class="tela">Falhou</span></td><td>A geração terminou com erro. A mensagem do erro aparece em vermelho, abaixo do selo. A barra fica no ponto em que a geração parou.</td><td>Nenhuma</td></tr>
+      <tr><td><span class="tela">Cancelada</span></td><td>A exportação foi cancelada. A barra fica no ponto em que a geração parou.</td><td>Nenhuma</td></tr>
+      <tr><td><span class="tela">Expirada</span></td><td>O arquivo deixou de estar disponível, pelo prazo ou porque foi excluído. Barra em 100%; a linha continua mostrando o tamanho e a data de <span class="tela">Expira em</span>.</td><td>Nenhuma</td></tr>
     </tbody>
   </table></div>
   <p>As linhas <span class="tela">Falhou</span>, <span class="tela">Cancelada</span> e <span class="tela">Expirada</span> ficam na lista até completar 30 dias. As mensagens de erro e o que fazer com cada uma estão em <a href="#cuidados-e-limites--quando-a-exportacao-falha">Cuidados e limites</a>.</p>
 
-  <!-- foto: exportacoes-lista-em-processamento | tela exportacoes; lista Minhas exportações com uma linha Em processamento (barra com percentual e texto N de M títulos, botão Cancelar) e uma Pendente -->
+  <figure class="captura"><img src="img/exportacoes-lista-falhou-cancelada-expirada.webp" alt="Lista com três linhas sem botões: Falhou com mensagem de erro em vermelho, Cancelada e Expirada" loading="lazy">
+    <figcaption>Linhas Falhou (com a mensagem de erro), Cancelada e Expirada: nenhuma tem botões, e a barra de cada uma fica onde parou.</figcaption></figure>
+
+  <figure class="captura"><img src="img/exportacoes-lista-em-processamento.webp" alt="Lista com uma linha Pendente e uma linha Em processamento, ambas com o botão Cancelar" loading="lazy">
+    <figcaption>Linhas Pendente e Em processamento, com a barra de andamento e a contagem de títulos; as duas têm o botão Cancelar.</figcaption></figure>
 
   <h2>Acompanhar o andamento</h2>
   <p>Enquanto houver alguma linha <span class="tela">Pendente</span> ou <span class="tela">Em processamento</span>, a lista se atualiza sozinha a cada 5 segundos. Não é preciso recarregar a página. A preparação segue no servidor mesmo que a tela seja fechada; ao voltar para <span class="tela">Exportações</span>, a lista mostra a situação atual.</p>
@@ -49,7 +56,8 @@
   </ol>
   <p>O arquivo baixado se chama <code>exportacao-titulos-</code>, seguido do número da exportação, da data e hora de geração (aaaaMMdd-HHmm) e de <code>.zip</code>.</p>
 
-  <!-- foto: exportacoes-lista-concluida | tela exportacoes; linha Concluída com Tamanho e Expira em preenchidos e os botões Baixar e Excluir; ao lado, a linha Em processamento sem esses botões -->
+  <figure class="captura"><img src="img/exportacoes-lista-concluida.webp" alt="Lista com uma linha Em processamento e uma linha Concluída, com tamanho, expiração e os botões Baixar e Excluir" loading="lazy">
+    <figcaption>Exportação concluída, com tamanho, data de expiração e os botões Baixar e Excluir, ao lado de uma exportação em processamento.</figcaption></figure>
 
   <div class="atencao">
     <p><strong>O link de download vale uma vez.</strong> Ao clicar em <span class="tela">Baixar</span>, o sistema gera um link de uso único que vale 120 segundos. Link já usado, vencido ou arquivo apagado: a tela avisa <span class="tela">Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.</span> Basta clicar em <span class="tela">Baixar</span> outra vez. Se a geração do link falhar, o aviso diz <span class="tela">Não foi possível iniciar o download. Tente novamente.</span> e a lista é recarregada.</p>
@@ -62,5 +70,4 @@
   <h2>Excluir o arquivo</h2>
   <p>O botão <span class="tela">Excluir</span> aparece nas linhas <span class="tela">Concluída</span>. Serve para apagar o pacote antes do prazo. O navegador pergunta <span class="tela">Excluir o arquivo desta exportação? Depois disso não será possível baixá-lo.</span> Confirmado, o aviso diz <span class="tela">Arquivo excluído.</span> e a situação passa a <span class="tela">Expirada</span>. Para ter o pacote de novo, é preciso gerar outra exportação.</p>
 
-  <!-- foto: exportacoes-lista-falhou-cancelada-expirada | tela exportacoes; linhas Falhou (mensagem de erro em vermelho sob o selo), Cancelada e Expirada, todas sem botões de ação -->
 </article>

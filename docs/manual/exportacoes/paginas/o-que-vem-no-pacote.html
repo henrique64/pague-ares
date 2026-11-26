@@ -17,7 +17,8 @@
     </tbody>
   </table></div>
 
-  <!-- foto: pacote-arvore-extraida | tela pacote-estrutura; pacote extraído no Explorador de Arquivos: os quatro arquivos da raiz e algumas pastas de título (SOL-... e RDDV-...) -->
+  <figure class="captura"><img src="img/pacote-arvore-extraida.webp" alt="Pasta do ZIP extraído, com as pastas dos títulos e os quatro arquivos da raiz" loading="lazy">
+    <figcaption>Pasta do ZIP extraído: na raiz ficam titulos.xlsx, indice.csv, indice.json e LEIA-ME.txt, e cada título com anexos tem a sua pasta SOL-… ou RDDV-…; um nome de anexo repetido ganha (2).</figcaption></figure>
 
   <h2>As pastas dos títulos</h2>
   <p>Cada pasta tem o código do título como nome: <code>SOL-</code> e o número para solicitações, <code>RDDV-</code> e o número para RDDVs, com seis dígitos no mínimo. Título sem anexo não ganha pasta. Com <span class="tela">Incluir anexos</span> desmarcada, o pacote não tem nenhuma pasta de título.</p>
@@ -43,12 +44,14 @@
     <dd>Uma linha por anexo que entrou no pacote. As colunas incluem <span class="tela">Código do título</span>, <span class="tela">Tipo do título</span>, <span class="tela">Tipo de documento</span>, <span class="tela">Nome original</span>, <span class="tela">Arquivo no pacote</span>, <span class="tela">Tamanho (bytes)</span>, <span class="tela">SHA-256</span> e <span class="tela">Data de envio</span>.</dd>
   </dl>
 
-  <!-- foto: pacote-planilha-abas | tela pacote-planilha; titulos.xlsx aberto no Excel na aba Solicitações, com as abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos visíveis embaixo -->
+  <figure class="captura"><img src="img/pacote-planilha-abas.webp" alt="Planilha titulos.xlsx na aba Solicitações, com as quatro abas embaixo" loading="lazy">
+    <figcaption>Planilha titulos.xlsx aberta na aba Solicitações; as abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos aparecem embaixo, e o código do título é um link para a pasta.</figcaption></figure>
 
   <h3>Links para as pastas e os anexos</h3>
   <p>Nas abas <span class="tela">Solicitações</span> e <span class="tela">RDDVs</span>, a coluna <span class="tela">Código</span> é um link para a pasta do título, quando ele tem anexos. A coluna <span class="tela">Qtde. de anexos</span> conta os anexos que entraram no pacote. Na aba <span class="tela">Anexos</span>, a coluna <span class="tela">Arquivo no pacote</span> é um link para cada arquivo. Os links são relativos e só funcionam com o ZIP extraído.</p>
 
-  <!-- foto: pacote-planilha-anexos | tela pacote-planilha; aba Anexos com as colunas Código do título, Tipo do título, Tipo de documento, Nome original, Arquivo no pacote, Tamanho (bytes), SHA-256 e Data de envio -->
+  <figure class="captura"><img src="img/pacote-planilha-anexos.webp" alt="Aba Anexos do titulos.xlsx, com uma linha por anexo e as colunas de tipo, nome, caminho, tamanho e SHA-256" loading="lazy">
+    <figcaption>Aba Anexos do titulos.xlsx: uma linha por anexo, com tipo de documento, nome original, caminho no pacote (link), tamanho, SHA-256 e data de envio.</figcaption></figure>
 
   <h3>Formato dos valores</h3>
   <ul>
@@ -69,7 +72,8 @@
     <li><strong>indice.json:</strong> o mesmo índice em formato JSON, para sistemas de análise. Traz também a versão do formato, o número e a data da exportação, os filtros do pedido, os totais e a lista de todos os títulos exportados, inclusive os sem anexo.</li>
   </ul>
 
-  <!-- foto: pacote-indice-csv | tela pacote-indices; indice.csv aberto no Excel ou em editor de texto, mostrando o cabeçalho titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256 e algumas linhas -->
+  <figure class="captura"><img src="img/pacote-indice-csv.webp" alt="Conteúdo do indice.csv, com o cabeçalho na primeira linha e uma linha por anexo" loading="lazy">
+    <figcaption>Arquivo indice.csv: primeira linha com o cabeçalho titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256 e uma linha por anexo.</figcaption></figure>
 
   <div class="nota">
     <p><strong>Tipo do título nos índices.</strong> No <code>indice.csv</code> e no <code>indice.json</code>, o tipo do título sai como <code>Solicitacao</code> ou <code>Rddv</code>, sem acento. A aba <span class="tela">Anexos</span> da planilha usa <span class="tela">Solicitação</span> e <span class="tela">RDDV</span>.</p>
@@ -87,7 +91,8 @@
   </ul>
   <p>No <code>LEIA-ME.txt</code>, os filtros de usuário e de departamento aparecem pelo número de identificação, e não pelo nome. Os filtros de lista de opções, como status e tipo, aparecem por extenso. Um período com os dois lados aparece como de uma data a outra; só com o início, como a partir de uma data; só com o fim, como até uma data.</p>
 
-  <!-- foto: pacote-leia-me | tela pacote-leia-me; LEIA-ME.txt aberto em editor de texto, mostrando o título, a linha da exportação, o aviso IMPORTANTE, a lista do pacote, os totais e os filtros usados -->
+  <figure class="captura"><img src="img/pacote-leia-me.webp" alt="Texto do arquivo LEIA-ME.txt, do título até os filtros usados" loading="lazy">
+    <figcaption>Texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados.</figcaption></figure>
 
   <h2>Conferir a integridade dos anexos</h2>
   <ol class="passos">
