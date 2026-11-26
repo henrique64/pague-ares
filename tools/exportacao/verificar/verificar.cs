@@ -479,8 +479,8 @@ sealed class Verificador(Resultado res, string caminhoZip)
         {
             if (!codigos.Add(t.Codigo)) res.Falhar("indice-totais", $"Título repetido em 'titulos': {t.Codigo}.");
             if (!PadraoCodigo.IsMatch(t.Codigo)) res.Falhar("indice-totais", $"Código de título inválido: '{Exibir(t.Codigo)}'.");
-            var esperado = (t.Tipo == "Solicitacao" ? "SOL-" : "RDDV-") + t.Id.ToString("D6", CultureInfo.InvariantCulture);
-            if (t.Tipo is not ("Solicitacao" or "Rddv")) res.Falhar("indice-totais", $"Tipo de título inválido em {t.Codigo}: '{t.Tipo}'.");
+            var esperado = (t.Tipo == "Solicitação" ? "SOL-" : "RDDV-") + t.Id.ToString("D6", CultureInfo.InvariantCulture);
+            if (t.Tipo is not ("Solicitação" or "RDDV")) res.Falhar("indice-totais", $"Tipo de título inválido em {t.Codigo}: '{t.Tipo}'.");
             else if (t.Codigo != esperado) res.Falhar("indice-totais", $"Código {t.Codigo} não corresponde ao id {t.Id} (esperado {esperado}).");
             var esperadaPasta = t.QuantidadeAnexos > 0 ? t.Codigo + "/" : null;
             if (t.Pasta != esperadaPasta) res.Falhar("indice-totais", $"{t.Codigo}: pasta '{t.Pasta ?? "null"}' não bate com quantidadeAnexos={t.QuantidadeAnexos}.");
@@ -581,7 +581,7 @@ sealed class Verificador(Resultado res, string caminhoZip)
             long somaBytes = _arquivos.Sum(a => a.TamanhoBytes);
             if (Num("anexos") != _arquivos.Count) res.Falhar("indice-totais", $"totais.anexos={Num("anexos")}, mas 'arquivos' tem {_arquivos.Count}.");
             if (Num("bytesAnexos") != somaBytes) res.Falhar("indice-totais", $"totais.bytesAnexos={Num("bytesAnexos")}, mas a soma dos arquivos é {somaBytes}.");
-            int sol = _titulos.Count(t => t.Tipo == "Solicitacao"), rddv = _titulos.Count(t => t.Tipo == "Rddv");
+            int sol = _titulos.Count(t => t.Tipo == "Solicitação"), rddv = _titulos.Count(t => t.Tipo == "RDDV");
             if (Num("solicitacoes") != sol) res.Falhar("indice-totais", $"totais.solicitacoes={Num("solicitacoes")}, mas 'titulos' tem {sol}.");
             if (Num("rddvs") != rddv) res.Falhar("indice-totais", $"totais.rddvs={Num("rddvs")}, mas 'titulos' tem {rddv}.");
             Resumo["solicitacoes"] = Num("solicitacoes");
@@ -981,7 +981,7 @@ sealed class Verificador(Resultado res, string caminhoZip)
 
             // Colunas que repetem o índice.
             ComparaCelula(ws, r, 1, item.Titulo, "Código do título");
-            ComparaCelula(ws, r, 2, item.TipoTitulo == "Solicitacao" ? "Solicitação" : "RDDV", "Tipo do título");
+            ComparaCelula(ws, r, 2, item.TipoTitulo, "Tipo do título");
             ComparaCelula(ws, r, 3, item.TipoDocumento, "Tipo de documento");
             ComparaCelula(ws, r, 4, item.NomeOriginal, "Nome original");
             ComparaCelula(ws, r, 7, item.Sha256, "SHA-256");

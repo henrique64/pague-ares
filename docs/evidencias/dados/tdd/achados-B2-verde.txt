@@ -1,0 +1,48 @@
+B2 — Pacote: índices, fuso de Brasília e semente (back-end e tools) — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-back
+Comandos: dotnet build back-end/Ares.PagueAres.sln
+          dotnet test back-end/Ares.PagueAres.sln
+          dotnet run tools/exportacao/semente/semente.cs -- --autoteste
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Unit/Exportacao/FusoExportacaoTests.cs (novo, 9 casos)
+                   back-end/Ares.PagueAres.Tests.Unit/Exportacao/GeradorPacoteTests.cs (2 testes novos e 2 ajustados)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportacaoControllerTests.cs (1 ajustado)
+Banco: nenhum (unidade) e EF Core InMemory (integração), só dados fictícios.
+
+Resultado
+------------------------------------------------------------------------------------------
+Build: 0 erros; os 32 avisos são os que já existiam (nenhum nos arquivos tocados).
+Unidade:    143 aprovados, 0 com falha (antes da etapa: 132).
+Integração: 275 aprovados, 0 com falha (antes da etapa: 275; o teste de download foi ajustado, não acrescentado).
+Semente --autoteste: AUTOTESTE OK, código de saída 0 ("Contabilidade: 119 de 365 dias de referência atribuem o título ao con.semente").
+
+Cenários que passaram a verde
+------------------------------------------------------------------------------------------
+[PASSOU] Gerar_IndiceCsv_TemBomSeparadorCabecalhoEOrdem            (tipo "Solicitação" e "RDDV" no CSV)
+[PASSOU] Gerar_IndiceJson_TemOFormatoDoContrato                    (tipo "Solicitação" e "RDDV" em títulos e anexos; geradoEm = 2026-11-26T12:30:00-03:00)
+[PASSOU] Gerar_LeiaMe_HoraDeBrasiliaParaUmInstanteUtcFixo          (26/11/2026 12:30 (horário de Brasília, UTC-03:00))
+[PASSOU] Gerar_LeiaMe_FusoConfiguradoDiferenteDeBrasiliaDizOIdEODeslocamento (26/11/2026 15:30 (fuso UTC, UTC+00:00))
+[PASSOU] FusoExportacaoTests.Padrao_ConverteInstanteUtcParaBrasilia
+[PASSOU] FusoExportacaoTests.Padrao_AgoraUsaORelogioInjetadoNoFusoDeBrasilia
+[PASSOU] FusoExportacaoTests.Padrao_RotuloDizHorarioDeBrasiliaEODeslocamento
+[PASSOU] FusoExportacaoTests.IdDoWindows_TambemResolveBrasilia
+[PASSOU] FusoExportacaoTests.FusoInvalido_CaiNoPadraoSemExcecaoERegistraAviso
+[PASSOU] FusoExportacaoTests.FusoVazio_CaiNoPadraoSemExcecao ("" e "   ")
+[PASSOU] FusoExportacaoTests.OutroFuso_RotuloTraOIdEODeslocamento
+[PASSOU] FusoExportacaoTests.ParaLocal_TrataDataSemKindComoUtc
+[PASSOU] Download_TokenValido_Responde200EmZipComNomeDoContratoECorpoIgualAoArquivo (exportacao-titulos-<id>-20261125-1404.zip)
+
+Correção
+------------------------------------------------------------------------------------------
+ - IndiceExportacao.NomeTipoTitulo devolve "Solicitação" e "RDDV" (igual à aba Anexos da planilha); os filtros do
+   indice.json não passam por essa função e ficam como estavam.
+ - ExportacaoSettings.FusoHorario (padrão "America/Sao_Paulo"; também em appsettings.json, seção Exportacao).
+ - FusoExportacao (singleton, com TimeProvider): id configurado, conversão IANA/Windows, padrão de Brasília nos dois
+   formatos e, por último, UTC com aviso no log. Nunca lança exceção.
+ - GeradorPacoteExportacao: geradoEm vem do componente; linha do LEIA-ME "(horário de Brasília, UTC-03:00)" no fuso de
+   São Paulo e "(fuso <id>, UTC±hh:mm)" nos demais.
+ - ExportacaoController.NomeDownload usa o componente em vez de ToLocalTime().
+ - Dockerfile da API: sem mudança. A imagem base mcr.microsoft.com/dotnet/aspnet:10.0 (Ubuntu 24.04) já traz
+   /usr/share/zoneinfo (conferido: America/Sao_Paulo existe na imagem).
+ - tools/exportacao/semente/semente.cs: um terço dos títulos atribuídos (por solicitação e por RDDV) vai para o
+   con.semente, sem consumir o gerador pseudoaleatório; tools/exportacao/verificar/verificar.cs aceita os nomes novos do tipo.

@@ -33,11 +33,11 @@ namespace Ares.PagueAres.Application.Exportacao
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        /// <summary>Nome do tipo de título nos índices: <c>Solicitacao</c> ou <c>Rddv</c>.</summary>
+        /// <summary>Nome do tipo de título nos índices, o mesmo da aba Anexos da planilha: <c>Solicitação</c> ou <c>RDDV</c>.</summary>
         public static string NomeTipoTitulo(TipoTituloExportacao tipo) => tipo switch
         {
-            TipoTituloExportacao.Solicitacao => "Solicitacao",
-            TipoTituloExportacao.Rddv => "Rddv",
+            TipoTituloExportacao.Solicitacao => "Solicitação",
+            TipoTituloExportacao.Rddv => "RDDV",
             _ => throw new ArgumentOutOfRangeException(nameof(tipo), tipo, "O tipo de título deve ser Solicitacao ou Rddv.")
         };
 

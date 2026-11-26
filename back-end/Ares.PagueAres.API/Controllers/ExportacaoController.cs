@@ -38,6 +38,7 @@ namespace Ares.PagueAres.API.Controllers
         TokensDownloadExportacao tokens,
         IOptions<ExportacaoSettings> opcoes,
         IHostEnvironment ambiente,
+        FusoExportacao fuso,
         ILogger<ExportacaoController> logger) : ControllerBase
     {
         private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
@@ -539,10 +540,10 @@ namespace Ares.PagueAres.API.Controllers
         private static bool FimAntesDoInicio(DateTime? inicio, DateTime? fim) =>
             inicio is not null && fim is not null && fim.Value.Date < inicio.Value.Date;
 
-        /// <summary>Nome sugerido no download (C2), com a hora local do servidor da conclusão.</summary>
-        private static string NomeDownload(ExportacaoJob job)
+        /// <summary>Nome sugerido no download (C2), com a hora da conclusão no fuso configurado (padrão: Brasília).</summary>
+        private string NomeDownload(ExportacaoJob job)
         {
-            var conclusao = ComoUtc(job.DataConclusao ?? job.DataCriacao).ToLocalTime();
+            var conclusao = fuso.ParaLocal(ComoUtc(job.DataConclusao ?? job.DataCriacao));
             return string.Create(CultureInfo.InvariantCulture,
                 $"exportacao-titulos-{job.IdExportacaoJob}-{conclusao:yyyyMMdd-HHmm}.zip");
         }

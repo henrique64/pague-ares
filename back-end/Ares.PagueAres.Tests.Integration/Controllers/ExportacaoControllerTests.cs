@@ -469,7 +469,8 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             resposta.Content.Headers.ContentType!.MediaType.Should().Be("application/zip");
             var disposicao = resposta.Content.Headers.ContentDisposition!;
             disposicao.DispositionType.Should().Be("attachment");
-            var nomeEsperado = $"exportacao-titulos-{id}-{conclusao.ToLocalTime():yyyyMMdd-HHmm}.zip";
+            // 17:04 UTC é 14:04 em Brasília, qualquer que seja o fuso do servidor de testes.
+            var nomeEsperado = $"exportacao-titulos-{id}-20261125-1404.zip";
             (disposicao.FileNameStar ?? disposicao.FileName!.Trim('"')).Should().Be(nomeEsperado);
             resposta.Headers.AcceptRanges.Should().BeEmpty("o download não aceita intervalos");
             (await resposta.Content.ReadAsByteArrayAsync()).Should().Equal(File.ReadAllBytes(caminho));

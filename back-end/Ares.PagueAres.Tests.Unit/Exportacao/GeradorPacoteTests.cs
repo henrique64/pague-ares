@@ -44,7 +44,7 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
         }
 
         private static GeradorPacoteExportacao CriarGerador(IFonteExportacao fonte, ExportacaoSettings? settings = null) =>
-            new(fonte, Options.Create(settings ?? new ExportacaoSettings()));
+            new(fonte, Options.Create(settings ?? new ExportacaoSettings()), FusoDeTeste.Criar());
 
         private static async Task<Pacote> GerarAsync(FonteExportacaoFalsa fonte, FiltroExportacaoDto? filtro = null,
             IProgress<ProgressoExportacao>? progresso = null, int idExportacao = 42)
@@ -379,12 +379,12 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
             }));
 
             var recibo = registros.Single(r => r[4] == "Recibo - recibo.jpg");
-            recibo.Should().Equal("RDDV-000045", "Rddv", "Recibo", "recibo.jpg", "Recibo - recibo.jpg", "RDDV-000045/Recibo - recibo.jpg",
+            recibo.Should().Equal("RDDV-000045", "RDDV", "Recibo", "recibo.jpg", "Recibo - recibo.jpg", "RDDV-000045/Recibo - recibo.jpg",
                 "5000", Convert.ToHexStringLower(SHA256.HashData(Bytes(5000, 6))));
 
             // Campo com ";" sai entre aspas.
             linhas.Should().Contain(l => l.Contains("\"a/b\\c;d.pdf\"") && l.Contains("\"Comprovante - abc;d.pdf\"") && l.Contains("\"SOL-000123/Comprovante - abc;d.pdf\""));
-            registros.Single(r => r[3] == "a/b\\c;d.pdf")[1].Should().Be("Solicitacao");
+            registros.Single(r => r[3] == "a/b\\c;d.pdf")[1].Should().Be("Solicitação");
         }
 
         [Fact]
@@ -491,6 +491,29 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
         }
 
         [Fact]
+        public async Task Gerar_LeiaMe_HoraDeBrasiliaParaUmInstanteUtcFixo()
+        {
+            // 2026-11-26 15:30 UTC: o servidor pode estar em UTC (contêiner) ou na hora do Windows, mas o LEIA-ME diz Brasília.
+            using var pacote = await GerarAsync(FonteCompleta());
+
+            var texto = Encoding.UTF8.GetString(pacote.Ler("LEIA-ME.txt"));
+            texto.Should().Contain("Exportação nº 42, gerada em 26/11/2026 12:30 (horário de Brasília, UTC-03:00).");
+            texto.Should().NotContain("horário do servidor");
+        }
+
+        [Fact]
+        public async Task Gerar_LeiaMe_FusoConfiguradoDiferenteDeBrasiliaDizOIdEODeslocamento()
+        {
+            using var destino = new MemoryStream();
+            var gerador = new GeradorPacoteExportacao(FonteCompleta(), Options.Create(new ExportacaoSettings()), FusoDeTeste.Criar("UTC"));
+            var resultado = await gerador.GerarAsync(7, new FiltroExportacaoDto(), destino, null, CancellationToken.None);
+            using var pacote = new Pacote(destino.ToArray(), resultado);
+
+            var texto = Encoding.UTF8.GetString(pacote.Ler("LEIA-ME.txt"));
+            texto.Should().Contain("Exportação nº 7, gerada em 26/11/2026 15:30 (fuso UTC, UTC+00:00).");
+        }
+
+        [Fact]
         public async Task Gerar_IndiceJson_TemOFormatoDoContrato()
         {
             var filtro = new FiltroExportacaoDto
@@ -512,7 +535,8 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
             raiz.GetProperty("exportacaoId").GetInt32().Should().Be(42);
             var geradoEm = raiz.GetProperty("geradoEm").GetString()!;
             geradoEm.Should().MatchRegex(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2}|Z)$");
-            DateTimeOffset.Parse(geradoEm).Should().BeCloseTo(DateTimeOffset.Now, TimeSpan.FromMinutes(5));
+            DateTimeOffset.Parse(geradoEm).Should().Be(FusoDeTeste.InstanteFixo, "o relógio do teste é fixo; o instante é o mesmo, escrito com o deslocamento de Brasília");
+            geradoEm.Should().EndWith("-03:00");
 
             var filtros = raiz.GetProperty("filtros");
             filtros.GetProperty("tipoTitulo").GetInt32().Should().Be(0);
@@ -531,14 +555,14 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
             var titulos = raiz.GetProperty("titulos").EnumerateArray().ToList();
             titulos.Select(t => t.GetProperty("codigo").GetString()).Should().BeEquivalentTo("SOL-000123", "SOL-000124", "RDDV-000045");
             var sol123 = titulos.Single(t => t.GetProperty("codigo").GetString() == "SOL-000123");
-            sol123.GetProperty("tipo").GetString().Should().Be("Solicitacao");
+            sol123.GetProperty("tipo").GetString().Should().Be("Solicitação");
             sol123.GetProperty("id").GetInt32().Should().Be(123);
             sol123.GetProperty("pasta").GetString().Should().Be("SOL-000123/");
             sol123.GetProperty("quantidadeAnexos").GetInt32().Should().Be(5);
             var sol124 = titulos.Single(t => t.GetProperty("codigo").GetString() == "SOL-000124");
             sol124.GetProperty("pasta").ValueKind.Should().Be(JsonValueKind.Null);
             sol124.GetProperty("quantidadeAnexos").GetInt32().Should().Be(0);
-            titulos.Single(t => t.GetProperty("codigo").GetString() == "RDDV-000045").GetProperty("tipo").GetString().Should().Be("Rddv");
+            titulos.Single(t => t.GetProperty("codigo").GetString() == "RDDV-000045").GetProperty("tipo").GetString().Should().Be("RDDV");
 
             var arquivos = raiz.GetProperty("arquivos").EnumerateArray().ToList();
             arquivos.Should().HaveCount(7);
@@ -546,7 +570,7 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
             boleto.EnumerateObject().Select(p => p.Name).Should().Equal(
                 "titulo", "tipoTitulo", "tipoDocumento", "nomeOriginal", "arquivo", "caminhoRelativo", "tamanhoBytes", "sha256");
             boleto.GetProperty("titulo").GetString().Should().Be("SOL-000123");
-            boleto.GetProperty("tipoTitulo").GetString().Should().Be("Solicitacao");
+            boleto.GetProperty("tipoTitulo").GetString().Should().Be("Solicitação");
             boleto.GetProperty("tipoDocumento").GetString().Should().Be("Nota Fiscal");
             boleto.GetProperty("nomeOriginal").GetString().Should().Be("boleto março.pdf");
             boleto.GetProperty("caminhoRelativo").GetString().Should().Be("SOL-000123/Nota Fiscal - boleto março.pdf");
