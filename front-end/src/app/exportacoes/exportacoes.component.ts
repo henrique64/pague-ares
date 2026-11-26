@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit, QueryList, ViewChildren } from "@angular/
 import { NgModel } from "@angular/forms";
 import { HttpErrorResponse } from "@angular/common/http";
 import { MatSnackBar } from "@angular/material/snack-bar";
+import { ErrorStateMatcher } from "@angular/material/core";
 import { MatEndDate, MatStartDate } from "@angular/material/datepicker";
 import { Observable, Subject, Subscription, interval, of } from "rxjs";
 import { catchError, exhaustMap, takeUntil } from "rxjs/operators";
@@ -15,11 +16,13 @@ import { ExportacaoJobModel } from "app/models/exportacao/exportacao-job.model";
 import { FiltroExportacaoModel } from "app/models/exportacao/filtro-exportacao.model";
 import { EnumStatusExportacao } from "app/models/exportacao/enum-status-exportacao";
 import { EnumTipoTituloExportacao } from "app/models/exportacao/enum-tipo-titulo-exportacao";
+import { formatarCodigoExportacao, interpretarCodigoExportacao } from "./codigo-exportacao";
 
 // Valores do formulário. Datas são Date (seletor do Material); 0 ou vazio significa "sem filtro".
+// O código é o texto digitado (123, SOL-000123, RDDV-45); quem o interpreta é interpretarCodigoExportacao.
 export interface FormularioExportacao {
   tipoTitulo: EnumTipoTituloExportacao;
-  codigo: number | null;
+  codigo: string;
   numeroDocumento: string;
   dataSolicitacaoInicio: Date | null;
   dataSolicitacaoFim: Date | null;
@@ -50,6 +53,12 @@ export interface FormularioExportacao {
 })
 export class ExportacoesComponent implements OnInit, OnDestroy {
   static readonly INTERVALO_POLLING_MS = 5000;
+  static readonly MENSAGEM_CODIGO_INVALIDO =
+    "Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).";
+  static readonly AVISO_CAMPOS_SOLICITACAO =
+    "Nº do documento, Tipo de solicitação, Tipo de pagamento e Forma de pagamento só existem em solicitações: com eles preenchidos, os RDDVs ficam de fora.";
+  static readonly AVISO_CAMPO_RDDV =
+    "Tipo de relatório só existe em RDDVs: com ele preenchido, as solicitações ficam de fora.";
   static readonly AVISO_DOWNLOAD_RECUSADO =
     "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: gere o link de novo clicando em Baixar.";
 
@@ -58,6 +67,12 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   isBusy = false;
   isLoadingLista = false;
+  // O erro do código só aparece no campo depois que ele é tocado ou que se tenta gerar a exportação.
+  private tentouGerar = false;
+  // Liga o estado de erro do campo Código à validação do componente (o campo não usa validador de formulário).
+  readonly codigoErrorMatcher: ErrorStateMatcher = {
+    isErrorState: (control) => this.erroCodigo !== null && (this.tentouGerar || !!control?.touched),
+  };
   form: FormularioExportacao = ExportacoesComponent.formularioVazio();
   jobs: ExportacaoJobModel[] = [];
   userList: UserListModel[] = [];
@@ -123,7 +138,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   static formularioVazio(): FormularioExportacao {
     return {
       tipoTitulo: EnumTipoTituloExportacao.Ambos,
-      codigo: null,
+      codigo: "",
       numeroDocumento: "",
       dataSolicitacaoInicio: null,
       dataSolicitacaoFim: null,
@@ -172,10 +187,67 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     return this.form.tipoTitulo === EnumTipoTituloExportacao.Solicitacao;
   }
 
+  // Tipo que vale para a exportação: o do prefixo do código (SOL-, RDDV-) quando o tipo escolhido é "Ambos".
+  // Com tipo escolhido diferente do prefixo o código é recusado (erroCodigo), então o tipo escolhido prevalece aqui.
+  private get tipoEfetivo(): EnumTipoTituloExportacao {
+    const codigo = interpretarCodigoExportacao(this.form.codigo);
+    if (this.form.tipoTitulo === EnumTipoTituloExportacao.Ambos && codigo.situacao === "ok" && codigo.tipo !== null) {
+      return codigo.tipo;
+    }
+
+    return this.form.tipoTitulo;
+  }
+
+  // Mensagem de validação do código digitado; nulo quando está vazio ou correto.
+  get erroCodigo(): string | null {
+    const codigo = interpretarCodigoExportacao(this.form.codigo);
+    if (codigo.situacao === "vazio") return null;
+    if (codigo.situacao === "invalido") return ExportacoesComponent.MENSAGEM_CODIGO_INVALIDO;
+
+    const escolhido = this.form.tipoTitulo;
+    if (codigo.tipo !== null && escolhido !== EnumTipoTituloExportacao.Ambos && codigo.tipo !== escolhido) {
+      const nome = formatarCodigoExportacao(codigo.tipo, codigo.numero);
+      const doPrefixo = codigo.tipo === EnumTipoTituloExportacao.Solicitacao ? "solicitação" : "RDDV";
+      const doEscolhido = escolhido === EnumTipoTituloExportacao.Solicitacao ? "Solicitação" : "RDDV";
+      return `O código ${nome} é de ${doPrefixo}, mas o tipo de título escolhido é ${doEscolhido}.`;
+    }
+
+    return null;
+  }
+
+  // Avisos do tipo "Ambos": o que o back-end deixa de fora quando um campo (ou o prefixo do código) é de um tipo só.
+  // Só informam; não impedem a exportação.
+  get avisosAmbos(): string[] {
+    if (this.form.tipoTitulo !== EnumTipoTituloExportacao.Ambos) return [];
+
+    const f = this.form;
+    const codigo = interpretarCodigoExportacao(f.codigo);
+    if (codigo.situacao === "ok" && codigo.tipo !== null) {
+      const nome = formatarCodigoExportacao(codigo.tipo, codigo.numero);
+      return [
+        codigo.tipo === EnumTipoTituloExportacao.Solicitacao
+          ? `O código ${nome} é de uma solicitação: os RDDVs ficam de fora.`
+          : `O código ${nome} é de um RDDV: as solicitações ficam de fora.`,
+      ];
+    }
+
+    const avisos: string[] = [];
+    const preenchido = (v: number) => Number.isInteger(Number(v)) && Number(v) > 0;
+    if ((f.numeroDocumento ?? "").trim().length > 0 || [f.tipoSolicitacao, f.tipoPagamento, f.formaPagamento].some(preenchido)) {
+      avisos.push(ExportacoesComponent.AVISO_CAMPOS_SOLICITACAO);
+    }
+    if (preenchido(f.tipoRelatorio)) avisos.push(ExportacoesComponent.AVISO_CAMPO_RDDV);
+
+    return avisos;
+  }
+
   montarFiltro(): FiltroExportacaoModel {
     const f = this.form;
+    const tipo = this.tipoEfetivo;
+    const solicitacaoDesabilitada = tipo === EnumTipoTituloExportacao.Rddv;
+    const rddvDesabilitado = tipo === EnumTipoTituloExportacao.Solicitacao;
     const filtro: FiltroExportacaoModel = {
-      tipoTitulo: f.tipoTitulo,
+      tipoTitulo: tipo,
       incluirAnexos: f.incluirAnexos,
     };
 
@@ -188,8 +260,8 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       return t.length > 0 ? t : null;
     };
 
-    const codigo = comoInteiro(f.codigo);
-    if (codigo !== null) filtro.codigo = codigo;
+    const codigo = interpretarCodigoExportacao(f.codigo);
+    if (codigo.situacao === "ok") filtro.codigo = codigo.numero;
 
     const inteiros: [keyof FiltroExportacaoModel, any][] = [
       ["idSolicitante", f.idSolicitante],
@@ -200,7 +272,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       ["statusContabil", f.statusContabil],
     ];
 
-    if (!this.camposSolicitacaoDesabilitados) {
+    if (!solicitacaoDesabilitada) {
       inteiros.push(
         ["tipoSolicitacao", f.tipoSolicitacao],
         ["tipoPagamento", f.tipoPagamento],
@@ -211,7 +283,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       if (numeroDocumento !== null) filtro.numeroDocumento = numeroDocumento;
     }
 
-    if (!this.camposRddvDesabilitados) {
+    if (!rddvDesabilitado) {
       inteiros.push(["tipoRelatorio", f.tipoRelatorio]);
     }
 
@@ -257,6 +329,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   limparFormulario() {
     this.form = ExportacoesComponent.formularioVazio();
+    this.tentouGerar = false;
     this.limparTextoDosCamposDeData();
   }
 
@@ -275,6 +348,13 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   gerarExportacao() {
     if (this.isBusy) return;
+
+    const erro = this.erroCodigo;
+    if (erro !== null) {
+      this.tentouGerar = true;
+      this.snackbar.open(erro, "OK", { duration: 6000 });
+      return;
+    }
 
     this.isBusy = true;
 
@@ -584,25 +664,29 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     return `${texto} ${unidades[i]}`;
   }
 
+  // Cada parte é "<rótulo do campo no formulário>: <valor como aparece no formulário>".
   resumoFiltros(job: ExportacaoJobModel): string {
     const f = job.filtros;
     if (!f) return "";
 
     const partes: string[] = [];
-    const tipo = f.tipoTitulo === EnumTipoTituloExportacao.Solicitacao ? "Solicitações"
-      : f.tipoTitulo === EnumTipoTituloExportacao.Rddv ? "RDDVs" : "Solicitações e RDDVs";
-    partes.push(tipo);
+    const tipo = f.tipoTitulo === EnumTipoTituloExportacao.Solicitacao ? "Solicitação"
+      : f.tipoTitulo === EnumTipoTituloExportacao.Rddv ? "RDDV" : "Ambos (Solicitações e RDDVs)";
+    partes.push(`Tipo de título: ${tipo}`);
 
-    if (f.codigo) partes.push(`Código ${f.codigo}`);
-    if (f.numeroDocumento) partes.push(`Documento ${f.numeroDocumento}`);
+    if (f.codigo) {
+      const ehTipoUnico = f.tipoTitulo === EnumTipoTituloExportacao.Solicitacao || f.tipoTitulo === EnumTipoTituloExportacao.Rddv;
+      partes.push(`Código: ${ehTipoUnico ? formatarCodigoExportacao(f.tipoTitulo, f.codigo) : f.codigo}`);
+    }
+    if (f.numeroDocumento) partes.push(`Nº do documento: ${f.numeroDocumento}`);
 
     const periodo = (rotulo: string, ini?: string | null, fim?: string | null) => {
       if (!ini && !fim) return;
       partes.push(`${rotulo}: ${this.dataCurta(ini) || "…"} a ${this.dataCurta(fim) || "…"}`);
     };
-    periodo("Solicitação", f.dataSolicitacaoInicio, f.dataSolicitacaoFim);
-    periodo("Vencimento", f.dataVencimentoInicio, f.dataVencimentoFim);
-    periodo("Aprovação financeiro", f.dataAprovacaoFinanceiroInicio, f.dataAprovacaoFinanceiroFim);
+    periodo("Período da solicitação", f.dataSolicitacaoInicio, f.dataSolicitacaoFim);
+    periodo("Período de vencimento", f.dataVencimentoInicio, f.dataVencimentoFim);
+    periodo("Período de aprovação do financeiro", f.dataAprovacaoFinanceiroInicio, f.dataAprovacaoFinanceiroFim);
 
     if (f.idSolicitante) partes.push(`Solicitante: ${this.nomeUsuario(f.idSolicitante)}`);
     if (f.idAtribuido) partes.push(`Atribuído a: ${this.nomeUsuario(f.idAtribuido)}`);
@@ -610,16 +694,16 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       const dep = this.departamentos.find((d) => d.idDepartamento === f.idDepartamento);
       partes.push(`Departamento: ${dep?.nome ?? f.idDepartamento}`);
     }
-    if (f.statusGestor) partes.push(`Gestor: ${this.rotulo(this.listStatusGestor, f.statusGestor)}`);
-    if (f.statusFinanceiro) partes.push(`Financeiro: ${this.rotulo(this.listStatusFinanceiro, f.statusFinanceiro)}`);
-    if (f.statusContabil) partes.push(`Contabilidade: ${this.rotulo(this.listStatusContabil, f.statusContabil)}`);
-    if (f.nomeParceiro) partes.push(`Nome: ${f.nomeParceiro}`);
-    if (f.documentoParceiro) partes.push(`CPF/CNPJ: ${f.documentoParceiro}`);
-    if (f.tipoSolicitacao) partes.push(`Tipo: ${this.rotulo(this.listTipoSolicitacao, f.tipoSolicitacao)}`);
-    if (f.tipoPagamento) partes.push(`Pagamento: ${this.rotulo(this.listTipoPagamento, f.tipoPagamento)}`);
-    if (f.formaPagamento) partes.push(`Forma: ${this.rotulo(this.listFormaPagamento, f.formaPagamento)}`);
-    if (f.tipoRelatorio) partes.push(`Relatório: ${this.rotulo(this.listTipoRelatorio, f.tipoRelatorio)}`);
-    partes.push(f.incluirAnexos ? "Com anexos" : "Sem anexos");
+    if (f.statusGestor) partes.push(`Status gestor: ${this.rotulo(this.listStatusGestor, f.statusGestor)}`);
+    if (f.statusFinanceiro) partes.push(`Status financeiro: ${this.rotulo(this.listStatusFinanceiro, f.statusFinanceiro)}`);
+    if (f.statusContabil) partes.push(`Status contábil: ${this.rotulo(this.listStatusContabil, f.statusContabil)}`);
+    if (f.nomeParceiro) partes.push(`Nome do parceiro: ${f.nomeParceiro}`);
+    if (f.documentoParceiro) partes.push(`CPF/CNPJ do parceiro: ${f.documentoParceiro}`);
+    if (f.tipoSolicitacao) partes.push(`Tipo de solicitação: ${this.rotulo(this.listTipoSolicitacao, f.tipoSolicitacao)}`);
+    if (f.tipoPagamento) partes.push(`Tipo de pagamento: ${this.rotulo(this.listTipoPagamento, f.tipoPagamento)}`);
+    if (f.formaPagamento) partes.push(`Forma de pagamento: ${this.rotulo(this.listFormaPagamento, f.formaPagamento)}`);
+    if (f.tipoRelatorio) partes.push(`Tipo de relatório: ${this.rotulo(this.listTipoRelatorio, f.tipoRelatorio)}`);
+    partes.push(`Incluir anexos: ${f.incluirAnexos ? "Sim" : "Não"}`);
 
     return partes.join(" · ");
   }

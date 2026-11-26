@@ -91,7 +91,7 @@ describe('ExportacoesComponent', () => {
     it('envia apenas os campos preenchidos, com datas em yyyy-MM-dd e anexos incluídos por padrão', () => {
       const c = criar();
       c.form.tipoTitulo = EnumTipoTituloExportacao.Ambos;
-      c.form.codigo = 123;
+      c.form.codigo = '123';
       c.form.dataSolicitacaoInicio = new Date(2026, 10, 1);   // 01/11/2026 local
       c.form.dataSolicitacaoFim = new Date(2026, 10, 30);
       c.form.dataAprovacaoFinanceiroInicio = new Date(2026, 0, 5);
@@ -183,13 +183,13 @@ describe('ExportacoesComponent', () => {
 
     function botaoLimpar(): HTMLButtonElement {
       return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
-        .find((b) => b.textContent?.includes('Limpar Filtros')) as HTMLButtonElement;
+        .find((b) => b.textContent?.includes('Limpar filtros')) as HTMLButtonElement;
     }
 
     it('digitar 01/11/2025 no início do período da solicitação vale 1º de novembro, não 11 de janeiro', async () => {
       montarTela();
       await fixture.whenStable();
-      const { inicio, fim } = inputsDoPeriodo('Período da Solicitação');
+      const { inicio, fim } = inputsDoPeriodo('Período da solicitação');
 
       await digitar(inicio, '01/11/2025');
       await digitar(fim, '31/12/2025');
@@ -205,7 +205,7 @@ describe('ExportacoesComponent', () => {
     it('data impossível (31/02/2025) não entra no filtro', async () => {
       montarTela();
       await fixture.whenStable();
-      const { inicio } = inputsDoPeriodo('Período de Vencimento');
+      const { inicio } = inputsDoPeriodo('Período de vencimento');
 
       await digitar(inicio, '31/02/2025');
 
@@ -213,10 +213,10 @@ describe('ExportacoesComponent', () => {
       expect(component.montarFiltro().dataVencimentoInicio).toBeUndefined();
     });
 
-    it('Limpar Filtros esvazia os campos de data na tela e o filtro montado não traz datas', async () => {
+    it('Limpar filtros esvazia os campos de data na tela e o filtro montado não traz datas', async () => {
       montarTela();
       await fixture.whenStable();
-      const periodos = ['Período da Solicitação', 'Período de Vencimento', 'Período de Aprovação do Financeiro'].map(inputsDoPeriodo);
+      const periodos = ['Período da solicitação', 'Período de vencimento', 'Período de aprovação do financeiro'].map(inputsDoPeriodo);
       for (const p of periodos) {
         await digitar(p.inicio, '01/11/2025');
         await digitar(p.fim, '31/12/2025');
@@ -236,10 +236,10 @@ describe('ExportacoesComponent', () => {
       expect(Object.keys(component.montarFiltro()).filter((k) => k.startsWith('data'))).toEqual([]);
     });
 
-    it('Limpar Filtros também esvazia texto de data ainda inválido (que não chegou ao modelo)', async () => {
+    it('Limpar filtros também esvazia texto de data ainda inválido (que não chegou ao modelo)', async () => {
       montarTela();
       await fixture.whenStable();
-      const { inicio } = inputsDoPeriodo('Período da Solicitação');
+      const { inicio } = inputsDoPeriodo('Período da solicitação');
       await digitar(inicio, '31/02/2025');
       expect(inicio.value).toBe('31/02/2025');
 
@@ -251,7 +251,7 @@ describe('ExportacoesComponent', () => {
       expect(inicio.value).toBe('');
     });
 
-    it('Limpar Filtros esvazia os demais campos de texto da tela', async () => {
+    it('Limpar filtros esvazia os demais campos de texto da tela', async () => {
       montarTela();
       await fixture.whenStable();
       const el: HTMLElement = fixture.nativeElement;
@@ -554,7 +554,7 @@ describe('ExportacoesComponent', () => {
       exportacao.criar.and.returnValue(of(envelope(job(9, EnumStatusExportacao.Pendente))));
       montarTela();
       component.form.tipoTitulo = EnumTipoTituloExportacao.Solicitacao;
-      component.form.codigo = 42;
+      component.form.codigo = '42';
       exportacao.listar.calls.reset();
 
       component.gerarExportacao();
@@ -759,6 +759,377 @@ describe('ExportacoesComponent', () => {
         const vazio = fixture.nativeElement.querySelector('p.vazio') as HTMLElement;
         expect(vazio.textContent!.trim()).toBe('Nenhuma exportação para mostrar nos últimos 30 dias.');
       });
+    });
+  });
+
+  describe('filtro Código (123, SOL-000123, RDDV-45)', () => {
+    const Sol = EnumTipoTituloExportacao.Solicitacao;
+    const Rddv = EnumTipoTituloExportacao.Rddv;
+    const Ambos = EnumTipoTituloExportacao.Ambos;
+    const MSG_INVALIDO =
+      'Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).';
+
+    function comCodigo(texto: string, tipo = Ambos) {
+      const c = criar();
+      c.form.tipoTitulo = tipo;
+      c.form.codigo = texto;
+      return c;
+    }
+
+    const aceitos: [string, EnumTipoTituloExportacao, number, EnumTipoTituloExportacao][] = [
+      ['123', Ambos, 123, Ambos],
+      ['000123', Ambos, 123, Ambos],
+      ['123', Sol, 123, Sol],
+      ['sol-000123', Ambos, 123, Sol],
+      ['SOL123', Ambos, 123, Sol],
+      ['  Sol-000123  ', Sol, 123, Sol],
+      ['RDDV-45', Ambos, 45, Rddv],
+      ['rddv45', Rddv, 45, Rddv],
+    ];
+
+    for (const [texto, tipoEscolhido, numero, tipoEnviado] of aceitos) {
+      it(`aceita "${texto}" com ${EnumTipoTituloExportacao[tipoEscolhido]}: envia código ${numero} e tipo ${EnumTipoTituloExportacao[tipoEnviado]}`, () => {
+        const c = comCodigo(texto, tipoEscolhido);
+
+        expect(c.erroCodigo).toBeNull();
+        expect(c.montarFiltro().codigo).toBe(numero);
+        expect(c.montarFiltro().tipoTitulo).toBe(tipoEnviado);
+      });
+    }
+
+    for (const texto of ['0', '1,5', '1.5', '-3', 'ABC-1', 'SOL-']) {
+      it(`recusa "${texto}" com a mensagem de validação e não gera a exportação`, () => {
+        const c = comCodigo(texto);
+
+        expect(c.erroCodigo).toBe(MSG_INVALIDO);
+
+        c.gerarExportacao();
+
+        expect(exportacao.criar).not.toHaveBeenCalled();
+        expect(snackbar.open).toHaveBeenCalledWith(MSG_INVALIDO, 'OK', jasmine.anything());
+      });
+    }
+
+    it('código vazio ou só com espaços não filtra nem recusa', () => {
+      for (const texto of ['', '   ']) {
+        const c = comCodigo(texto);
+
+        expect(c.erroCodigo).toBeNull();
+        expect(c.montarFiltro().codigo).toBeUndefined();
+      }
+    });
+
+    it('prefixo em conflito com o tipo escolhido é recusado e não gera a exportação', () => {
+      const c = comCodigo('SOL-000123', Rddv);
+
+      expect(c.erroCodigo).toBe('O código SOL-000123 é de solicitação, mas o tipo de título escolhido é RDDV.');
+
+      const d = comCodigo('rddv-45', Sol);
+
+      expect(d.erroCodigo).toBe('O código RDDV-000045 é de RDDV, mas o tipo de título escolhido é Solicitação.');
+
+      c.gerarExportacao();
+
+      expect(exportacao.criar).not.toHaveBeenCalled();
+      expect(snackbar.open).toHaveBeenCalledWith(
+        'O código SOL-000123 é de solicitação, mas o tipo de título escolhido é RDDV.', 'OK', jasmine.anything());
+    });
+
+    it('com "Ambos" e prefixo, o filtro enviado leva o tipo do prefixo', () => {
+      exportacao.criar.and.returnValue(of(envelope(job(9, EnumStatusExportacao.Pendente))));
+      const c = comCodigo('SOL-000123');
+
+      c.gerarExportacao();
+
+      expect(exportacao.criar).toHaveBeenCalledOnceWith({ tipoTitulo: Sol, incluirAnexos: true, codigo: 123 });
+      c.ngOnDestroy();
+    });
+
+    it('com o tipo do prefixo, os campos só do outro tipo não vão no filtro (como se o tipo tivesse sido escolhido)', () => {
+      const c = comCodigo('SOL-000123');
+      c.form.tipoRelatorio = 2;
+      c.form.numeroDocumento = 'NF-1';
+
+      const f = c.montarFiltro();
+
+      expect(f.tipoRelatorio).toBeUndefined();
+      expect(f.numeroDocumento).toBe('NF-1');
+    });
+
+    it('na tela: campo de texto, com dica; o erro aparece depois de tentar gerar', async () => {
+      montarTela();
+      await fixture.whenStable();
+      const el: HTMLElement = fixture.nativeElement;
+      const campo = el.querySelector('#codigo') as HTMLInputElement;
+
+      expect(campo.type).toBe('text');
+      const formField = campo.closest('mat-form-field')!;
+      expect(formField.querySelector('mat-hint')?.textContent?.trim())
+        .toBe('Número (123) ou código com prefixo (SOL-000123, RDDV-000045)');
+
+      campo.value = '1,5';
+      campo.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      component.gerarExportacao();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(exportacao.criar).not.toHaveBeenCalled();
+      expect(formField.querySelector('mat-error')?.textContent?.trim()).toBe(MSG_INVALIDO);
+    });
+
+    it('Limpar filtros tira o erro do código', async () => {
+      montarTela();
+      component.form.codigo = '0';
+      component.gerarExportacao();
+      fixture.detectChanges();
+
+      component.limparFormulario();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.erroCodigo).toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('#codigo')!.closest('mat-form-field')!.querySelector('mat-error')).toBeNull();
+    });
+  });
+
+  describe('avisos do tipo "Ambos"', () => {
+    const AV_SOLICITACAO =
+      'Nº do documento, Tipo de solicitação, Tipo de pagamento e Forma de pagamento só existem em solicitações: com eles preenchidos, os RDDVs ficam de fora.';
+    const AV_RELATORIO = 'Tipo de relatório só existe em RDDVs: com ele preenchido, as solicitações ficam de fora.';
+
+    function avisos(): string[] {
+      const area = (fixture.nativeElement as HTMLElement).querySelector('[role="status"]');
+      return area ? Array.from(area.querySelectorAll('p')).map((p) => p.textContent!.trim()) : [];
+    }
+
+    function atualizar() {
+      fixture.detectChanges();
+    }
+
+    it('formulário vazio não mostra aviso', () => {
+      montarTela();
+
+      expect(avisos()).toEqual([]);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[role="status"]')).toBeNull();
+    });
+
+    it('cada campo só de Solicitação preenchido mostra o aviso e ele some quando o campo é esvaziado', () => {
+      montarTela();
+      const campos: [string, () => void, () => void][] = [
+        ['numeroDocumento', () => (component.form.numeroDocumento = 'NF-1'), () => (component.form.numeroDocumento = '  ')],
+        ['tipoSolicitacao', () => (component.form.tipoSolicitacao = 1), () => (component.form.tipoSolicitacao = 0)],
+        ['tipoPagamento', () => (component.form.tipoPagamento = 2), () => (component.form.tipoPagamento = 0)],
+        ['formaPagamento', () => (component.form.formaPagamento = 1), () => (component.form.formaPagamento = 0)],
+      ];
+
+      for (const [nome, preencher, esvaziar] of campos) {
+        preencher();
+        atualizar();
+        expect(avisos()).withContext(nome + ' preenchido').toEqual([AV_SOLICITACAO]);
+
+        esvaziar();
+        atualizar();
+        expect(avisos()).withContext(nome + ' esvaziado').toEqual([]);
+      }
+    });
+
+    it('Tipo de relatório preenchido mostra o aviso das solicitações e ele some com o campo', () => {
+      montarTela();
+
+      component.form.tipoRelatorio = 3;
+      atualizar();
+      expect(avisos()).toEqual([AV_RELATORIO]);
+
+      component.form.tipoRelatorio = 0;
+      atualizar();
+      expect(avisos()).toEqual([]);
+    });
+
+    it('os dois casos juntos mostram os dois avisos', () => {
+      montarTela();
+      component.form.numeroDocumento = 'NF-1';
+      component.form.tipoRelatorio = 1;
+      atualizar();
+
+      expect(avisos()).toEqual([AV_SOLICITACAO, AV_RELATORIO]);
+    });
+
+    it('código com prefixo mostra o aviso do prefixo e some quando o código vira número puro', () => {
+      montarTela();
+
+      component.form.codigo = 'SOL-000123';
+      atualizar();
+      expect(avisos()).toEqual(['O código SOL-000123 é de uma solicitação: os RDDVs ficam de fora.']);
+
+      component.form.codigo = 'rddv45';
+      atualizar();
+      expect(avisos()).toEqual(['O código RDDV-000045 é de um RDDV: as solicitações ficam de fora.']);
+
+      component.form.codigo = '45';
+      atualizar();
+      expect(avisos()).toEqual([]);
+    });
+
+    it('com Solicitação ou RDDV escolhido não há aviso (os campos do outro tipo já ficam desabilitados)', () => {
+      montarTela();
+      component.form.numeroDocumento = 'NF-1';
+      component.form.tipoRelatorio = 1;
+      component.form.codigo = '123';
+
+      for (const tipo of [EnumTipoTituloExportacao.Solicitacao, EnumTipoTituloExportacao.Rddv]) {
+        component.form.tipoTitulo = tipo;
+        atualizar();
+        expect(avisos()).withContext(EnumTipoTituloExportacao[tipo]).toEqual([]);
+      }
+    });
+
+    it('o aviso não bloqueia a exportação', () => {
+      exportacao.criar.and.returnValue(of(envelope(job(9, EnumStatusExportacao.Pendente))));
+      montarTela();
+      component.form.numeroDocumento = 'NF-1';
+      component.form.tipoRelatorio = 1;
+      atualizar();
+
+      component.gerarExportacao();
+
+      expect(exportacao.criar).toHaveBeenCalledTimes(1);
+      component.ngOnDestroy();
+    });
+  });
+
+  describe('rótulos e layout do formulário', () => {
+    function rotulos(): string[] {
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-card mat-label'))
+        .map((l) => l.textContent!.trim());
+    }
+
+    it('rótulos em caixa de frase, pela convenção', () => {
+      montarTela();
+
+      expect(rotulos()).toEqual([
+        'Tipo de título',
+        'Código',
+        'Departamento',
+        'Nome do parceiro (RDDV: funcionário)',
+        'CPF/CNPJ do parceiro (RDDV: CPF do funcionário)',
+        'Solicitante',
+        'Atribuído a',
+        'Nº do documento (só Solicitação)',
+        'Tipo de solicitação (só Solicitação)',
+        'Tipo de pagamento (só Solicitação)',
+        'Forma de pagamento (só Solicitação)',
+        'Período da solicitação (RDDV: cadastro)',
+        'Período de vencimento',
+        'Período de aprovação do financeiro',
+        'Tipo de relatório (só RDDV)',
+        'Status gestor',
+        'Status financeiro',
+        'Status contábil',
+      ]);
+    });
+
+    it('botões "Limpar filtros" e "Gerar exportação"', () => {
+      montarTela();
+      const botoes = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-card .pull-right button')).map((b) => b.textContent!.trim());
+
+      expect(botoes).toEqual(['Limpar filtros', 'Gerar exportação']);
+    });
+
+    it('nenhum rótulo longo fica numa coluna estreita (menos de 4 de 12), onde o texto seria cortado a 1360 px', () => {
+      montarTela();
+      const estreitos: string[] = [];
+
+      (fixture.nativeElement as HTMLElement).querySelectorAll('mat-card mat-form-field').forEach((campo) => {
+        const rotulo = campo.querySelector('mat-label')!.textContent!.trim();
+        const coluna = campo.closest('[class*="col-"]')!;
+        const largura = Number(/col-md-(\d+)/.exec(coluna.className)?.[1] ?? 12);
+        if (rotulo.length > 20 && largura < 4) estreitos.push(`${rotulo} (col-md-${largura})`);
+      });
+
+      expect(estreitos).toEqual([]);
+    });
+
+    it('os campos de período com rótulo longo têm pelo menos 6 de 12 colunas (rótulo mais o ícone do calendário)', () => {
+      montarTela();
+      const el: HTMLElement = fixture.nativeElement;
+      const larguraDe = (texto: string) => {
+        const campo = Array.from(el.querySelectorAll('mat-card mat-form-field'))
+          .find((f) => f.querySelector('mat-label')!.textContent!.trim() === texto)!;
+        return Number(/col-md-(\d+)/.exec(campo.closest('[class*="col-"]')!.className)![1]);
+      };
+
+      expect(larguraDe('Período da solicitação (RDDV: cadastro)')).toBeGreaterThanOrEqual(6);
+      expect(larguraDe('Período de aprovação do financeiro')).toBeGreaterThanOrEqual(6);
+    });
+  });
+
+  describe('coluna Filtros da lista (resumoFiltros)', () => {
+    function resumo(filtros: any): string {
+      const c = criar();
+      c.userList = [{ idUsuario: 7, nome: 'Ana Teste' } as any, { idUsuario: 8, nome: 'Bruno Teste' } as any];
+      c.departamentos = [{ idDepartamento: 3, nome: 'Compras' } as any];
+      return c.resumoFiltros(job(1, EnumStatusExportacao.Concluido, { filtros }));
+    }
+
+    it('só o essencial: tipo de título e anexos, com dois-pontos', () => {
+      expect(resumo({ tipoTitulo: EnumTipoTituloExportacao.Ambos, incluirAnexos: true }))
+        .toBe('Tipo de título: Ambos (Solicitações e RDDVs) · Incluir anexos: Sim');
+      expect(resumo({ tipoTitulo: EnumTipoTituloExportacao.Solicitacao, incluirAnexos: false }))
+        .toBe('Tipo de título: Solicitação · Incluir anexos: Não');
+      expect(resumo({ tipoTitulo: EnumTipoTituloExportacao.Rddv, incluirAnexos: true }))
+        .toBe('Tipo de título: RDDV · Incluir anexos: Sim');
+    });
+
+    it('código com prefixo e seis dígitos quando o tipo é Solicitação ou RDDV; número puro com "Ambos"', () => {
+      expect(resumo({ tipoTitulo: EnumTipoTituloExportacao.Solicitacao, codigo: 123, incluirAnexos: true }))
+        .toContain('Código: SOL-000123');
+      expect(resumo({ tipoTitulo: EnumTipoTituloExportacao.Rddv, codigo: 45, incluirAnexos: true }))
+        .toContain('Código: RDDV-000045');
+      expect(resumo({ tipoTitulo: EnumTipoTituloExportacao.Ambos, codigo: 123, incluirAnexos: true }))
+        .toContain('Código: 123');
+      expect(resumo({ tipoTitulo: EnumTipoTituloExportacao.Ambos, codigo: 123, incluirAnexos: true }))
+        .not.toContain('SOL-');
+    });
+
+    it('todos os campos, com o rótulo do formulário e dois-pontos', () => {
+      const texto = resumo({
+        tipoTitulo: EnumTipoTituloExportacao.Solicitacao,
+        codigo: 123,
+        numeroDocumento: 'NF-9',
+        dataSolicitacaoInicio: '2025-11-01', dataSolicitacaoFim: '2025-11-30',
+        dataVencimentoInicio: '2025-12-01',
+        dataAprovacaoFinanceiroFim: '2025-12-31',
+        idSolicitante: 7, idAtribuido: 8, idDepartamento: 3,
+        statusGestor: 2, statusFinanceiro: 1, statusContabil: 2,
+        nomeParceiro: 'Parceiro Teste', documentoParceiro: '123.456',
+        tipoSolicitacao: 2, tipoPagamento: 1, formaPagamento: 2, tipoRelatorio: 3,
+        incluirAnexos: true,
+      });
+
+      expect(texto.split(' · ')).toEqual([
+        'Tipo de título: Solicitação',
+        'Código: SOL-000123',
+        'Nº do documento: NF-9',
+        'Período da solicitação: 01/11/2025 a 30/11/2025',
+        'Período de vencimento: 01/12/2025 a …',
+        'Período de aprovação do financeiro: … a 31/12/2025',
+        'Solicitante: Ana Teste',
+        'Atribuído a: Bruno Teste',
+        'Departamento: Compras',
+        'Status gestor: Autorizado',
+        'Status financeiro: Aguardando Autorização',
+        'Status contábil: Lançado',
+        'Nome do parceiro: Parceiro Teste',
+        'CPF/CNPJ do parceiro: 123.456',
+        'Tipo de solicitação: Pagamento',
+        'Tipo de pagamento: Nacional',
+        'Forma de pagamento: Transferência Bancária',
+        'Tipo de relatório: Reembolso',
+        'Incluir anexos: Sim',
+      ]);
     });
   });
 

@@ -11,8 +11,9 @@
       </div>
     </div>
 
+    <!-- Larguras (12 colunas, a partir de 768 px): escolhidas para o rótulo inteiro caber a 1360 px de tela, com o menu lateral aberto. -->
     <div class="row">
-      <div class="col-md-3">
+      <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
           <mat-label>Tipo de título</mat-label>
           <mat-select id="tipoTitulo" [(ngModel)]="form.tipoTitulo">
@@ -22,21 +23,19 @@
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="col-md-3">
-        <mat-form-field appearance="outline">
+      <div class="col-md-5">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Código</mat-label>
-          <input id="codigo" matInput type="number" min="1" [(ngModel)]="form.codigo" />
-        </mat-form-field>
-      </div>
-      <div class="col-md-3">
-        <mat-form-field appearance="outline">
-          <mat-label>Número do Documento (só Solicitação)</mat-label>
           <input
-            id="numeroDocumento"
+            id="codigo"
             matInput
-            [(ngModel)]="form.numeroDocumento"
-            [disabled]="camposSolicitacaoDesabilitados"
+            type="text"
+            autocomplete="off"
+            [errorStateMatcher]="codigoErrorMatcher"
+            [(ngModel)]="form.codigo"
           />
+          <mat-hint>Número (123) ou código com prefixo (SOL-000123, RDDV-000045)</mat-hint>
+          <mat-error>{{ erroCodigo }}</mat-error>
         </mat-form-field>
       </div>
       <div class="col-md-3">
@@ -66,7 +65,7 @@
     </div>
 
     <div class="row">
-      <div class="col-md-3">
+      <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
           <mat-label>Solicitante</mat-label>
           <mat-select [(ngModel)]="form.idSolicitante">
@@ -75,7 +74,7 @@
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
           <mat-label>Atribuído a</mat-label>
           <mat-select [(ngModel)]="form.idAtribuido">
@@ -84,7 +83,21 @@
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-4">
+        <mat-form-field appearance="outline">
+          <mat-label>Nº do documento (só Solicitação)</mat-label>
+          <input
+            id="numeroDocumento"
+            matInput
+            [(ngModel)]="form.numeroDocumento"
+            [disabled]="camposSolicitacaoDesabilitados"
+          />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
           <mat-label>Tipo de solicitação (só Solicitação)</mat-label>
           <mat-select id="tipoSolicitacao" [(ngModel)]="form.tipoSolicitacao" [disabled]="camposSolicitacaoDesabilitados">
@@ -93,19 +106,7 @@
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="col-md-3">
-        <mat-form-field class="example-full-width" appearance="outline">
-          <mat-label>Tipo de relatório (só RDDV)</mat-label>
-          <mat-select id="tipoRelatorio" [(ngModel)]="form.tipoRelatorio" [disabled]="camposRddvDesabilitados">
-            <mat-option [value]="0">Todos</mat-option>
-            <mat-option *ngFor="let item of listTipoRelatorio" [value]="item.id">{{ item.name }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col-md-3">
+      <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
           <mat-label>Tipo de pagamento (só Solicitação)</mat-label>
           <mat-select id="tipoPagamento" [(ngModel)]="form.tipoPagamento" [disabled]="camposSolicitacaoDesabilitados">
@@ -114,7 +115,7 @@
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
           <mat-label>Forma de pagamento (só Solicitação)</mat-label>
           <mat-select id="formaPagamento" [(ngModel)]="form.formaPagamento" [disabled]="camposSolicitacaoDesabilitados">
@@ -126,9 +127,9 @@
     </div>
 
     <div class="row">
-      <div class="col-md-4">
+      <div class="col-md-6">
         <mat-form-field class="filter-datepicker-range" appearance="outline">
-          <mat-label>Período da Solicitação (RDDV: cadastro)</mat-label>
+          <mat-label>Período da solicitação (RDDV: cadastro)</mat-label>
           <mat-date-range-input [rangePicker]="pickerSolicitacao">
             <input matStartDate placeholder="Início" [(ngModel)]="form.dataSolicitacaoInicio" />
             <input matEndDate placeholder="Fim" [(ngModel)]="form.dataSolicitacaoFim" />
@@ -137,9 +138,9 @@
           <mat-date-range-picker #pickerSolicitacao></mat-date-range-picker>
         </mat-form-field>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-6">
         <mat-form-field class="filter-datepicker-range" appearance="outline">
-          <mat-label>Período de Vencimento</mat-label>
+          <mat-label>Período de vencimento</mat-label>
           <mat-date-range-input [rangePicker]="pickerVencimento">
             <input matStartDate placeholder="Início" [(ngModel)]="form.dataVencimentoInicio" />
             <input matEndDate placeholder="Fim" [(ngModel)]="form.dataVencimentoFim" />
@@ -148,9 +149,12 @@
           <mat-date-range-picker #pickerVencimento></mat-date-range-picker>
         </mat-form-field>
       </div>
-      <div class="col-md-4">
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
         <mat-form-field class="filter-datepicker-range" appearance="outline">
-          <mat-label>Período de Aprovação do Financeiro</mat-label>
+          <mat-label>Período de aprovação do financeiro</mat-label>
           <mat-date-range-input [rangePicker]="pickerFinanceiro">
             <input matStartDate placeholder="Início" [(ngModel)]="form.dataAprovacaoFinanceiroInicio" />
             <input matEndDate placeholder="Fim" [(ngModel)]="form.dataAprovacaoFinanceiroFim" />
@@ -159,12 +163,21 @@
           <mat-date-range-picker #pickerFinanceiro></mat-date-range-picker>
         </mat-form-field>
       </div>
+      <div class="col-md-4">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Tipo de relatório (só RDDV)</mat-label>
+          <mat-select id="tipoRelatorio" [(ngModel)]="form.tipoRelatorio" [disabled]="camposRddvDesabilitados">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listTipoRelatorio" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
     </div>
 
     <div class="row">
       <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
-          <mat-label>Status Gestor</mat-label>
+          <mat-label>Status gestor</mat-label>
           <mat-select [(ngModel)]="form.statusGestor">
             <mat-option [value]="0">Todos</mat-option>
             <mat-option *ngFor="let item of listStatusGestor" [value]="item.id">{{ item.name }}</mat-option>
@@ -173,7 +186,7 @@
       </div>
       <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
-          <mat-label>Status Financeiro</mat-label>
+          <mat-label>Status financeiro</mat-label>
           <mat-select [(ngModel)]="form.statusFinanceiro">
             <mat-option [value]="0">Todos</mat-option>
             <mat-option *ngFor="let item of listStatusFinanceiro" [value]="item.id">{{ item.name }}</mat-option>
@@ -182,12 +195,20 @@
       </div>
       <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
-          <mat-label>Status Contabilidade</mat-label>
+          <mat-label>Status contábil</mat-label>
           <mat-select [(ngModel)]="form.statusContabil">
             <mat-option [value]="0">Todos</mat-option>
             <mat-option *ngFor="let item of listStatusContabil" [value]="item.id">{{ item.name }}</mat-option>
           </mat-select>
         </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row" *ngIf="avisosAmbos.length > 0">
+      <div class="col-md-12">
+        <div class="aviso aviso-ambos" role="status">
+          <p *ngFor="let aviso of avisosAmbos">{{ aviso }}</p>
+        </div>
       </div>
     </div>
 
@@ -198,7 +219,7 @@
       <div class="col-md-6">
         <div class="pull-right">
           <button mat-raised-button type="button" class="btn btn-danger" (click)="limparFormulario()" [disabled]="isBusy">
-            Limpar Filtros
+            Limpar filtros
           </button>
           <button
             id="btnGerar"
