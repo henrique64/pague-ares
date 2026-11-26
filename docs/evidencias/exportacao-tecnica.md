@@ -291,7 +291,7 @@ Não há um `indice.json` real versionado (o ZIP de 500 títulos não foi guarda
 
 ```json
 {
-  "versao": 1,
+  "versao": 2,
   "exportacaoId": 42,
   "geradoEm": "2026-11-25T21:08:00-03:00",
   "filtros": { "tipoTitulo": 0, "incluirAnexos": true },
