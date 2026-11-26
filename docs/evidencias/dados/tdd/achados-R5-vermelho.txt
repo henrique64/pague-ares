@@ -1,0 +1,5 @@
+# R5 — vermelho (Descrição '#' em RDDV na lista de pagamentos)
+Comando: npx ng test --watch=false --karma-config=<scratchpad>\f1\karma.headless.js (Edge headless)
+	Error: Minhas Solicitações: RDDV, Descrição: Expected '#' to be ''.
+	Error: Gestor: RDDV, Descrição: Expected '#' to be ''.
+[31mTOTAL: 1 FAILED, 224 SUCCESS[39m

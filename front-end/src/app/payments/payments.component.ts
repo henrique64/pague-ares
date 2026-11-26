@@ -263,6 +263,10 @@ export class PaymentsComponent implements OnInit {
     return this.isRddv(req) ? (req.nomeSolicitante ?? "") : req.nomeParceiro;
   }
 
+  descricaoExibida(req: PaymentListModel): string {
+    return this.isRddv(req) && req.descricao === "#" ? "" : (req.descricao ?? "");
+  }
+
   print(req: PaymentListModel) {
     if(req.idTipo === 0) {
       window.open("/#/payment-report/" + req.codigo);

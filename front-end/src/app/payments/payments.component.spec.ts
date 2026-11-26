@@ -228,6 +228,10 @@ describe('PaymentsComponent', () => {
           expect(celula(45, "Parceiro")).withContext(rotulo + ": RDDV, Parceiro").toBe("João Viajante");
           expect(celula(11, "Parceiro")).withContext(rotulo + ": SOL, Parceiro").toBe("Fornecedor X");
         }
+        if (ths.includes("Descrição")) {
+          expect(celula(45, "Descrição")).withContext(rotulo + ": RDDV, Descrição").toBe("");
+          expect(celula(11, "Descrição")).withContext(rotulo + ": SOL, Descrição").toBe("Compra");
+        }
       }
     });
 
