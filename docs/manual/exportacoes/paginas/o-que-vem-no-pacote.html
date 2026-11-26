@@ -22,7 +22,7 @@
 
   <h2>As pastas dos títulos</h2>
   <p>Cada pasta tem o código do título como nome: <code>SOL-</code> e o número para solicitações, <code>RDDV-</code> e o número para RDDVs, com seis dígitos no mínimo. Título sem anexo não ganha pasta. Com <span class="tela">Incluir anexos</span> desmarcada, o pacote não tem nenhuma pasta de título.</p>
-  <p>O nome de cada anexo dentro da pasta é o tipo de documento, um hífen e o nome original do arquivo, como <code>Nota Fiscal - boleto-marco.pdf</code>. As regras de nome:</p>
+  <p>O nome de cada anexo dentro da pasta é o tipo de documento, um hífen e o nome original do arquivo, como <code>Nota de Débito - relatorio de viagem.pdf</code>. As regras de nome:</p>
   <ul>
     <li>Anexo sem tipo de documento começa por <code>Documento</code>.</li>
     <li>Anexo sem nome original recebe o nome <code>anexo-</code> seguido do número do anexo.</li>
@@ -69,7 +69,7 @@
   <p>O <code>indice.csv</code> e o <code>indice.json</code> listam os anexos do pacote, um por entrada, com o tipo de documento, o nome original, o caminho dentro do pacote, o tamanho em bytes e o SHA-256. O SHA-256 é um código calculado a partir do conteúdo do arquivo: se o arquivo mudar um único byte, o código muda.</p>
   <ul>
     <li><strong>indice.csv:</strong> texto UTF-8 com campos separados por ponto e vírgula, para abrir no Excel. Sem anexos (<span class="tela">Incluir anexos</span> desmarcada ou títulos sem anexo), traz só a linha de cabeçalho.</li>
-    <li><strong>indice.json:</strong> o mesmo índice em formato JSON, para sistemas de análise. Traz também a versão do formato, o número e a data da exportação (no horário de Brasília, com o deslocamento -03:00), os filtros do pedido, os totais e a lista de todos os títulos exportados, inclusive os sem anexo.</li>
+    <li><strong>indice.json:</strong> o mesmo índice em formato JSON, para sistemas de análise. Traz também a versão do formato, o número e a data da exportação (no fuso configurado no servidor, que por padrão é o horário de Brasília, com o deslocamento -03:00), os filtros do pedido, os totais e a lista de todos os títulos exportados, inclusive os sem anexo.</li>
   </ul>
 
   <figure class="captura"><img src="img/pacote-indice-csv.webp" alt="Conteúdo do indice.csv, com o cabeçalho na primeira linha e uma linha por anexo" loading="lazy">
