@@ -1,0 +1,111 @@
+[
+  {
+    "tarefa": "exportar-titulos-com-anexos",
+    "titulo": "Exportar títulos com anexos",
+    "spec": "e2e-docs/e2e/manual/video/exportar-titulos-com-anexos.video.spec.ts",
+    "spec_sha256": "67c28486ef6843cebacf07c697097c7158b4dd3ace1dccf3162b799e63c22a2a",
+    "roteiro": "docs/manual/exportacoes/video/exportar-titulos-com-anexos.narracao.md",
+    "roteiro_sha256": "73f3fe6fb4e6b8a53f8755f4df575d7c21c9f349bb2d5c3bccde48d8b0ab3ddb",
+    "provedor": "azure",
+    "voz": "pt-BR-AntonioNeural",
+    "estilo": "",
+    "velocidade": "-8%",
+    "caracteres": 2464,
+    "gerado_em": "2026-11-26T01:45:09-03:00",
+    "telas": {
+      "front-end/src/app/exportacoes/exportacoes.component.html": "6a7b0a2ad22cf7fcc901d406a1ccef7b55a39029d2bae8172af5b9bd22c959b9",
+      "front-end/src/app/components/sidebar/sidebar.component.ts": "8c18f8d3f6d124ff8946d3a2e8b6837e087152a65e1880ea794408b0e52a8013",
+      "back-end/Ares.PagueAres.Application/Exportacao/PlanilhaExportacao.cs": "38cce11b9f1a20ebbaf2e050c75bb9df9868930288f86352fe6cd1b066d9ac45"
+    },
+    "mp4": {
+      "arquivo": "exportar-titulos-com-anexos.mp4",
+      "bytes": 9306471,
+      "sha256": "45159b630e25838ec666c986b5edace289cc2cdc504c967679a0c9f64082c77d",
+      "duracao_s": 209.233,
+      "largura": 1280,
+      "altura": 720,
+      "video": "h264",
+      "audio": "aac"
+    },
+    "passos": [
+      {
+        "id": "p01",
+        "inicio_s": 0,
+        "fim_s": 8.558,
+        "audio_s": 7.848
+      },
+      {
+        "id": "p02",
+        "inicio_s": 8.558,
+        "fim_s": 18.755,
+        "audio_s": 9.48
+      },
+      {
+        "id": "p03",
+        "inicio_s": 18.755,
+        "fim_s": 35.789,
+        "audio_s": 16.32
+      },
+      {
+        "id": "p04",
+        "inicio_s": 35.789,
+        "fim_s": 56.884,
+        "audio_s": 20.376
+      },
+      {
+        "id": "p05",
+        "inicio_s": 56.884,
+        "fim_s": 75.148,
+        "audio_s": 17.544
+      },
+      {
+        "id": "p06",
+        "inicio_s": 75.148,
+        "fim_s": 87.745,
+        "audio_s": 11.88
+      },
+      {
+        "id": "p07",
+        "inicio_s": 87.745,
+        "fim_s": 98.713,
+        "audio_s": 10.248
+      },
+      {
+        "id": "p08",
+        "inicio_s": 98.713,
+        "fim_s": 116.399,
+        "audio_s": 16.968
+      },
+      {
+        "id": "p09",
+        "inicio_s": 116.399,
+        "fim_s": 133.189,
+        "audio_s": 16.08
+      },
+      {
+        "id": "p10",
+        "inicio_s": 133.189,
+        "fim_s": 148.662,
+        "audio_s": 14.76
+      },
+      {
+        "id": "p11",
+        "inicio_s": 148.662,
+        "fim_s": 170.932,
+        "audio_s": 21.552
+      },
+      {
+        "id": "p12",
+        "inicio_s": 170.932,
+        "fim_s": 191.061,
+        "audio_s": 19.416
+      },
+      {
+        "id": "p13",
+        "inicio_s": 191.061,
+        "fim_s": 209.233,
+        "audio_s": 17.448
+      }
+    ]
+  }
+]

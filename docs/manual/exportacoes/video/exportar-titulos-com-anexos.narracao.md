@@ -31,7 +31,7 @@ O campo **Tipo de título** define o que entra no pacote: solicitações, RDDVs 
 
 > O cursor aponta para o período da solicitação; as datas de início e de fim são digitadas nos dois campos.
 
-O período limita a exportação. Em **Período da Solicitação (RDDV: cadastro)**, as datas de **Início** e de **Fim** são digitadas no formato dia, mês e ano. Exportar um mês de cada vez mantém cada pacote dentro dos limites do sistema.
+O período limita a exportação. Em **Período da Solicitação (RDDV: cadastro)**, as datas de **Início** e de **Fim** são digitadas no formato dia, mês e ano. Um período mais curto reduz o número de títulos e o tamanho do pacote.
 
 ## p06 — Os anexos
 
@@ -55,13 +55,13 @@ A situação começa em **Pendente** e passa para **Em processamento**. A barra 
 
 > A situação muda para Concluída; o cursor aponta para as colunas Tamanho e Expira em e para os botões Baixar e Excluir.
 
-Quando a situação muda para **Concluída**, a linha mostra o **Tamanho** do arquivo e a data de **Expira em**. Os botões **Baixar** e **Excluir** aparecem na coluna **Ações**. O arquivo fica disponível por 48 horas.
+Quando a situação muda para **Concluída**, a linha mostra o **Tamanho** do arquivo e a data de **Expira em**. Os botões **Baixar** e **Excluir** aparecem na coluna **Ações**. Pelo valor padrão do sistema, o arquivo fica disponível por 48 horas.
 
 ## p10 — Baixar
 
 > O cursor clica em Baixar; o download do ZIP começa sem que a tela mude.
 
-O botão **Baixar** gera um link de uso único, que vale por 120 segundos. O navegador baixa o ZIP sem sair da tela. O nome do arquivo leva o número da exportação e a data de geração.
+O botão **Baixar** gera um link de uso único, que vale por 120 segundos. O navegador baixa o ZIP sem sair da tela. O nome do arquivo leva o número da exportação e a data da conclusão.
 
 ## p11 — Extrair o pacote
 
@@ -79,4 +79,4 @@ A planilha tem quatro abas: **Solicitações**, **RDDVs**, **Despesas dos RDDVs*
 
 > A tela Exportações volta a aparecer, com a lista e a linha Concluída.
 
-Assim termina a exportação: pedida, acompanhada, baixada e aberta. Para apagar o arquivo antes do prazo, o botão **Excluir** remove a exportação concluída. A página do manual traz os limites e as mensagens de cada recusa.
+Assim termina a exportação: pedida, acompanhada, baixada e aberta. Para apagar o arquivo antes do prazo, o botão **Excluir** apaga o arquivo do servidor. A página do manual traz os limites e as mensagens de cada recusa.
