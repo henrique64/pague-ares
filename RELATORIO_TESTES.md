@@ -9,11 +9,11 @@
 
 | Suite | Total | Aprovados | Reprovados | Duração |
 |-------|-------|-----------|------------|---------|
-| Backend — Integração | 294 | **294** | 0 | — |
-| Backend — Unitários | 143 | **143** | 0 | — |
-| Frontend — Unitários (Karma, Edge headless) | 218 | **218** | 0 | — |
+| Backend — Integração | 425 | **425** | 0 | — |
+| Backend — Unitários | 149 | **149** | 0 | — |
+| Frontend — Unitários (Karma, Edge headless) | 225 | **225** | 0 | — |
 | E2E (Cypress) | — | — | — | *não executado* |
-| **TOTAL** | **655** | **655** | **0** | |
+| **TOTAL** | **799** | **799** | **0** | |
 
 Totais de 26/11/2026: Integração e Unitários conforme `docs/evidencias/dados/tdd/achados-B3-verde.txt` e Karma conforme `docs/evidencias/dados/tdd/achados-F3-verde.txt` (na execução anterior, de 23/11/2026, eram 47, 20 e 73 testes, 140 no total; a entrega da exportação de títulos e as correções dos achados do manual acrescentaram os demais). A coluna de duração não foi remedida nesta execução.
 
