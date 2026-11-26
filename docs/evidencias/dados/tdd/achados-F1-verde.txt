@@ -1,0 +1,27 @@
+F1 — Lista de exportações: download, Excluída, Remover da lista e número — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-front (base cf2353f)
+Comando: cd front-end && CHROME_BIN=<msedge.exe> npx ng test --watch=false --karma-config=<karma.headless.js fora do repositório: reaproveita o karma.conf.js e troca o navegador por ChromeHeadless sobre o Edge>
+Arquivos de teste: front-end/src/app/exportacoes/exportacoes.component.spec.ts, front-end/src/app/services/exportacao.service.spec.ts
+Dados: só fictícios; o serviço de exportação é um spy, nenhuma requisição de rede.
+
+Resultado: TOTAL 151 SUCCESS (138 da base + 13 novos). Karma inteiro verde.
+Build: npx ng build → Application bundle generation complete, código 0.
+
+Cenários cobertos (todos aprovados)
+------------------------------------------------------------------------------------------
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída podeRemoverDaLista é verdadeiro só para Falhou, Cancelada, Expirada e Excluída
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída Remover da lista pede confirmação, chama o serviço, avisa e recarrega a lista
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída Remover da lista com erro mostra a mensagem do servidor e recarrega a lista
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída na tela a coluna "Nº" vem logo depois de "Ações" e mostra o número da exportação
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída na tela lista vazia diz que não há exportações para mostrar nos últimos 30 dias
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída na tela clicar no botão remove o job da lista
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída na tela o botão aparece nas quatro situações encerradas e em nenhuma outra
+[PASSOU] ExportacoesComponent ações download sem sair da aplicação iframe ilegível (origem diferente): mostra o aviso fixo, com "g" minúsculo depois dos dois-pontos
+[PASSOU] ExportacoesComponent ações download sem sair da aplicação iframe sem acesso ao documento (null) mostra o aviso fixo
+[PASSOU] ExportacoesComponent ações download sem sair da aplicação iframe com o envelope JSON de erro da API: mostra a mensagem do servidor
+[PASSOU] ExportacoesComponent ações download sem sair da aplicação iframe com texto que não é o envelope (HTML, JSON sem message): mostra o aviso fixo
+[PASSOU] ExportacaoService removerDaLista faz DELETE em api/exportacao/{id}/lista
+[PASSOU] ExportacoesComponent ações Baixar só aparece para Concluída... (acrescidas as asserções da situação Excluída)
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída Remover da lista sem confirmar não chama o serviço
+[PASSOU] ExportacoesComponent Remover da lista e situação Excluída na tela Excluída não tem Baixar nem Excluir, e a situação aparece como inativa

@@ -46,6 +46,19 @@ mat-form-field {
   color: #888;
 }
 
+/* Avisos do tipo "Ambos": informam o que fica de fora, sem bloquear a exportação */
+.aviso-ambos {
+  margin: 0 0 12px 0;
+}
+
+.aviso-ambos p {
+  margin: 0;
+}
+
+.aviso-ambos p + p {
+  margin-top: 4px;
+}
+
 /* Loader/spinner da lista */
 .loader {
   display: flex;

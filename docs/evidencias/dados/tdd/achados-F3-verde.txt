@@ -1,0 +1,17 @@
+F3 — Tela de pagamentos: "Exportar planilha", ordenação e rótulos — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-front (base d68772e, a F2)
+Comando: cd front-end && CHROME_BIN=<msedge.exe> npx ng test --watch=false --karma-config=<karma.headless.js fora do repositório: reaproveita o karma.conf.js e troca o navegador por ChromeHeadless sobre o Edge>
+Arquivo de teste: front-end/src/app/payments/payments.component.spec.ts
+Dados: só fictícios; os serviços são spies, nenhuma requisição de rede.
+
+Resultado: TOTAL 218 SUCCESS (213 da base da F2 + 5 novos). Karma inteiro verde, 0 falhas.
+Build: npx ng build → Application bundle generation complete, código 0.
+
+Cenários cobertos (todos aprovados; os mesmos 5 que falharam na fase vermelha)
+------------------------------------------------------------------------------------------
+[PASSOU] com ordenação por data de inclusão, a seta aparece no cabeçalho "Data de inclusão" e não no de vencimento, em todas as abas
+[PASSOU] o botão "Exportar planilha" tem a dica dizendo que os anexos ficam em Exportações
+[PASSOU] cabeçalhos da aba Financeiro/Contábil em caixa de frase, com os três status pelo nome da convenção
+[PASSOU] cabeçalhos das abas Minhas Solicitações e Gestor pela convenção de rótulos
+[PASSOU] rótulos dos filtros e botões em caixa de frase, sem placeholder em Title Case
