@@ -3,15 +3,15 @@
     "tarefa": "exportar-titulos-com-anexos",
     "titulo": "Exportar títulos com anexos",
     "spec": "e2e-docs/e2e/manual/video/exportar-titulos-com-anexos.video.spec.ts",
-    "spec_sha256": "67c28486ef6843cebacf07c697097c7158b4dd3ace1dccf3162b799e63c22a2a",
+    "spec_sha256": "b6495025d88cf4b95ff36e87e9799e44c5e9192f7890b84af168cc90f5037e5c",
     "roteiro": "docs/manual/exportacoes/video/exportar-titulos-com-anexos.narracao.md",
-    "roteiro_sha256": "73f3fe6fb4e6b8a53f8755f4df575d7c21c9f349bb2d5c3bccde48d8b0ab3ddb",
+    "roteiro_sha256": "d1e963c7a30f5de2fd98bf114e2aa8825f8a680332d80926937555d154c948e2",
     "provedor": "azure",
     "voz": "pt-BR-AntonioNeural",
     "estilo": "",
     "velocidade": "-8%",
-    "caracteres": 2464,
-    "gerado_em": "2026-11-26T01:45:09-03:00",
+    "caracteres": 2442,
+    "gerado_em": "2026-11-26T05:46:59-03:00",
     "telas": {
       "front-end/src/app/exportacoes/exportacoes.component.html": "6a7b0a2ad22cf7fcc901d406a1ccef7b55a39029d2bae8172af5b9bd22c959b9",
       "front-end/src/app/components/sidebar/sidebar.component.ts": "8c18f8d3f6d124ff8946d3a2e8b6837e087152a65e1880ea794408b0e52a8013",
@@ -19,9 +19,9 @@
     },
     "mp4": {
       "arquivo": "exportar-titulos-com-anexos.mp4",
-      "bytes": 9306471,
-      "sha256": "45159b630e25838ec666c986b5edace289cc2cdc504c967679a0c9f64082c77d",
-      "duracao_s": 209.233,
+      "bytes": 8545350,
+      "sha256": "2c34ec4888332af3a41ef7e9d2cad1b0769a9e96600859b86ac19eacbc957b5c",
+      "duracao_s": 207.966,
       "largura": 1280,
       "altura": 720,
       "video": "h264",
@@ -31,79 +31,79 @@
       {
         "id": "p01",
         "inicio_s": 0,
-        "fim_s": 8.558,
+        "fim_s": 8.554,
         "audio_s": 7.848
       },
       {
         "id": "p02",
-        "inicio_s": 8.558,
-        "fim_s": 18.755,
+        "inicio_s": 8.554,
+        "fim_s": 18.741,
         "audio_s": 9.48
       },
       {
         "id": "p03",
-        "inicio_s": 18.755,
-        "fim_s": 35.789,
+        "inicio_s": 18.741,
+        "fim_s": 35.772,
         "audio_s": 16.32
       },
       {
         "id": "p04",
-        "inicio_s": 35.789,
-        "fim_s": 56.884,
+        "inicio_s": 35.772,
+        "fim_s": 56.866,
         "audio_s": 20.376
       },
       {
         "id": "p05",
-        "inicio_s": 56.884,
-        "fim_s": 75.148,
+        "inicio_s": 56.866,
+        "fim_s": 75.12,
         "audio_s": 17.544
       },
       {
         "id": "p06",
-        "inicio_s": 75.148,
-        "fim_s": 87.745,
+        "inicio_s": 75.12,
+        "fim_s": 87.713,
         "audio_s": 11.88
       },
       {
         "id": "p07",
-        "inicio_s": 87.745,
-        "fim_s": 98.713,
+        "inicio_s": 87.713,
+        "fim_s": 98.677,
         "audio_s": 10.248
       },
       {
         "id": "p08",
-        "inicio_s": 98.713,
-        "fim_s": 116.399,
-        "audio_s": 16.968
+        "inicio_s": 98.677,
+        "fim_s": 115.135,
+        "audio_s": 15.744
       },
       {
         "id": "p09",
-        "inicio_s": 116.399,
-        "fim_s": 133.189,
+        "inicio_s": 115.135,
+        "fim_s": 131.928,
         "audio_s": 16.08
       },
       {
         "id": "p10",
-        "inicio_s": 133.189,
-        "fim_s": 148.662,
+        "inicio_s": 131.928,
+        "fim_s": 147.398,
         "audio_s": 14.76
       },
       {
         "id": "p11",
-        "inicio_s": 148.662,
-        "fim_s": 170.932,
+        "inicio_s": 147.398,
+        "fim_s": 169.662,
         "audio_s": 21.552
       },
       {
         "id": "p12",
-        "inicio_s": 170.932,
-        "fim_s": 191.061,
+        "inicio_s": 169.662,
+        "fim_s": 189.788,
         "audio_s": 19.416
       },
       {
         "id": "p13",
-        "inicio_s": 191.061,
-        "fim_s": 209.233,
+        "inicio_s": 189.788,
+        "fim_s": 207.966,
         "audio_s": 17.448
       }
     ]

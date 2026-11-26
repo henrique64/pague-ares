@@ -47,9 +47,9 @@ O botão **Gerar exportação** envia o pedido. Um aviso confirma a solicitaçã
 
 ## p08 — O andamento
 
-> A linha aparece como Pendente e passa a Em processamento; o cursor aponta para a barra de andamento e para o texto com os títulos já tratados.
+> A situação da linha muda para Em processamento; o cursor aponta para a barra de andamento e para o texto com os títulos já tratados.
 
-A situação começa em **Pendente** e passa para **Em processamento**. A barra mostra o percentual, e o texto ao lado diz quantos títulos já foram tratados. A lista se atualiza sozinha a cada cinco segundos, sem recarregar a página.
+A situação muda para **Em processamento**. A barra mostra o percentual, e o texto ao lado diz quantos títulos já foram tratados. A lista se atualiza sozinha a cada cinco segundos, sem recarregar a página.
 
 ## p09 — A exportação concluída
 
