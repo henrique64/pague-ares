@@ -9,7 +9,7 @@
   <p>No alto da tela, o título <span class="tela">Exportar títulos com anexos</span> vem seguido de um aviso fixo: o sistema prepara o ZIP em segundo plano, o botão <span class="tela">Baixar</span> aparece na lista quando o arquivo fica pronto, e a frase <span class="tela">Extraia o ZIP antes de abrir o Excel</span> lembra que os links para os anexos só funcionam depois da extração.</p>
 
   <figure class="captura"><img src="img/exportacoes-formulario-padrao.webp" alt="Formulário Exportar títulos com anexos recém-aberto, com os filtros em branco ou em Todos" loading="lazy">
-    <figcaption>Formulário de exportação como aparece ao abrir a tela: tipo Ambos, Código vazio, filtros em Todos e a caixa Incluir anexos marcada, com o aviso fixo no topo.</figcaption></figure>
+    <figcaption>Formulário de exportação como aparece ao abrir a tela: tipo Ambos, campo Código com a dica de formato (Ex.: 123, SOL-000123 ou RDDV-000045), filtros em Todos e a caixa Incluir anexos marcada, com o aviso fixo no topo.</figcaption></figure>
 
   <h2>Os campos do formulário</h2>
   <p>Todos os filtros são opcionais. Campo em branco, ou lista em <span class="tela">Todos</span>, não restringe o resultado. Só entram na exportação títulos que já foram aprovados pelo Gestor, que não são rascunho e que não foram cancelados; os filtros apenas reduzem esse conjunto.</p>
@@ -17,7 +17,7 @@
     <dt>Tipo de título</dt>
     <dd>Três opções: <span class="tela">Ambos (Solicitações e RDDVs)</span>, que é o padrão, <span class="tela">Solicitação</span> e <span class="tela">RDDV</span>. A escolha habilita ou desabilita outros campos (ver a próxima seção).</dd>
     <dt>Código</dt>
-    <dd>Campo de texto, com a dica <span class="tela">Número (123) ou código com prefixo (SOL-000123, RDDV-000045)</span> sob o campo. Aceita o número do título (<code>123</code> ou <code>000123</code>) ou o código com prefixo (<code>SOL-000123</code>, <code>RDDV-45</code>). O hífen do prefixo é opcional, maiúsculas e minúsculas tanto faz e espaços nas pontas são ignorados. O número tem de ser inteiro, de 1 a 2147483647. O prefixo define o tipo: <code>SOL</code> vale só para solicitação e <code>RDDV</code>, só para RDDV. Um número sem prefixo vale para o tipo escolhido; com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, vale para a solicitação e para o RDDV que tenham esse número. Zero, número decimal, número negativo e texto fora desses formatos são recusados (ver <a href="#gerar-exportacao--codigo-recusado-e-prefixo">Código recusado e prefixo</a>). A planilha e as pastas do pacote mostram o código com prefixo e zeros, como <code>SOL-000123</code>.</dd>
+    <dd>Campo de texto, com a dica <span class="tela">Ex.: 123, SOL-000123 ou RDDV-000045</span> sob o campo. Aceita o número do título (<code>123</code> ou <code>000123</code>) ou o código com prefixo (<code>SOL-000123</code>, <code>RDDV-45</code>). O hífen do prefixo é opcional, maiúsculas e minúsculas tanto faz e espaços nas pontas são ignorados. O número tem de ser inteiro, de 1 a 2147483647. O prefixo define o tipo: <code>SOL</code> vale só para solicitação e <code>RDDV</code>, só para RDDV. Um número sem prefixo vale para o tipo escolhido; com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, vale para a solicitação e para o RDDV que tenham esse número. Zero, número decimal, número negativo e texto fora desses formatos são recusados (ver <a href="#gerar-exportacao--codigo-recusado-e-prefixo">Código recusado e prefixo</a>). A planilha e as pastas do pacote mostram o código com prefixo e zeros, como <code>SOL-000123</code>.</dd>
     <dt>Nº do documento (só Solicitação)</dt>
     <dd>Número do documento da solicitação. O texto digitado precisa ser igual ao número gravado.</dd>
     <dt>Departamento</dt>
@@ -65,7 +65,7 @@
     </tbody>
   </table></div>
 
-  <p>Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span> e o <span class="tela">Código</span> sem prefixo, nenhum campo fica desabilitado. Com o <span class="tela">Código</span> com prefixo, os campos do outro tipo ficam desabilitados, como quando o tipo é escolhido na lista: com <code>SOL-</code>, fica desabilitado o <span class="tela">Tipo de relatório (só RDDV)</span>; com <code>RDDV-</code>, ficam desabilitados os quatro campos marcados com <span class="tela">(só Solicitação)</span>.</p>
+  <p>Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span> e o <span class="tela">Código</span> sem prefixo, nenhum campo fica desabilitado. Com o <span class="tela">Código</span> com prefixo, os campos do outro tipo ficam desabilitados, como quando o tipo é escolhido na lista: com <code>SOL-</code>, fica desabilitado o <span class="tela">Tipo de relatório (só RDDV)</span>; com <code>RDDV-</code>, ficam desabilitados os quatro campos marcados com <span class="tela">(só Solicitação)</span>. O valor já digitado num campo desabilitado continua visível, mas não entra no filtro. Quando o prefixo sai do <span class="tela">Código</span>, os campos voltam a ficar habilitados.</p>
 
   <figure class="captura"><img src="img/exportacoes-tipo-rddv.webp" alt="Formulário com o tipo RDDV e quatro campos esmaecidos, cercados por um contorno laranja de destaque" loading="lazy">
     <figcaption>Com o tipo RDDV, os quatro campos marcados com "só Solicitação" ficam desabilitados e aparecem esmaecidos. O contorno laranja em volta deles é um destaque colocado só na foto e não faz parte da tela.</figcaption></figure>
@@ -74,7 +74,8 @@
   <p>Quando o <span class="tela">Código</span> está fora dos formatos aceitos (zero, número decimal, número negativo, texto fora dos formatos, como <code>ABC-1</code>, ou um prefixo sem número, como <code>SOL-</code>), a mensagem <span class="tela">Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).</span> aparece sob o campo, depois que o campo é tocado ou que se tenta gerar a exportação. O botão <span class="tela">Gerar exportação</span> não envia o pedido e mostra a mesma mensagem no aviso de poucos segundos.</p>
   <p>Com o tipo <span class="tela">Solicitação</span> ou <span class="tela">RDDV</span> escolhido e um prefixo de outro tipo, a mensagem sob o campo começa por <span class="tela">O código</span>, traz o código com seis dígitos e o tipo do prefixo (solicitação ou RDDV) e termina por <span class="tela">mas o tipo de título escolhido é</span> seguido do tipo escolhido. O pedido também não é enviado. Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, o prefixo é aceito e decide o tipo do filtro: <code>SOL-</code> exporta só solicitações, e <code>RDDV-</code>, só RDDVs.</p>
 
-  <!-- foto: exportacoes Código recusado, com a mensagem de validação sob o campo -->
+  <figure class="captura"><img src="img/exportacoes-codigo-recusado.webp" alt="Formulário de exportação com o Código 0 recusado: campo com contorno vermelho, mensagem de validação sob ele e aviso com o botão OK" loading="lazy">
+    <figcaption>Formulário com o Código 0 recusado: o campo fica com contorno vermelho, a mensagem de validação aparece sob ele e o mesmo texto vem no aviso com o botão OK; nenhuma exportação é pedida.</figcaption></figure>
 
   <h2>Avisos do tipo Ambos</h2>
   <p>Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, preencher certos campos tira títulos do pacote. A tela avisa, num quadro perto dos botões <span class="tela">Limpar filtros</span> e <span class="tela">Gerar exportação</span>. O aviso só informa: a exportação continua permitida. O quadro some quando o campo é esvaziado, volta a <span class="tela">Todos</span> ou o tipo deixa de ser <span class="tela">Ambos (Solicitações e RDDVs)</span>.</p>
@@ -89,7 +90,8 @@
   </table></div>
   <p>Quando os dois primeiros casos acontecem juntos, as duas frases aparecem, uma abaixo da outra. Um <span class="tela">Código</span> só com número, sem prefixo, não gera aviso.</p>
 
-  <!-- foto: exportacoes aviso do tipo Ambos com um campo só de Solicitação preenchido -->
+  <figure class="captura"><img src="img/exportacoes-aviso-ambos.webp" alt="Formulário com o tipo Ambos e o Nº do documento preenchido, com o quadro de aviso sob os filtros" loading="lazy">
+    <figcaption>Tipo Ambos com o Nº do documento 123456 preenchido: sob os filtros, o aviso diz que Nº do documento, Tipo de solicitação, Tipo de pagamento e Forma de pagamento só existem em solicitações e que, com eles preenchidos, os RDDVs ficam de fora.</figcaption></figure>
 
   <h2>Períodos</h2>
   <p>Cada período tem os campos <span class="tela">Início</span> e <span class="tela">Fim</span>. As datas podem ser escolhidas no calendário, aberto pelo ícone do campo, ou digitadas no formato dd/mm/aaaa. Início e fim também podem ser preenchidos isoladamente: só o início busca de uma data em diante, e só o fim, até uma data. O dia final entra no resultado.</p>

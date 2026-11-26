@@ -17,14 +17,14 @@
     <dt>Andamento</dt>
     <dd>Uma barra e o percentual concluído. Quando o total de títulos é maior que zero, o texto mostra também quantos títulos já foram tratados, no formato N de M títulos, seja qual for a situação da linha: <span class="tela">Pendente</span>, <span class="tela">Em processamento</span>, <span class="tela">Concluída</span>, <span class="tela">Falhou</span>, <span class="tela">Cancelada</span>, <span class="tela">Expirada</span> ou <span class="tela">Excluída</span>.</dd>
     <dt>Tamanho</dt>
-    <dd>Tamanho do ZIP, em B, KB, MB, GB ou TB, com vírgula decimal. Fica vazio enquanto a exportação não conclui.</dd>
+    <dd>Tamanho do ZIP, em B, KB, MB, GB ou TB, com vírgula decimal. Fica vazio enquanto a exportação não conclui. Numa linha <span class="tela">Excluída</span>, mostra <span class="tela">—</span>, porque o arquivo foi apagado.</dd>
     <dt>Expira em</dt>
     <dd>Data e hora em que o arquivo deixa de estar disponível, no fuso do navegador. Fica vazia enquanto a exportação não conclui. Numa linha <span class="tela">Expirada</span>, mostra quando o arquivo deixou de estar disponível pelo prazo. Numa linha <span class="tela">Excluída</span>, continua mostrando o prazo original: a exclusão não muda essa data.</dd>
   </dl>
   <p>Sem nenhuma exportação para mostrar, a tela exibe <span class="tela">Nenhuma exportação para mostrar nos últimos 30 dias.</span> no lugar da tabela. Isso vale tanto para quem ainda não gerou nenhuma exportação quanto para quem removeu todas da lista. Enquanto a lista carrega pela primeira vez, aparece o indicador <span class="tela">Carregando exportações...</span>. Se a carga falhar, um aviso temporário diz <span class="tela">Não foi possível carregar as exportações. Tente novamente.</span> e a lista fica como estava.</p>
 
   <figure class="captura"><img src="img/exportacoes-lista-vazia.webp" alt="Lista Minhas exportações sem tabela, só com a frase sobre os últimos 30 dias" loading="lazy">
-    <figcaption>Lista Minhas exportações sem nenhuma exportação: no lugar da tabela, a tela mostra a frase sobre os últimos 30 dias.</figcaption></figure>
+    <figcaption>Lista Minhas exportações sem nenhuma exportação: no lugar da tabela, a tela mostra a frase Nenhuma exportação para mostrar nos últimos 30 dias.</figcaption></figure>
 
   <h2>As situações</h2>
   <div class="tabela"><table>
@@ -36,15 +36,16 @@
       <tr><td><span class="tela">Falhou</span></td><td>A geração terminou com erro. A mensagem do erro aparece em vermelho, abaixo do selo. A barra fica no ponto em que a geração parou.</td><td><span class="tela">Remover da lista</span></td></tr>
       <tr><td><span class="tela">Cancelada</span></td><td>A exportação foi cancelada. A barra fica no ponto em que a geração parou.</td><td><span class="tela">Remover da lista</span></td></tr>
       <tr><td><span class="tela">Expirada</span></td><td>O arquivo deixou de estar disponível porque o prazo venceu. Barra em 100%; a linha continua mostrando o tamanho e a coluna <span class="tela">Expira em</span>, com o prazo que venceu.</td><td><span class="tela">Remover da lista</span></td></tr>
-      <tr><td><span class="tela">Excluída</span></td><td>O arquivo foi apagado pelo botão <span class="tela">Excluir</span>, antes do prazo. Barra em 100%; a coluna <span class="tela">Expira em</span> continua mostrando o prazo original. Não há mais arquivo para baixar.</td><td><span class="tela">Remover da lista</span></td></tr>
+      <tr><td><span class="tela">Excluída</span></td><td>O arquivo foi apagado pelo botão <span class="tela">Excluir</span>, antes do prazo. Barra em 100%; a coluna <span class="tela">Tamanho</span> mostra <span class="tela">—</span>, e a coluna <span class="tela">Expira em</span> continua mostrando o prazo original. Não há mais arquivo para baixar.</td><td><span class="tela">Remover da lista</span></td></tr>
     </tbody>
   </table></div>
   <p>As linhas <span class="tela">Falhou</span>, <span class="tela">Cancelada</span>, <span class="tela">Expirada</span> e <span class="tela">Excluída</span> ficam na lista até completar 30 dias, contados do pedido (coluna <span class="tela">Solicitada em</span>), ou até serem removidas pelo botão <span class="tela">Remover da lista</span>. As mensagens de erro e o que fazer com cada uma estão em <a href="#cuidados-e-limites--quando-a-exportacao-falha">Cuidados e limites</a>.</p>
 
   <figure class="captura"><img src="img/exportacoes-lista-falhou-cancelada-expirada.webp" alt="Lista com três linhas encerradas, cada uma com o botão Remover da lista: Falhou com mensagem de erro em vermelho, Cancelada e Expirada" loading="lazy">
-    <figcaption>Linhas Falhou (com a mensagem de erro), Cancelada e Expirada, cada uma com o botão Remover da lista. A barra de Falhou e a de Cancelada ficam onde a geração parou, e a de Expirada está completa, com tamanho e data de Expira em.</figcaption></figure>
+    <figcaption>Linhas Falhou (com a mensagem de erro), Cancelada e Expirada, cada uma só com o botão Remover da lista. A barra de Falhou e a de Cancelada ficam onde a geração parou, e a de Expirada está completa, com tamanho e data de Expira em.</figcaption></figure>
 
-  <!-- foto: exportacoes lista com a linha Excluída (botão Remover da lista, sem Baixar nem Excluir, Expira em original) -->
+  <figure class="captura"><img src="img/exportacoes-lista-excluida.webp" alt="Lista Minhas exportações com uma linha Cancelada e uma Excluída, cada uma só com o botão Remover da lista" loading="lazy">
+    <figcaption>Lista Minhas exportações com uma linha Cancelada e uma Excluída (criada ao excluir uma Concluída): as duas só com Remover da lista; a Excluída não tem Baixar nem Excluir, mostra "—" no Tamanho e mantém o Expira em original.</figcaption></figure>
 
   <figure class="captura"><img src="img/exportacoes-lista-em-processamento.webp" alt="Lista com uma linha Pendente e uma linha Em processamento, ambas com o botão Cancelar" loading="lazy">
     <figcaption>Linhas Pendente e Em processamento, com a barra de andamento e a contagem de títulos; as duas têm o botão Cancelar.</figcaption></figure>
@@ -73,7 +74,7 @@
   <p>Numa linha <span class="tela">Pendente</span>, a situação passa a <span class="tela">Cancelada</span>. Numa linha <span class="tela">Em processamento</span>, o cancelamento é só pedido: a linha segue <span class="tela">Em processamento</span> até o servidor parar de gerar o pacote, e então passa a <span class="tela">Cancelada</span>.</p>
 
   <h2>Excluir o arquivo</h2>
-  <p>O botão <span class="tela">Excluir</span> aparece nas linhas <span class="tela">Concluída</span>. Serve para apagar o pacote antes do prazo. O navegador pergunta <span class="tela">Excluir o arquivo desta exportação? Depois disso não será possível baixá-lo.</span> Confirmado, o aviso diz <span class="tela">Arquivo excluído.</span> e a situação passa a <span class="tela">Excluída</span>. A coluna <span class="tela">Expira em</span> continua com o prazo original. Para ter o pacote de novo, é preciso gerar outra exportação.</p>
+  <p>O botão <span class="tela">Excluir</span> aparece nas linhas <span class="tela">Concluída</span>. Serve para apagar o pacote antes do prazo. O navegador pergunta <span class="tela">Excluir o arquivo desta exportação? Depois disso não será possível baixá-lo.</span> Confirmado, o aviso diz <span class="tela">Arquivo excluído.</span> e a situação passa a <span class="tela">Excluída</span>. A coluna <span class="tela">Tamanho</span> passa a mostrar <span class="tela">—</span>, e a coluna <span class="tela">Expira em</span> continua com o prazo original. Para ter o pacote de novo, é preciso gerar outra exportação.</p>
 
   <h2>Remover da lista</h2>
   <p>O botão <span class="tela">Remover da lista</span> aparece nas linhas <span class="tela">Falhou</span>, <span class="tela">Cancelada</span>, <span class="tela">Expirada</span> e <span class="tela">Excluída</span>. Serve para tirar da lista as exportações encerradas que não interessam mais. O navegador pergunta <span class="tela">Remover esta exportação da lista?</span>; sem confirmar, nada acontece. Confirmado, o aviso diz <span class="tela">Exportação removida da lista.</span> e a linha some da lista. A exportação não é apagada: só deixa de aparecer na lista.</p>

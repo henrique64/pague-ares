@@ -9,14 +9,17 @@
     <li>Na mesma aba, o usuário da Contabilidade vê a aba, com a lista restrita aos títulos aprovados pelo Gestor que estão atribuídos a ele, mas não vê o botão <span class="tela">Exportar planilha</span>.</li>
   </ul>
 
+  <p>Na tabela da aba, as linhas de RDDV trazem a <span class="tela">Descrição</span> e o <span class="tela">Nº do documento</span> vazios, nas abas em que essas colunas existem, e a coluna <span class="tela">Parceiro</span> mostra o nome do solicitante. É a mesma regra da planilha <code>Pagamentos.xlsx</code>, descrita em <a href="#exportar-lista-de-pagamentos--o-que-a-planilha-traz">O que a planilha traz</a>.</p>
+
   <div class="galeria">
     <figure class="captura"><img src="img/pagamentos-botao-exportar.webp" alt="Tela Solicitações na aba Financeiro/Contábil, com o botão Exportar planilha destacado ao lado de Limpar filtros e Filtrar" loading="lazy">
-    <figcaption>Aba Financeiro/Contábil de Solicitações, com o botão Exportar planilha, cercado por um contorno laranja colocado só na foto (não faz parte da tela), antes de Limpar filtros e Filtrar.</figcaption></figure>
+    <figcaption>Aba Financeiro/Contábil de Solicitações, com o botão Exportar planilha, cercado por um contorno laranja colocado só na foto (não faz parte da tela), antes de Limpar filtros e Filtrar. Nas linhas de RDDV da tabela, o Nº do documento fica vazio e o Parceiro mostra o nome do solicitante.</figcaption></figure>
     <figure class="captura"><img src="img/pagamentos-sem-botao-exportar.webp" alt="Tela Solicitações na aba Financeiro/Contábil para a Contabilidade, sem o botão Exportar planilha e com títulos na tabela" loading="lazy">
-    <figcaption>A mesma aba para a Contabilidade, sem o botão Exportar planilha entre os botões do painel e sem o item Exportações no menu. A tabela lista só os títulos aprovados pelo Gestor que estão atribuídos ao próprio usuário.</figcaption></figure>
+    <figcaption>A mesma aba para a Contabilidade, sem o botão Exportar planilha entre os botões do painel e sem o item Exportações no menu. A tabela traz registros: para a Contabilidade a aba mostra os títulos aprovados pelo Gestor que estão atribuídos ao próprio usuário.</figcaption></figure>
   </div>
 
-  <!-- foto: pagamentos dica do botão Exportar planilha (ponteiro sobre o botão, com o texto da dica visível) -->
+  <figure class="captura"><img src="img/pagamentos-dica-exportar-planilha.webp" alt="Aba Financeiro/Contábil com o ponteiro sobre o botão Exportar planilha e a dica do botão visível" loading="lazy">
+    <figcaption>Aba Financeiro/Contábil com o ponteiro sobre Exportar planilha: a dica diz que baixa a lista desta aba em Excel (Pagamentos.xlsx), sem anexos, e que os anexos ficam no menu Exportações.</figcaption></figure>
 
   <h2>Baixar a planilha</h2>
   <ol class="passos">
@@ -34,7 +37,7 @@
   </ul>
 
   <figure class="captura"><img src="img/pagamentos-excel-previa.webp" alt="Planilha Pagamentos.xlsx com a aba Pagamentos, o cabeçalho em negrito e seis linhas de dados" loading="lazy">
-    <figcaption>Prévia da planilha Pagamentos.xlsx gerada pelo botão Exportar planilha: uma linha por solicitação (Tipo igual a Pagamento) e uma por RDDV (Tipo igual a RDDV - Adiantamento, com Nº do documento vazio), com datas e valor formatados.</figcaption></figure>
+    <figcaption>Prévia da planilha Pagamentos.xlsx gerada pelo botão Exportar planilha: uma linha por solicitação (Tipo igual a Pagamento) e uma por RDDV (Tipo igual a RDDV - Adiantamento, com Nº do documento vazio), com cabeçalhos em caixa de frase e acentuados, até a coluna Status financeiro.</figcaption></figure>
 
   <h3>Quais títulos entram</h3>
   <p>Só entram títulos que não são rascunho, não estão cancelados e foram aprovados pelo Gestor. Os filtros do painel restringem esse conjunto pelas mesmas regras da lista da tela:</p>
