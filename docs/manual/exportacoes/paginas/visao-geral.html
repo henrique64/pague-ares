@@ -1,7 +1,32 @@
 <article class="pagina" data-id="visao-geral" data-secao="Introdução" data-titulo="Visão geral" data-publico="todos">
-  <p>Esta página abre o manual. Descreve, em poucas linhas, para que serve o aplicativo e a quem o manual se destina.</p>
-  <p>Cada tarefa do aplicativo tem uma página própria. O texto de cada página é escrito de forma impessoal e cita os nomes de botões, campos e títulos exatamente como aparecem na tela.</p>
-  <div class="nota">
-    <p>Página de modelo instalada por doc.ts instalar. Substitua este texto pelo conteúdo real do manual depois de preencher o inventário de telas.</p>
+  <p class="resumo">A tela <span class="tela">Exportações</span> do PagueAres reúne títulos e anexos num único arquivo ZIP, preparado em segundo plano. Este manual explica como gerar, acompanhar, baixar e abrir esse arquivo, e como exportar a lista de pagamentos em Excel.</p>
+
+  <h2>Para que serve</h2>
+  <p>A exportação junta, num só pacote, as informações dos títulos e os arquivos anexados a eles. O pacote traz uma planilha de Excel, uma pasta com os anexos de cada título, dois índices para conferência e um arquivo de instruções. O conteúdo completo está em <a href="#o-que-vem-no-pacote">O que vem no pacote</a>.</p>
+  <p>Título, aqui, é uma solicitação ou um RDDV (Relatório de Despesas com Deslocamento e Viagem, a prestação de contas de uma viagem). A exportação trata os dois tipos.</p>
+
+  <h2>Quem usa</h2>
+  <p>Só os perfis Financeiro e Administrador veem o item <span class="tela">Exportações</span> no menu e conseguem gerar pacotes. Os demais perfis não veem o item. Os detalhes estão em <a href="#cuidados-e-limites--quem-tem-acesso">Cuidados e limites</a>.</p>
+
+  <!-- foto: exportacoes-tela-com-lista | tela exportacoes; usuário Financeiro; menu lateral com o item Exportações destacado, formulário no padrão e a lista Minhas exportações com uma linha Em processamento e uma Concluída -->
+
+  <h2>Como o trabalho acontece</h2>
+  <ol class="passos">
+    <li>Abrir <span class="tela">Exportações</span> no menu e escolher os filtros. Todos são opcionais.</li>
+    <li>Clicar em <span class="tela">Gerar exportação</span>. A exportação entra na lista <span class="tela">Minhas exportações</span> e é preparada no servidor.</li>
+    <li>Acompanhar a situação e a barra de andamento na lista, até a situação mudar para <span class="tela">Concluída</span>.</li>
+    <li>Clicar em <span class="tela">Baixar</span>, extrair o ZIP numa pasta do computador e só então abrir o <code>titulos.xlsx</code>.</li>
+  </ol>
+  <p>Cada passo tem a sua página: <a href="#gerar-exportacao">Gerar uma exportação</a> e <a href="#acompanhar-e-baixar">Acompanhar e baixar</a>.</p>
+
+  <div class="atencao">
+    <p><strong>Extrair antes de abrir.</strong> A tela avisa para extrair o ZIP antes de abrir o Excel. Os links da planilha para as pastas e os anexos só funcionam com o ZIP extraído.</p>
   </div>
+
+  <h2>Outras páginas do manual</h2>
+  <ul>
+    <li><a href="#exportar-lista-de-pagamentos">Exportar a lista de pagamentos</a>: o botão <span class="tela">Exportar</span> da tela <span class="tela">Solicitações</span>, que baixa uma planilha simples, sem anexos.</li>
+    <li><a href="#cuidados-e-limites">Cuidados e limites</a>: prazos, tamanhos, quantidades e o que fazer diante de uma recusa.</li>
+    <li><a href="#perguntas-frequentes">Perguntas frequentes</a>: respostas curtas para as dúvidas mais comuns.</li>
+  </ul>
 </article>

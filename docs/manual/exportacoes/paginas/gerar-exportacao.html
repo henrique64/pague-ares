@@ -1,0 +1,91 @@
+<article class="pagina" data-id="gerar-exportacao" data-secao="Exportar títulos com anexos" data-titulo="Gerar uma exportação" data-publico="financeiro administrador">
+  <p class="resumo">Como abrir a tela <span class="tela">Exportações</span>, escolher o tipo de título e os filtros e pedir a geração do pacote. Serve ao Financeiro e ao Administrador.</p>
+
+  <figure class="video"><video controls preload="none" src="video/exportar-titulos-com-anexos.mp4" poster="img/video-exportar-titulos-com-anexos-capa.webp"></video>
+    <figcaption>Vídeo: a exportação pedida, acompanhada, baixada e aberta, do começo ao fim.</figcaption></figure>
+
+  <h2>Abrir a tela</h2>
+  <p>No menu lateral, clicar em <span class="tela">Exportações</span>. O item aparece só para o Financeiro e o Administrador. Com a tela aberta, o título do topo da página passa a ser <span class="tela">Exportações</span> e o item do menu fica destacado.</p>
+  <p>No alto da tela, o título <span class="tela">Exportar títulos com anexos</span> vem seguido de um aviso fixo: o sistema prepara o ZIP em segundo plano, o botão <span class="tela">Baixar</span> aparece na lista quando o arquivo fica pronto, e a frase <span class="tela">Extraia o ZIP antes de abrir o Excel</span> lembra que os links para os anexos só funcionam depois da extração.</p>
+
+  <!-- foto: exportacoes-formulario-padrao | tela exportacoes; formulário recém-aberto no padrão: Tipo de título em Ambos (Solicitações e RDDVs), campos de lista em Todos, datas e textos em branco, Incluir anexos marcada; aviso fixo visível no topo -->
+
+  <h2>Os campos do formulário</h2>
+  <p>Todos os filtros são opcionais. Campo em branco, ou lista em <span class="tela">Todos</span>, não restringe o resultado. Só entram na exportação títulos que já foram aprovados pelo Gestor, que não são rascunho e que não foram cancelados; os filtros apenas reduzem esse conjunto.</p>
+  <dl class="campos">
+    <dt>Tipo de título</dt>
+    <dd>Três opções: <span class="tela">Ambos (Solicitações e RDDVs)</span>, que é o padrão, <span class="tela">Solicitação</span> e <span class="tela">RDDV</span>. A escolha habilita ou desabilita outros campos (ver a próxima seção).</dd>
+    <dt>Código</dt>
+    <dd>Número do título. Aceita só número inteiro maior que zero. A planilha e as pastas do pacote mostram o código com prefixo e zeros, como <code>SOL-000123</code>.</dd>
+    <dt>Número do Documento (só Solicitação)</dt>
+    <dd>Número do documento da solicitação. O texto digitado precisa ser igual ao número gravado.</dd>
+    <dt>Departamento</dt>
+    <dd>Lista com <span class="tela">Todos</span> e os departamentos cadastrados.</dd>
+    <dt>Nome do parceiro (RDDV: funcionário)</dt>
+    <dd>Parte do nome do parceiro. No RDDV, procura no nome do funcionário.</dd>
+    <dt>CPF/CNPJ do parceiro (RDDV: CPF do funcionário)</dt>
+    <dd>Parte do documento do parceiro. No RDDV, procura no CPF do funcionário. Pontos, traços e barras do documento não atrapalham a busca.</dd>
+    <dt>Solicitante</dt>
+    <dd>Lista com <span class="tela">Todos</span> e os usuários cadastrados.</dd>
+    <dt>Atribuído a</dt>
+    <dd>Lista com <span class="tela">Todos</span> e os usuários cadastrados.</dd>
+    <dt>Tipo de solicitação (só Solicitação)</dt>
+    <dd>Opções: <span class="tela">Adiantamento</span>, <span class="tela">Pagamento</span> e <span class="tela">Movimento Almoxarifado</span>.</dd>
+    <dt>Tipo de relatório (só RDDV)</dt>
+    <dd>Opções: <span class="tela">Adiantamento</span>, <span class="tela">Prestação de Contas</span> e <span class="tela">Reembolso</span>.</dd>
+    <dt>Tipo de pagamento (só Solicitação)</dt>
+    <dd>Opções: <span class="tela">Nacional</span> e <span class="tela">Internacional</span>.</dd>
+    <dt>Forma de pagamento (só Solicitação)</dt>
+    <dd>Opções: <span class="tela">Boleto</span> e <span class="tela">Transferência Bancária</span>.</dd>
+    <dt>Período da Solicitação (RDDV: cadastro)</dt>
+    <dd>Datas inicial e final. No RDDV, vale a data de cadastro.</dd>
+    <dt>Período de Vencimento</dt>
+    <dd>Datas inicial e final do vencimento.</dd>
+    <dt>Período de Aprovação do Financeiro</dt>
+    <dd>Datas inicial e final da aprovação do Financeiro.</dd>
+    <dt>Status Gestor</dt>
+    <dd>Opções: <span class="tela">Aguardando Autorização</span>, <span class="tela">Autorizado</span> e <span class="tela">Negado</span>.</dd>
+    <dt>Status Financeiro</dt>
+    <dd>Opções: <span class="tela">Aguardando Autorização</span>, <span class="tela">Autorizado</span> e <span class="tela">Negado</span>.</dd>
+    <dt>Status Contabilidade</dt>
+    <dd>Opções: <span class="tela">Aguardando Lançamento</span>, <span class="tela">Lançado</span> e <span class="tela">Negado</span>.</dd>
+    <dt>Incluir anexos</dt>
+    <dd>Caixa marcada ao abrir a tela. Marcada, o pacote leva os arquivos anexados a cada título. Desmarcada, o pacote leva só a planilha, os índices e o LEIA-ME, sem pastas de títulos.</dd>
+  </dl>
+
+  <h2>Tipo de título e campos desabilitados</h2>
+  <p>Alguns campos existem só para um tipo de título e ficam desabilitados quando o tipo escolhido não os usa. O valor de um campo desabilitado não entra no filtro enviado.</p>
+  <div class="tabela"><table>
+    <thead><tr><th>Tipo de título escolhido</th><th>Campos desabilitados</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tela">Ambos (Solicitações e RDDVs)</span></td><td>Nenhum.</td></tr>
+      <tr><td><span class="tela">Solicitação</span></td><td><span class="tela">Tipo de relatório (só RDDV)</span></td></tr>
+      <tr><td><span class="tela">RDDV</span></td><td><span class="tela">Número do Documento (só Solicitação)</span>, <span class="tela">Tipo de solicitação (só Solicitação)</span>, <span class="tela">Tipo de pagamento (só Solicitação)</span> e <span class="tela">Forma de pagamento (só Solicitação)</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- foto: exportacoes-tipo-rddv | tela exportacoes; Tipo de título = RDDV; os quatro campos (só Solicitação) aparecem desabilitados (esmaecidos) -->
+
+  <h2>Períodos</h2>
+  <p>Cada período tem os campos <span class="tela">Início</span> e <span class="tela">Fim</span>. As datas podem ser escolhidas no calendário, aberto pelo ícone do campo, ou digitadas no formato dd/mm/aaaa. Início e fim também podem ser preenchidos isoladamente: só o início busca de uma data em diante, e só o fim, até uma data. O dia final entra no resultado.</p>
+  <p>Para volumes grandes, exportar por período, um mês de cada vez, mantém o pacote dentro dos limites descritos em <a href="#cuidados-e-limites--limites-de-uso">Cuidados e limites</a>.</p>
+
+  <!-- foto: exportacoes-formulario-preenchido | tela exportacoes; Tipo de título = Solicitação, Período da Solicitação (RDDV: cadastro) preenchido com início e fim, Status Gestor = Autorizado, Incluir anexos marcada; Tipo de relatório (só RDDV) desabilitado -->
+
+  <h2>Gerar a exportação</h2>
+  <ol class="passos">
+    <li>Escolher o <span class="tela">Tipo de título</span> e preencher os filtros desejados.</li>
+    <li>Conferir se <span class="tela">Incluir anexos</span> está como se deseja.</li>
+    <li>Clicar em <span class="tela">Gerar exportação</span>.</li>
+    <li>Ler o aviso que aparece por alguns segundos e, se quiser, clicar em <span class="tela">OK</span> para fechá-lo.</li>
+  </ol>
+  <p>Quando o pedido é aceito, o aviso diz <span class="tela">Exportação solicitada. Ela aparece na lista abaixo e você pode baixar quando ficar pronta.</span> A nova linha aparece no topo da lista <span class="tela">Minhas exportações</span>. A continuação está em <a href="#acompanhar-e-baixar">Acompanhar e baixar</a>.</p>
+
+  <!-- foto: exportacoes-aviso-solicitada | tela exportacoes; aviso temporário de sucesso de exportação solicitada, com o botão OK, e a nova linha no topo da lista Minhas exportações (Pendente ou Em processamento) -->
+
+  <p>O botão <span class="tela">Limpar Filtros</span> devolve o formulário ao padrão: tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, listas em <span class="tela">Todos</span>, datas e textos em branco e <span class="tela">Incluir anexos</span> marcada. Enquanto uma operação está em andamento (gerar, baixar, cancelar ou excluir), <span class="tela">Limpar Filtros</span> e <span class="tela">Gerar exportação</span> ficam desabilitados.</p>
+
+  <div class="nota">
+    <p><strong>Pedido recusado.</strong> Quando a tela recusa o pedido, o aviso traz o motivo. As recusas mais comuns (nenhum título encontrado, mais títulos que o máximo, exportações demais em andamento) estão em <a href="#cuidados-e-limites--quando-o-pedido-e-recusado">Cuidados e limites</a>.</p>
+  </div>
+</article>
