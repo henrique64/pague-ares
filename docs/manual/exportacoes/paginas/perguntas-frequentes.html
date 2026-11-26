@@ -19,7 +19,7 @@
   <p>Aceita o número do título, sem prefixo e sem zeros à esquerda. A planilha e as pastas do pacote mostram o código com prefixo, como <code>SOL-000123</code> para a solicitação de número 123.</p>
 
   <h3>O que muda ao desmarcar Incluir anexos?</h3>
-  <p>O pacote sai sem pastas de títulos. A planilha e o <code>LEIA-ME.txt</code> continuam no pacote, e a aba <span class="tela">Anexos</span> e os índices ficam só com o cabeçalho.</p>
+  <p>O pacote sai sem pastas de títulos. A planilha e o <code>LEIA-ME.txt</code> continuam no pacote, e a aba <span class="tela">Anexos</span> e o <code>indice.csv</code> ficam só com o cabeçalho, e o <code>indice.json</code> traz a lista de arquivos vazia.</p>
 
   <h3>Por que um título esperado não entrou no pacote?</h3>
   <p>Só entram títulos que já foram aprovados pelo Gestor, que não são rascunho e que não foram cancelados. Depois disso, os filtros do formulário restringem o resultado. Conferir, em especial, os períodos e os status escolhidos.</p>
@@ -32,7 +32,7 @@
   <p>Sim. A preparação segue no servidor. Ao voltar para <span class="tela">Exportações</span>, a lista <span class="tela">Minhas exportações</span> mostra a situação atual.</p>
 
   <h3>Quanto tempo o arquivo fica disponível?</h3>
-  <p>Hoje, 48 horas depois de concluído. A coluna <span class="tela">Expira em</span> mostra a data e a hora de cada exportação. Passado o prazo, a situação passa a <span class="tela">Expirada</span> e é preciso gerar de novo.</p>
+  <p>Pelo valor padrão do sistema, 48 horas depois de concluído; a equipe de TI pode alterar o prazo. A coluna <span class="tela">Expira em</span> mostra a data e a hora de cada exportação. Passado o prazo, o arquivo deixa de poder ser baixado e a situação passa a <span class="tela">Expirada</span> em até 30 minutos (a limpeza roda a cada 30 minutos, valor padrão). É preciso gerar de novo.</p>
 
   <h3>O botão Baixar não funcionou na segunda vez. Por quê?</h3>
   <p>O link gerado pelo botão <span class="tela">Baixar</span> vale uma vez e por 120 segundos. Clicar em <span class="tela">Baixar</span> de novo gera um link novo. Ver <a href="#acompanhar-e-baixar--baixar-o-arquivo">Acompanhar e baixar</a>.</p>
@@ -53,7 +53,7 @@
   <h3>Como conferir se um anexo foi alterado?</h3>
   <p>Comparando o SHA-256 do arquivo com o que está no <code>indice.csv</code> ou no <code>indice.json</code>. Ver <a href="#o-que-vem-no-pacote--conferir-a-integridade-dos-anexos">O que vem no pacote</a>.</p>
 
-  <h3>Dois anexos de um título têm o mesmo nome. Um deles se perde?</h3>
+  <h3>Dois anexos de um título têm o mesmo tipo de documento e o mesmo nome. Um deles se perde?</h3>
   <p>Não se perde. O segundo ganha <code>(2)</code> antes da extensão, o terceiro ganha <code>(3)</code>, e assim por diante.</p>
 
   <h2>Lista de pagamentos</h2>

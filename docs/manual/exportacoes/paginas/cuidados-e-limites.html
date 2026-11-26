@@ -24,11 +24,11 @@
   <p>Cada pessoa vê, na lista <span class="tela">Minhas exportações</span>, só as exportações que ela mesma pediu. O link de download é de uso único e vale por pouco tempo.</p>
 
   <h2>Limites de uso</h2>
-  <p>Os valores abaixo são os configurados hoje no servidor. A equipe de TI pode alterá-los.</p>
+  <p>Os valores abaixo são os valores padrão do sistema. A equipe de TI pode alterá-los.</p>
   <div class="tabela"><table>
     <thead><tr><th>Limite</th><th>Valor</th></tr></thead>
     <tbody>
-      <tr><td>Disponibilidade do arquivo depois de concluído</td><td>48 horas. Passado o prazo, o arquivo é apagado e a situação passa a <span class="tela">Expirada</span>.</td></tr>
+      <tr><td>Disponibilidade do arquivo depois de concluído</td><td>48 horas. Passado o prazo, o download deixa de ser possível e, na limpeza que o servidor faz a cada 30 minutos (também um valor padrão), o arquivo é apagado e a situação passa a <span class="tela">Expirada</span>.</td></tr>
       <tr><td>Títulos por exportação</td><td>até 5000</td></tr>
       <tr><td>Exportações em andamento por usuário</td><td>até 2, contando as linhas <span class="tela">Pendente</span> e <span class="tela">Em processamento</span></td></tr>
       <tr><td>Anexos por pacote</td><td>até 20 GB</td></tr>
@@ -38,7 +38,7 @@
     </tbody>
   </table></div>
   <div class="dica">
-    <p><strong>Exportar por período.</strong> Para volumes grandes, filtrar por período, um mês de cada vez, mantém cada pacote dentro dos limites de títulos e de tamanho.</p>
+    <p><strong>Exportar por período.</strong> Para volumes grandes, filtrar por um período mais curto reduz o número de títulos e o tamanho do pacote. As mensagens de recusa e de falha da tela dão a mesma sugestão.</p>
   </div>
 
   <h2>Quando o pedido é recusado</h2>
@@ -55,8 +55,9 @@
       <tr><td><span class="tela">A data final da solicitação é anterior à data inicial.</span></td><td>Corrigir o <span class="tela">Período da Solicitação (RDDV: cadastro)</span>. O mesmo vale para vencimento e para aprovação do Financeiro, com as mensagens <span class="tela">A data final de vencimento é anterior à data inicial.</span> e <span class="tela">A data final de aprovação do financeiro é anterior à data inicial.</span></td></tr>
       <tr><td>A mensagem informa a quantidade de <span class="tela">exportações em andamento, o máximo permitido.</span> e segue com <span class="tela">Aguarde uma terminar ou cancele uma delas.</span></td><td>Esperar uma exportação terminar ou cancelá-la na lista, com o botão <span class="tela">Cancelar</span>.</td></tr>
       <tr><td><span class="tela">A exportação está indisponível neste servidor por falta de configuração. Acione o suporte.</span></td><td>Acionar o suporte. A exportação não funciona neste servidor até a configuração ser corrigida.</td></tr>
-      <tr><td><span class="tela">Filtro de exportação inválido.</span> ou <span class="tela">Tipo de título inválido.</span></td><td>Clicar em <span class="tela">Limpar Filtros</span> e preencher de novo.</td></tr>
-      <tr><td><span class="tela">Não foi possível solicitar a exportação. Tente novamente.</span></td><td>Tentar de novo. Persistindo, acionar o suporte.</td></tr>
+      <tr><td><span class="tela">Filtro de exportação inválido.</span> ou <span class="tela">Tipo de título inválido.</span></td><td>A mensagem não indica outra ação.</td></tr>
+      <tr><td><span class="tela">Não foi possível solicitar a exportação. Tente novamente.</span> (aparece quando o servidor não responde)</td><td>Tentar de novo.</td></tr>
+      <tr><td><span class="tela">Não foi possível concluir a operação. Tente de novo.</span> (mensagem do servidor para um erro inesperado)</td><td>Tentar de novo.</td></tr>
     </tbody>
   </table></div>
 
@@ -72,10 +73,10 @@
       <tr><td><span class="tela">Não foi possível gerar a exportação. Gere de novo; se o erro continuar, acione o suporte.</span></td><td>Gerar de novo. Persistindo, acionar o suporte.</td></tr>
       <tr><td><span class="tela">O servidor está sem espaço em disco suficiente para gerar a exportação agora.</span> seguida de <span class="tela">Tente de novo mais tarde; se o erro continuar, acione o suporte.</span></td><td>Tentar mais tarde. Persistindo, acionar o suporte.</td></tr>
       <tr><td>A mensagem informa que a exportação <span class="tela">passou do limite de</span> um tamanho <span class="tela">de anexos por pacote.</span> e termina com <span class="tela">Gere de novo com filtros menores, por exemplo um período mais curto.</span></td><td>Gerar de novo com filtros menores, como um período mais curto.</td></tr>
-      <tr><td>A mensagem cita um anexo e o título dele e termina com <span class="tela">está corrompido e não pôde ser exportado.</span></td><td>A mensagem identifica o anexo e o título envolvidos. <!-- lacuna: qual é o procedimento para tratar um anexo corrompido (reenviar o anexo, acionar o suporte)? --></td></tr>
+      <tr><td>A mensagem cita um anexo e o título dele e termina com <span class="tela">está corrompido e não pôde ser exportado.</span></td><td>A exportação inteira falha e nenhum pacote fica disponível, enquanto esse título estiver entre os filtros. A mensagem diz qual é o anexo e qual é o título. Gerar de novo com filtros que deixem esse título de fora, por exemplo outro período, produz o pacote dos demais títulos.</td></tr>
     </tbody>
   </table></div>
 
   <h2>Dados pessoais no pacote</h2>
-  <p>A planilha <code>titulos.xlsx</code> traz CPF, banco, agência e conta completos. Compartilhar o pacote só com quem precisa, por um canal seguro, e apagar as cópias quando o uso terminar reduz o risco de vazamento. Excluir o arquivo na lista (botão <span class="tela">Excluir</span>) apaga a cópia guardada no servidor, mas não as cópias já baixadas.</p>
+  <p>A planilha <code>titulos.xlsx</code> traz sem máscara o documento do parceiro (CPF ou CNPJ) nas solicitações, o CPF do funcionário nos RDDVs, e banco, agência e conta. Compartilhar o pacote só com quem precisa, por um canal seguro, e apagar as cópias quando o uso terminar reduz o risco de vazamento. Excluir o arquivo na lista (botão <span class="tela">Excluir</span>) apaga o arquivo guardado no servidor, e depois disso não é possível baixá-lo de novo. As cópias que já foram baixadas continuam nos computadores onde foram salvas.</p>
 </article>

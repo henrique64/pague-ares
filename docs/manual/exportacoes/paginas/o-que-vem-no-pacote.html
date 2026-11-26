@@ -18,7 +18,7 @@
   </table></div>
 
   <figure class="captura"><img src="img/pacote-arvore-extraida.webp" alt="Pasta do ZIP extraído, com as pastas dos títulos e os quatro arquivos da raiz" loading="lazy">
-    <figcaption>Pasta do ZIP extraído: na raiz ficam titulos.xlsx, indice.csv, indice.json e LEIA-ME.txt, e cada título com anexos tem a sua pasta SOL-… ou RDDV-…; um nome de anexo repetido ganha (2).</figcaption></figure>
+    <figcaption>Prévia da pasta do ZIP extraído: na raiz ficam titulos.xlsx, indice.csv, indice.json e LEIA-ME.txt, e cada título com anexos tem a sua pasta SOL-… ou RDDV-…; um nome de anexo repetido ganha (2).</figcaption></figure>
 
   <h2>As pastas dos títulos</h2>
   <p>Cada pasta tem o código do título como nome: <code>SOL-</code> e o número para solicitações, <code>RDDV-</code> e o número para RDDVs, com seis dígitos no mínimo. Título sem anexo não ganha pasta. Com <span class="tela">Incluir anexos</span> desmarcada, o pacote não tem nenhuma pasta de título.</p>
@@ -27,7 +27,7 @@
     <li>Anexo sem tipo de documento começa por <code>Documento</code>.</li>
     <li>Anexo sem nome original recebe o nome <code>anexo-</code> seguido do número do anexo.</li>
     <li>O nome tem no máximo 120 caracteres, e a extensão é preservada.</li>
-    <li>Nomes repetidos na mesma pasta ganham <code>(2)</code>, <code>(3)</code> e assim por diante antes da extensão. O primeiro fica sem número.</li>
+    <li>Nomes repetidos na mesma pasta ganham <code>(2)</code>, <code>(3)</code> e assim por diante antes da extensão. O primeiro fica sem número. A comparação não diferencia maiúsculas de minúsculas: na foto, o segundo anexo enviado, de nome igual ao primeiro, mas escrito em maiúsculas, aparece como <code>EXTRATO (2).PDF</code> ao lado de <code>extrato.pdf</code>.</li>
     <li>Os caracteres que o Windows não aceita em nomes de arquivo saem do nome.</li>
   </ul>
 
@@ -45,13 +45,13 @@
   </dl>
 
   <figure class="captura"><img src="img/pacote-planilha-abas.webp" alt="Planilha titulos.xlsx na aba Solicitações, com as quatro abas embaixo" loading="lazy">
-    <figcaption>Planilha titulos.xlsx aberta na aba Solicitações; as abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos aparecem embaixo, e o código do título é um link para a pasta.</figcaption></figure>
+    <figcaption>Prévia da planilha titulos.xlsx na aba Solicitações; as abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos aparecem embaixo, e o código do título é um link para a pasta.</figcaption></figure>
 
   <h3>Links para as pastas e os anexos</h3>
   <p>Nas abas <span class="tela">Solicitações</span> e <span class="tela">RDDVs</span>, a coluna <span class="tela">Código</span> é um link para a pasta do título, quando ele tem anexos. A coluna <span class="tela">Qtde. de anexos</span> conta os anexos que entraram no pacote. Na aba <span class="tela">Anexos</span>, a coluna <span class="tela">Arquivo no pacote</span> é um link para cada arquivo. Os links são relativos e só funcionam com o ZIP extraído.</p>
 
   <figure class="captura"><img src="img/pacote-planilha-anexos.webp" alt="Aba Anexos do titulos.xlsx, com uma linha por anexo e as colunas de tipo, nome, caminho, tamanho e SHA-256" loading="lazy">
-    <figcaption>Aba Anexos do titulos.xlsx: uma linha por anexo, com tipo de documento, nome original, caminho no pacote (link), tamanho, SHA-256 e data de envio.</figcaption></figure>
+    <figcaption>Prévia da aba Anexos do titulos.xlsx: uma linha por anexo, com tipo de documento, nome original, caminho no pacote (link), tamanho, SHA-256 e data de envio.</figcaption></figure>
 
   <h3>Formato dos valores</h3>
   <ul>
@@ -73,7 +73,7 @@
   </ul>
 
   <figure class="captura"><img src="img/pacote-indice-csv.webp" alt="Conteúdo do indice.csv, com o cabeçalho na primeira linha e uma linha por anexo" loading="lazy">
-    <figcaption>Arquivo indice.csv: primeira linha com o cabeçalho titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256 e uma linha por anexo.</figcaption></figure>
+    <figcaption>Prévia do arquivo indice.csv: primeira linha com o cabeçalho titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256 e uma linha por anexo.</figcaption></figure>
 
   <div class="nota">
     <p><strong>Tipo do título nos índices.</strong> No <code>indice.csv</code> e no <code>indice.json</code>, o tipo do título sai como <code>Solicitacao</code> ou <code>Rddv</code>, sem acento. A aba <span class="tela">Anexos</span> da planilha usa <span class="tela">Solicitação</span> e <span class="tela">RDDV</span>.</p>
@@ -92,12 +92,12 @@
   <p>No <code>LEIA-ME.txt</code>, os filtros de usuário e de departamento aparecem pelo número de identificação, e não pelo nome. Os filtros de lista de opções, como status e tipo, aparecem por extenso. Um período com os dois lados aparece como de uma data a outra; só com o início, como a partir de uma data; só com o fim, como até uma data.</p>
 
   <figure class="captura"><img src="img/pacote-leia-me.webp" alt="Texto do arquivo LEIA-ME.txt, do título até os filtros usados" loading="lazy">
-    <figcaption>Texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados.</figcaption></figure>
+    <figcaption>Prévia do texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados.</figcaption></figure>
 
   <h2>Conferir a integridade dos anexos</h2>
   <ol class="passos">
     <li>No <code>indice.csv</code> (ou no <code>indice.json</code>), localizar o anexo e anotar o SHA-256 dele.</li>
     <li>Calcular o SHA-256 do arquivo extraído. No Windows, o <code>LEIA-ME.txt</code> indica o comando <code>certutil -hashfile</code>.</li>
-    <li>Comparar os dois códigos. Se forem iguais, o arquivo é o mesmo que foi enviado ao PagueAres.</li>
+    <li>Comparar os dois códigos. Se forem iguais, o arquivo extraído é igual ao anexo guardado no PagueAres na hora da exportação.</li>
   </ol>
 </article>

@@ -17,7 +17,7 @@
     <dt>Tipo de título</dt>
     <dd>Três opções: <span class="tela">Ambos (Solicitações e RDDVs)</span>, que é o padrão, <span class="tela">Solicitação</span> e <span class="tela">RDDV</span>. A escolha habilita ou desabilita outros campos (ver a próxima seção).</dd>
     <dt>Código</dt>
-    <dd>Número do título. Aceita só número inteiro maior que zero. A planilha e as pastas do pacote mostram o código com prefixo e zeros, como <code>SOL-000123</code>.</dd>
+    <dd>Número do título, inteiro e maior que zero. Zero ou número com casas decimais é ignorado e a exportação sai sem esse filtro. A planilha e as pastas do pacote mostram o código com prefixo e zeros, como <code>SOL-000123</code>.</dd>
     <dt>Número do Documento (só Solicitação)</dt>
     <dd>Número do documento da solicitação. O texto digitado precisa ser igual ao número gravado.</dd>
     <dt>Departamento</dt>
@@ -65,12 +65,14 @@
     </tbody>
   </table></div>
 
-  <figure class="captura"><img src="img/exportacoes-tipo-rddv.webp" alt="Formulário com o tipo RDDV e quatro campos esmaecidos, cercados por um realce" loading="lazy">
-    <figcaption>Com o tipo RDDV, os quatro campos marcados com "só Solicitação" ficam desabilitados e aparecem esmaecidos, com um realce em volta.</figcaption></figure>
+  <p>Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, nenhum campo fica desabilitado, mas o preenchimento de alguns tira títulos do pacote: preencher um campo que só vale para Solicitação (<span class="tela">Número do Documento (só Solicitação)</span>, <span class="tela">Tipo de solicitação (só Solicitação)</span>, <span class="tela">Tipo de pagamento (só Solicitação)</span> ou <span class="tela">Forma de pagamento (só Solicitação)</span>) deixa os RDDVs fora do pacote, e preencher <span class="tela">Tipo de relatório (só RDDV)</span> deixa as solicitações fora.</p>
+
+  <figure class="captura"><img src="img/exportacoes-tipo-rddv.webp" alt="Formulário com o tipo RDDV e quatro campos esmaecidos, cercados por um contorno laranja de destaque" loading="lazy">
+    <figcaption>Com o tipo RDDV, os quatro campos marcados com "só Solicitação" ficam desabilitados e aparecem esmaecidos. O contorno laranja em volta deles é um destaque colocado só na foto e não faz parte da tela.</figcaption></figure>
 
   <h2>Períodos</h2>
   <p>Cada período tem os campos <span class="tela">Início</span> e <span class="tela">Fim</span>. As datas podem ser escolhidas no calendário, aberto pelo ícone do campo, ou digitadas no formato dd/mm/aaaa. Início e fim também podem ser preenchidos isoladamente: só o início busca de uma data em diante, e só o fim, até uma data. O dia final entra no resultado.</p>
-  <p>Para volumes grandes, exportar por período, um mês de cada vez, mantém o pacote dentro dos limites descritos em <a href="#cuidados-e-limites--limites-de-uso">Cuidados e limites</a>.</p>
+  <p>Quando os filtros trazem mais títulos que o máximo, ou o pacote passa do limite de anexos, restringir o período reduz o pacote, como as próprias mensagens da tela sugerem. Os limites estão em <a href="#cuidados-e-limites--limites-de-uso">Cuidados e limites</a>.</p>
 
   <figure class="captura"><img src="img/exportacoes-seletor-de-periodo.webp" alt="Calendário de novembro de 2026 aberto sobre o formulário, a partir do campo Período de Vencimento" loading="lazy">
     <figcaption>Calendário aberto pelo ícone do campo Período de Vencimento, com o mês de novembro de 2026 e o dia atual circulado.</figcaption></figure>
@@ -93,6 +95,6 @@
   <p>O botão <span class="tela">Limpar Filtros</span> devolve o formulário ao padrão: tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, listas em <span class="tela">Todos</span>, datas e textos em branco e <span class="tela">Incluir anexos</span> marcada. Enquanto uma operação está em andamento (gerar, baixar, cancelar ou excluir), <span class="tela">Limpar Filtros</span> e <span class="tela">Gerar exportação</span> ficam desabilitados.</p>
 
   <div class="nota">
-    <p><strong>Pedido recusado.</strong> Quando a tela recusa o pedido, o aviso traz o motivo. As recusas mais comuns (nenhum título encontrado, mais títulos que o máximo, exportações demais em andamento) estão em <a href="#cuidados-e-limites--quando-o-pedido-e-recusado">Cuidados e limites</a>.</p>
+    <p><strong>Pedido recusado.</strong> Quando o servidor recusa o pedido, o aviso traz o motivo. As recusas mais comuns (nenhum título encontrado, mais títulos que o máximo, exportações demais em andamento) estão em <a href="#cuidados-e-limites--quando-o-pedido-e-recusado">Cuidados e limites</a>.</p>
   </div>
 </article>
