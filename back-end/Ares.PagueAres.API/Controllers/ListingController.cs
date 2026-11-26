@@ -87,17 +87,22 @@ namespace Ares.PagueAres.API.Controllers
         {
             var query = ApplyFilters(dbContext.ViewListagemSolicitacoes, filter);
 
-            if (filter.ViewMode is not null && filter.ViewMode != PaymentListView.Undefined)
-            {
-                var currentUser = this.GetUserFromToken()
-                    ?? throw new Exception("Usuário não autenticado.");
+            var currentUser = this.GetUserFromToken()
+                ?? throw new Exception("Usuário não autenticado.");
 
-                query = ApplyViewModeFilter(
-                    query,
-                    filter.ViewMode.Value,
-                    currentUser.IdUsuario,
-                    veTodosNaVisaoFinanceira: this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador));
-            }
+            // A visão é sempre aplicada: sem viewMode, ou com Undefined (0), a lista vale como Minhas Solicitações, para
+            // que nenhum pedido receba os títulos de todos os usuários. Um valor fora do enum nem chega aqui: o model
+            // binding o recusa com 400.
+            var viewMode = filter.ViewMode is null or PaymentListView.Undefined
+                ? PaymentListView.MyView
+                : filter.ViewMode.Value;
+
+            query = ApplyViewModeFilter(
+                query,
+                viewMode,
+                currentUser.IdUsuario,
+                veTodosNaVisaoFinanceira: this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador),
+                veFilaDoDashboard: this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Contabilidade, Funcoes.Administrador));
 
             var sortField = string.IsNullOrEmpty(filter.SortField) ?
                 "DataSolicitacao" : filter.SortField;
@@ -207,23 +212,28 @@ namespace Ares.PagueAres.API.Controllers
         /// Aplica o filtro de visão (aba) à listagem. Rascunhos e cancelados NUNCA aparecem
         /// no fluxo de aprovação (Gestor / Financeiro / Dashboard); apenas a visão
         /// "Minhas Solicitações" exibe os próprios registros do usuário, inclusive rascunhos.
+        /// Toda visão tem escopo: Undefined (0) e qualquer valor fora do enum valem como Minhas Solicitações, e nunca
+        /// devolvem a lista inteira.
         /// </summary>
         /// <param name="veTodosNaVisaoFinanceira">
         /// Verdadeiro quando o usuário tem o perfil Financeiro ou Administrador: na visão financeira (aba
         /// Financeiro/Contábil) ele vê todos os títulos aprovados pelo gestor. Falso nos demais perfis (Contabilidade,
         /// por exemplo), que veem só os títulos atribuídos a eles. As outras visões não usam este parâmetro.
         /// </param>
+        /// <param name="veFilaDoDashboard">
+        /// Verdadeiro quando o usuário tem o perfil Financeiro, Contabilidade ou Administrador, os perfis que veem a tela
+        /// inicial. A fila do Dashboard traz títulos de todos os usuários; sem um desses perfis, ela vem vazia. As
+        /// outras visões não usam este parâmetro.
+        /// </param>
         public static IQueryable<ViewListagemSolicitacoes> ApplyViewModeFilter(
             IQueryable<ViewListagemSolicitacoes> query,
             PaymentListView viewMode,
             int currentUserId,
-            bool veTodosNaVisaoFinanceira)
+            bool veTodosNaVisaoFinanceira,
+            bool veFilaDoDashboard)
         {
             switch (viewMode)
             {
-                case PaymentListView.MyView:
-                    return query.Where(r => r.IdSolicitante == currentUserId);
-
                 case PaymentListView.ManagerView:
                     return query.Where(r => r.IdGestor == currentUserId &&
                         r.Rascunho != true && r.Cancelado != true);
@@ -236,6 +246,11 @@ namespace Ares.PagueAres.API.Controllers
                             r.Rascunho != true && r.Cancelado != true);
 
                 case PaymentListView.Dashboard:
+                    if (!veFilaDoDashboard)
+                    {
+                        return query.Where(r => false);
+                    }
+
                     return query.Where(r =>
                         r.IdUsuarioAtribuido == null &&
                         r.IdStatusGestor == 2 &&
@@ -243,8 +258,10 @@ namespace Ares.PagueAres.API.Controllers
                         r.IdStatusContabilidade != 3 &&
                         r.Rascunho != true && r.Cancelado != true);
 
+                // Minhas Solicitações, e também Undefined e qualquer valor fora do enum.
+                case PaymentListView.MyView:
                 default:
-                    return query;
+                    return query.Where(r => r.IdSolicitante == currentUserId);
             }
         }
 

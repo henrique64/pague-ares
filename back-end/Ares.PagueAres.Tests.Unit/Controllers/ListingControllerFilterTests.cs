@@ -28,7 +28,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void ManagerView_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.ManagerView, currentUserId: 2, veTodosNaVisaoFinanceira: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.ManagerView, currentUserId: 2, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -40,7 +40,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void MyView_RetornaPropriosRegistrosInclusiveRascunho()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.MyView, currentUserId: 3, veTodosNaVisaoFinanceira: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.MyView, currentUserId: 3, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -52,7 +52,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void FinancialView_FinanceiroOuAdministrador_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, veTodosNaVisaoFinanceira: true)
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, veTodosNaVisaoFinanceira: true, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -64,7 +64,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void FinancialView_SemPerfilFinanceiroNemAdministrador_SomenteAtribuidosSemRascunho()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, veTodosNaVisaoFinanceira: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -76,12 +76,40 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void Dashboard_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 1, veTodosNaVisaoFinanceira: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 1, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: true)
                 .Select(r => r.Codigo)
                 .ToList();
 
             // Não atribuídos, StatusGestor=2, não rejeitados, não rascunho, não cancelado → 2 e 4.
             result.Should().BeEquivalentTo(new[] { 2, 4 });
+        }
+
+        [Fact]
+        public void Dashboard_SemPerfilFinanceiroContabilidadeNemAdministrador_NaoRetornaNada()
+        {
+            var result = ListingController
+                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 3, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
+                .Select(r => r.Codigo)
+                .ToList();
+
+            // A fila traz títulos de todos os usuários (2 e 4, este de outro solicitante): sem o perfil, vem vazia.
+            result.Should().BeEmpty();
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(5)]
+        [InlineData(99)]
+        [InlineData(-1)]
+        public void VisaoIndefinidaOuForaDoEnum_RetornaSoOsPropriosRegistros(int visao)
+        {
+            var result = ListingController
+                .ApplyViewModeFilter(Sample(), (PaymentListView)visao, currentUserId: 3, veTodosNaVisaoFinanceira: true, veFilaDoDashboard: true)
+                .Select(r => r.Codigo)
+                .ToList();
+
+            // Sem visão conhecida vale Minhas Solicitações: só os registros do solicitante 3 (1, 2, 3), nunca a lista toda.
+            result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
     }
 }

@@ -22,6 +22,13 @@ namespace Ares.PagueAres.API.Controllers
         private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
         private const string MensagemFiltroInvalido = "Filtro de exportação inválido.";
 
+        /// <summary>
+        /// Começo do texto <c>Tipo</c> do RDDV na view <c>vListagemSolicitacoes</c> (<c>CONCAT('RDDV - ', ...)</c>); a
+        /// solicitação tem o texto fixo <c>Pagamento</c>. É este texto que distingue solicitação de RDDV na planilha: o
+        /// <c>IdTipo</c> da view não serve, porque no RDDV ele é o tipo de relatório, que pode estar gravado como 0.
+        /// </summary>
+        private const string PrefixoTipoRddv = "RDDV";
+
         // Garante que a leitura e a remoção da chave de exportação aconteçam juntas (uso único).
         private static readonly Lock TravaChaveExportacao = new();
 
@@ -121,17 +128,18 @@ namespace Ares.PagueAres.API.Controllers
                 {
                     var documentoParceiro = filter.PartnerDocument.ToLower();
 
-                    titulos = titulos.Where(r => r.IdTipo == 0 && dbContext.Solicitacaos.Any(s =>
+                    titulos = titulos.Where(r => !r.Tipo.StartsWith(PrefixoTipoRddv) && dbContext.Solicitacaos.Any(s =>
                         s.IdSolicitacao == r.Codigo && s.NumDocParceiro.ToLower().Contains(documentoParceiro)));
                 }
 
                 // Solicitações primeiro e RDDVs depois, cada grupo pelo código, como no relatório antigo.
                 var linhas = await titulos
-                    .OrderBy(r => r.IdTipo == 0 ? 0 : 1)
+                    .OrderBy(r => r.Tipo.StartsWith(PrefixoTipoRddv) ? 1 : 0)
                     .ThenBy(r => r.Codigo)
                     .Select(r => new
                     {
                         r.Codigo,
+                        EhRddv = r.Tipo.StartsWith(PrefixoTipoRddv),
                         r.IdTipo,
                         r.DataSolicitacao,
                         r.DataVencimento,
@@ -147,11 +155,12 @@ namespace Ares.PagueAres.API.Controllers
 
                 var dataset = linhas.Select(r =>
                 {
-                    var ehSolicitacao = r.IdTipo == 0;
+                    var ehSolicitacao = !r.EhRddv;
 
                     return new PaymentListItem()
                     {
                         Codigo = r.Codigo.ToString(),
+                        // No RDDV, o IdTipo da view é o tipo de relatório (1 a 3; 0 sai como "Código 0").
                         Tipo = ehSolicitacao ? "Pagamento" : "RDDV - " + RotulosExportacao.TipoRelatorio(r.IdTipo),
                         DataInclusao = r.DataSolicitacao,
                         DataVencimento = r.DataVencimento,

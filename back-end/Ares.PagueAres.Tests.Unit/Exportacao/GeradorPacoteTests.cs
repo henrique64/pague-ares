@@ -526,12 +526,12 @@ namespace Ares.PagueAres.Tests.Unit.Exportacao
 
             var bytes = pacote.Ler("indice.json");
             bytes.Take(3).Should().NotEqual(new byte[] { 0xEF, 0xBB, 0xBF }, "o JSON é UTF-8 sem BOM");
-            Encoding.UTF8.GetString(bytes).Should().Contain("\n  \"versao\": 1", "o JSON é indentado");
+            Encoding.UTF8.GetString(bytes).Should().Contain("\n  \"versao\": 2", "o JSON é indentado");
 
             using var json = JsonDocument.Parse(bytes);
             var raiz = json.RootElement;
             raiz.EnumerateObject().Select(p => p.Name).Should().Equal("versao", "exportacaoId", "geradoEm", "filtros", "totais", "titulos", "arquivos");
-            raiz.GetProperty("versao").GetInt32().Should().Be(1);
+            raiz.GetProperty("versao").GetInt32().Should().Be(2, "a versão 2 do contrato tem o tipo \"Solicitação\"/\"RDDV\" e o geradoEm com deslocamento");
             raiz.GetProperty("exportacaoId").GetInt32().Should().Be(42);
             var geradoEm = raiz.GetProperty("geradoEm").GetString()!;
             geradoEm.Should().MatchRegex(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2}|Z)$");

@@ -91,6 +91,9 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             resultado.Should().BeOfType<FileStreamResult>("a consulta traduz e a planilha sai, mesmo sem linhas");
             captura.Comandos.Should().ContainSingle();
             captura.Comandos[0].Should().Contain("[vListagemSolicitacoes]").And.Contain("EXISTS").And.Contain("ORDER BY");
+            captura.Comandos[0].Should().Contain("LIKE N'RDDV%'",
+                "solicitação e RDDV se distinguem pelo texto do tipo na view, e não pelo IdTipo, que no RDDV é o tipo de relatório");
+            captura.Comandos[0].Should().NotContain("[IdTipo] = 0");
             avisos.Should().BeEmpty("a tradução não pode gerar aviso do EF");
         }
     }

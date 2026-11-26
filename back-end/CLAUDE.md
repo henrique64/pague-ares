@@ -212,7 +212,7 @@ Todos os controllers usam `[Route("api/[controller]")]` e `[Authorize]` (JWT Bea
 | `AuthController` | `/api/auth` | `POST /` — login e geração de JWT |
 | `RequestController` | `/api/request` | `GET /{id}`, `POST /` (cria/atualiza, rascunho, aprovação), `GET /dashboard` (consolidado: Solicitações + RDDVs), `GET /{id}/user?userId=` (atribuição) |
 | `RddvController` | `/api/rddv` | `GET /{id}`, `POST /`, `GET /dashboard` (só RDDVs), `GET /{id}/user?userId=` |
-| `ListingController` | `/api/listing` | `GET /` — listagem unificada com filtros, ordenação, paginação e `ViewMode` |
+| `ListingController` | `/api/listing` | `GET /` — listagem unificada com filtros, ordenação, paginação e `ViewMode` (sem `ViewMode`, vale `MyView`; ver ViewModes) |
 | `UsersController` | `/api/users` | `GET /` (ADM), `GET /{id}` (próprio perfil ou ADM), `POST /` (ADM), `GET /directory?userName=` (busca no AD), `GET /list?roles=` |
 | `ExportController` | `/api/export` | `GET /payments` (Excel), `GET /rddv/attachment/{id}` e `GET /request/attachment/{id}` (ZIP) — todos com `?key=` |
 | `ConfigController` | `/api/config` | `GET /`, `POST /` (somente ADM) |
@@ -291,9 +291,14 @@ Regras aplicadas em `RequestController` (Solicitação):
 - `MyView` — próprias solicitações (inclui rascunhos)
 - `ManagerView` — onde o usuário é gestor (sem rascunhos/cancelados)
 - `FinancialView` — aprovadas pelo gestor (todas se FIN ou ADM, somente atribuídas ao usuário caso contrário, por exemplo CON; sem rascunhos/cancelados)
+- `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados); só para FIN, CON e ADM, os perfis que veem a tela inicial. Nos demais perfis a fila vem vazia, porque traz títulos de todos os usuários.
 
-Os filtros da tela (sem a visão e sem a ordenação) ficam num lugar só, `ListingController.ApplyFilters`, usado também pelo Excel `Pagamentos.xlsx` (`GET /api/export/payments`), que parte da mesma view: com o mesmo filtro, a planilha traz os títulos que a aba Financeiro/Contábil mostra ao FIN. O documento do parceiro é filtro só da planilha.
-- `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados)
+A visão é sempre aplicada: `GET /api/listing` sem `viewMode`, ou com `viewMode=0` (`Undefined`), vale como `MyView`, em qualquer perfil, e nunca devolve os títulos de todos os usuários. Um `viewMode` fora do enum (por exemplo `5`, `99`, `-1` ou texto) é recusado pelo model binding com 400; em `ApplyViewModeFilter`, qualquer valor que não seja uma das quatro visões também cai em `MyView`. O rascunho só aparece para o próprio dono, em `MyView`.
+
+Os filtros da tela (sem a visão e sem a ordenação) ficam num lugar só, `ListingController.ApplyFilters`, usado também pelo Excel `Pagamentos.xlsx` (`GET /api/export/payments`), que parte da mesma view: com o mesmo filtro, a planilha traz os títulos que a aba Financeiro/Contábil mostra ao FIN. O documento do parceiro é filtro só da planilha. Na planilha, solicitação e RDDV se distinguem pelo texto `Tipo` da view (o do RDDV começa com `RDDV`), e não pelo `IdTipo`, que no RDDV é o tipo de relatório.
+
+### Tipo de relatório do RDDV (RddvController.POST)
+`TipoRelatorio` aceita 1 (Adiantamento), 2 (Prestação de Contas) e 3 (Reembolso); fora disso, `POST /api/rddv` responde 400 com `success=false` e a mensagem `RddvController.MensagemTipoRelatorioInvalido`, sem gravar. Duas exceções, para não quebrar a tela nem travar dados antigos: o rascunho pode ficar com 0 (tipo ainda não escolhido, porque a tela salva o rascunho sem validar), mas não sai do rascunho sem um tipo de 1 a 3; e o RDDV já enviado e gravado com outro valor antes da regra segue o fluxo enquanto o tipo gravado não muda.
 
 ---
 

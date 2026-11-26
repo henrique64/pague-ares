@@ -417,8 +417,9 @@ sealed class Verificador(Resultado res, string caminhoZip)
             var raiz = doc.RootElement;
             if (raiz.ValueKind != JsonValueKind.Object) { res.Falhar("indice-json", "A raiz de indice.json não é um objeto."); return; }
 
-            if (!raiz.TryGetProperty("versao", out var versao) || versao.ValueKind != JsonValueKind.Number || versao.GetInt32() != 1)
-                res.Falhar("indice-json", "'versao' ausente ou diferente de 1.");
+            // Versão 2 do contrato: tipo do título "Solicitação"/"RDDV" e geradoEm com o deslocamento do fuso da exportação.
+            if (!raiz.TryGetProperty("versao", out var versao) || versao.ValueKind != JsonValueKind.Number || versao.GetInt32() != 2)
+                res.Falhar("indice-json", "'versao' ausente ou diferente de 2.");
             if (!raiz.TryGetProperty("exportacaoId", out var expId) || expId.ValueKind != JsonValueKind.Number)
                 res.Falhar("indice-json", "'exportacaoId' ausente ou não numérico.");
             if (!raiz.TryGetProperty("geradoEm", out var gerado) || gerado.ValueKind != JsonValueKind.String || !DateTimeOffset.TryParse(gerado.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out _))

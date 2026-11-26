@@ -196,6 +196,13 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (rddv.IdRelatorio == 0)
                 {
+                    var erroTipoRelatorio = ValidarTipoRelatorio(rddv, gravado: null);
+
+                    if (erroTipoRelatorio != null)
+                    {
+                        return RespostaTipoRelatorioInvalido(erroTipoRelatorio);
+                    }
+
                     requestData = new Rddv();
 
                     requestData.DataCadastro = DateTime.Now;
@@ -231,6 +238,13 @@ namespace Ares.PagueAres.API.Controllers
                             Pages = 1,
                             Records = 0
                         });
+                    }
+
+                    var erroTipoRelatorio = ValidarTipoRelatorio(rddv, requestData);
+
+                    if (erroTipoRelatorio != null)
+                    {
+                        return RespostaTipoRelatorioInvalido(erroTipoRelatorio);
                     }
                 }
 
@@ -482,6 +496,55 @@ namespace Ares.PagueAres.API.Controllers
                     Records = 0
                 });
             }
+        }
+
+        public const string MensagemTipoRelatorioInvalido =
+            "Tipo de relatório inválido: informe 1 (Adiantamento), 2 (Prestação de Contas) ou 3 (Reembolso).";
+
+        /// <summary>
+        /// Valida o tipo de relatório do RDDV que vai ser gravado. Devolve a mensagem de recusa, ou null quando o tipo
+        /// pode ser gravado.
+        /// <list type="bullet">
+        /// <item>1 (Adiantamento), 2 (Prestação de Contas) e 3 (Reembolso) valem sempre.</item>
+        /// <item>0 vale só no rascunho, que a tela salva sem validar, antes de o tipo ser escolhido. Para sair do
+        /// rascunho, o RDDV precisa de um tipo de 1 a 3.</item>
+        /// <item>O RDDV já enviado e gravado com outro valor antes desta regra (legado) continua podendo seguir o fluxo
+        /// (aprovar, negar, lançar, cancelar) enquanto o tipo gravado não muda; trocar o tipo exige um de 1 a 3.</item>
+        /// </list>
+        /// Qualquer outro valor (negativo, maior que 3) é recusado, inclusive no rascunho.
+        /// </summary>
+        /// <param name="gravado">O RDDV como está no banco, na edição; null na criação.</param>
+        public static string? ValidarTipoRelatorio(RddvDto rddv, Rddv? gravado)
+        {
+            if (rddv.TipoRelatorio is >= 1 and <= 3)
+            {
+                return null;
+            }
+
+            if (gravado is { Rascunho: false } && rddv.TipoRelatorio == gravado.TipoRelatorio)
+            {
+                return null;
+            }
+
+            if (rddv.Rascunho && rddv.TipoRelatorio == 0)
+            {
+                return null;
+            }
+
+            return MensagemTipoRelatorioInvalido;
+        }
+
+        private BadRequestObjectResult RespostaTipoRelatorioInvalido(string mensagem)
+        {
+            return BadRequest(new GenericResponse<object>()
+            {
+                Success = false,
+                Message = mensagem,
+                Data = null,
+                Page = 1,
+                Pages = 1,
+                Records = 0
+            });
         }
 
         [HttpGet("dashboard")]

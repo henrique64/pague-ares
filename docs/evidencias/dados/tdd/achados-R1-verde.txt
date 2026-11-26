@@ -1,0 +1,87 @@
+R1 — Achados da revisão (back-end, crítica: autorização de dados) — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela
+Comandos: dotnet test back-end/Ares.PagueAres.Tests.Unit --filter "FullyQualifiedName~ListingControllerFilterTests|FullyQualifiedName~GeradorPacoteTests.Gerar_IndiceJson_TemOFormatoDoContrato"
+          dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~ListagemEscopoTests|FullyQualifiedName~RddvTipoRelatorioTests|FullyQualifiedName~PagamentosTraducaoSqlServerTests"
+          dotnet build back-end/Ares.PagueAres.sln --no-incremental
+          dotnet test back-end/Ares.PagueAres.sln
+          dotnet build tools/exportacao/verificar/verificar.cs
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/ListagemEscopoTests.cs (novo, 55 casos)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/RddvTipoRelatorioTests.cs (novo, 16 casos)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/PagamentosTraducaoSqlServerTests.cs (asserção nova)
+                   back-end/Ares.PagueAres.Tests.Unit/Controllers/ListingControllerFilterTests.cs (5 casos novos; parâmetro
+                   novo veFilaDoDashboard nas chamadas que já existiam)
+                   back-end/Ares.PagueAres.Tests.Unit/Exportacao/GeradorPacoteTests.cs (versão esperada 2)
+Banco: EF Core InMemory (integração) e SQL Server só para traduzir o SQL, sem conexão. Só dados fictícios.
+
+Mudança
+------------------------------------------------------------------------------------------
+Achado 1 — ListingController
+- BuildQuery aplica a visão sempre. Sem viewMode, ou com viewMode=0 (Undefined), vale MyView (títulos do próprio
+  usuário, inclusive os rascunhos dele), em qualquer perfil. A tela manda viewMode em todas as chamadas (MyView,
+  ManagerView ou FinancialView em payments; Dashboard em home), então nada muda para ela.
+- ApplyViewModeFilter: o ramo default, que devolvia a lista inteira, passa a ser o de MyView; Undefined e qualquer valor
+  fora do enum caem nele. Parâmetro novo veFilaDoDashboard: a fila do Dashboard, que traz títulos de todos os usuários,
+  só vem para FIN, CON e ADM (os perfis que veem a tela inicial); nos demais, vem vazia (lista vazia, 200, para não
+  quebrar a tela inicial, que um SOL ou GES chega a chamar antes de ser redirecionado para /payments).
+- Valor fora do enum (5, 99, -1, texto): o model binding já responde 400 (fixado por teste); escolhido manter o 400 na
+  borda HTTP e MyView como defesa dentro de ApplyViewModeFilter. A tela nunca manda um valor assim.
+- Outros endpoints: ApplyViewModeFilter só é usado pela lista. ExportController.ExportPaymentList não usa visão (escopo
+  próprio de FIN/ADM pela chave de exportação). Os GET /api/request/dashboard e /api/rddv/dashboard não têm viewMode e
+  devolvem só contagens (sem títulos): não é o mesmo furo, ficou registrado como pendência.
+Achado 2 — RDDV com tipo de relatório 0
+- ExportController.ExportPaymentList distingue solicitação de RDDV pelo texto Tipo da view (o do RDDV começa com "RDDV",
+  CONCAT('RDDV - ', ...); o da solicitação é 'Pagamento'), na ordenação, no rótulo da linha e no filtro de documento do
+  parceiro. O RDDV gravado com tipo 0 sai "RDDV - Código 0", com "Nº do documento" vazio e o solicitante como parceiro, e
+  fica de fora do filtro de documento do parceiro. No SQL Server: LIKE N'RDDV%'.
+- RddvController.POST valida TipoRelatorio (ValidarTipoRelatorio) na criação e na edição: fora de 1 a 3 responde 400 com
+  success=false e "Tipo de relatório inválido: informe 1 (Adiantamento), 2 (Prestação de Contas) ou 3 (Reembolso).", sem
+  gravar. Exceções: rascunho com 0 (a tela salva o rascunho sem validar, antes de o tipo ser escolhido; não sai do
+  rascunho sem um tipo de 1 a 3) e RDDV já enviado gravado com outro valor antes da regra, enquanto o tipo não muda
+  (para que GES, FIN e CON possam seguir o fluxo de um RDDV legado). Qualquer valor negativo ou maior que 3 é recusado,
+  inclusive no rascunho.
+Achado 3 — indice.json
+- IndiceExportacao.VersaoIndiceJson = 2 (tipo "Solicitação"/"RDDV", antes "Solicitacao"/"Rddv"; geradoEm com o
+  deslocamento do fuso da exportação, antes o do servidor). tools/exportacao/verificar/verificar.cs exige versao 2.
+Documentação: back-end/CLAUDE.md (ViewModes, tipo de relatório do RDDV, discriminador da planilha).
+
+Resultado
+------------------------------------------------------------------------------------------
+Filtro dos testes da etapa: Unidade 11 aprovados, 0 com falha; Integração 73 aprovados, 0 com falha.
+Build (--no-incremental): 0 erros, 35 avisos, todos já existentes (os mesmos 7 CS8602/CS8604 em arquivos e linhas que a
+etapa não tocou, e os NU1902/NU1903 de pacotes). Nenhum aviso novo.
+Unidade:    148 aprovados, 0 com falha (antes da etapa: 143; 5 novos, nenhum removido).
+Integração: 365 aprovados, 0 com falha (antes da etapa: 294; 71 novos, nenhum removido).
+
+Cenários que passaram a verde
+------------------------------------------------------------------------------------------
+[PASSOU] ListagemEscopoTests.Listagem_SemVisaoDefinida_DevolveSoOsTitulosDoProprioUsuario, 15 casos
+         (sem viewMode, viewMode=0, viewMode=Undefined; SOL, GES, CON, FIN, ADM): cada um só com os próprios títulos
+[PASSOU] ListagemEscopoTests.Listagem_RascunhoDeOutroUsuario_NuncaAparece, 30 casos (sem viewMode e 0 a 4, nos cinco
+         perfis): S903 e R911 nunca aparecem
+[PASSOU] ListagemEscopoTests.Listagem_Dashboard_SemPerfilDaFila_NaoDevolveTitulos (SOL 3, SOL 6, GES 2): lista vazia
+[PASSOU] ListingControllerFilterTests.VisaoIndefinidaOuForaDoEnum_RetornaSoOsPropriosRegistros (0, 5, 99, -1)
+[PASSOU] ListingControllerFilterTests.Dashboard_SemPerfilFinanceiroContabilidadeNemAdministrador_NaoRetornaNada (novo)
+[PASSOU] RddvTipoRelatorioTests.PostRddv_NovoEnviadoComTipoRelatorioZero_Responde400ComMensagemENaoGrava
+[PASSOU] RddvTipoRelatorioTests.PostRddv_NovoComTipoRelatorioForaDaFaixa_Responde400ENaoGrava (5 casos)
+[PASSOU] RddvTipoRelatorioTests.PostRddv_EdicaoTrocandoOTipoParaZero_Responde400ENaoGrava
+[PASSOU] RddvTipoRelatorioTests.PostRddv_EnvioDeRascunhoSemTipoRelatorio_Responde400EContinuaRascunho
+[PASSOU] RddvTipoRelatorioTests.Planilha_RddvGravadoComTipoRelatorioZero_SaiComoRddv ("RDDV - Código 0")
+[PASSOU] RddvTipoRelatorioTests.Planilha_FiltroDocumentoDoParceiro_DeixaDeForaORddvComTipoZeroDeMesmoCodigo
+[PASSOU] PagamentosTraducaoSqlServerTests.ExportPaymentList_TodosOsFiltros_TraduzParaSqlServerEDevolveAPlanilha
+         o SQL tem LIKE N'RDDV%' e não tem [IdTipo] = 0; nenhum aviso do EF
+[PASSOU] GeradorPacoteTests.Gerar_IndiceJson_TemOFormatoDoContrato ("versao": 2)
+
+Controles que continuam verdes
+------------------------------------------------------------------------------------------
+[PASSOU] ListagemEscopoTests.Listagem_Dashboard_ComPerfilDaFila_DevolveOsAprovadosSemAtribuicao (FIN, CON, ADM)
+[PASSOU] ListagemEscopoTests.Listagem_VisaoForaDoEnum_Responde400 ("5", "99", "-1", "abc")
+[PASSOU] RddvTipoRelatorioTests: tipo válido gravado (1, 2, 3), rascunho novo sem tipo gravado, rascunho sem tipo salvo de
+         novo, RDDV legado com tipo 0 editado sem trocar o tipo
+[PASSOU] VisaoFinanceiraTests, ExportLegadoFiltrosTests, ExportLegadoExcelTests, ApprovalWorkflowTests (RDDV),
+         DataSegregationTests e os demais da suíte
+
+Resumo do console
+------------------------------------------------------------------------------------------
+Aprovado!  – Com falha:     0, Aprovado:   148, Ignorado:     0, Total:   148 - Ares.PagueAres.Tests.Unit.dll (net10.0)
+Aprovado!  – Com falha:     0, Aprovado:   365, Ignorado:     0, Total:   365 - Ares.PagueAres.Tests.Integration.dll (net10.0)
