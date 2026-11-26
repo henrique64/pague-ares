@@ -1,0 +1,17 @@
+Achado R2 (baixo) — campos do outro tipo ficavam habilitados com Tipo "Ambos" e código com prefixo — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela
+Comando: cd front-end && CHROME_BIN=<msedge.exe> npx ng test --watch=false --karma-config=<karma.headless.js fora do repositório: reaproveita o karma.conf.js e troca o navegador por ChromeHeadless sobre o Edge>
+Arquivo de teste: front-end/src/app/exportacoes/exportacoes.component.spec.ts (bloco novo "com Ambos e código com prefixo, vale o tipo do prefixo")
+Dados: só fictícios; os serviços são spies, nenhuma requisição de rede.
+
+Resultado: 223 testes — 3 com falha, 220 aprovados (218 da base + 5 novos; 3 dos novos falharam, 2 já passavam por descreverem o que não deve mudar).
+------------------------------------------------------------------------------------------
+[FALHOU] RDDV-45 desabilita na tela os campos só de Solicitação, mantém o valor digitado e deixa o de RDDV habilitado
+         Expected false to be true. (camposSolicitacaoDesabilitados com Ambos + RDDV-45)
+[FALHOU] SOL-12 desabilita na tela o tipo de relatório e deixa os campos de Solicitação habilitados
+         Expected false to be true. (camposRddvDesabilitados com Ambos + SOL-12)
+[FALHOU] os campos voltam a ficar habilitados quando o código vira número puro, e o valor digitado segue lá
+         Expected false to be true. (camposSolicitacaoDesabilitados com Ambos + RDDV-45, antes de virar número puro)
+[PASSOU] o aviso do prefixo continua aparecendo junto com os campos desabilitados
+[PASSOU] com tipo escolhido diferente do prefixo (código recusado) vale o tipo escolhido

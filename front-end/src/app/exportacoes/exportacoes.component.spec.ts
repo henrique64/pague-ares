@@ -313,6 +313,87 @@ describe('ExportacoesComponent', () => {
       expect(c.camposSolicitacaoDesabilitados).toBeFalse();
       expect(c.camposRddvDesabilitados).toBeFalse();
     });
+
+    describe('com Ambos e código com prefixo, vale o tipo do prefixo', () => {
+      async function renderizar(): Promise<HTMLElement> {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        return fixture.nativeElement;
+      }
+
+      it('RDDV-45 desabilita na tela os campos só de Solicitação, mantém o valor digitado e deixa o de RDDV habilitado', async () => {
+        montarTela();
+        component.form.tipoTitulo = EnumTipoTituloExportacao.Ambos;
+        component.form.codigo = 'RDDV-45';
+        component.form.numeroDocumento = 'NF-99';
+        component.form.tipoSolicitacao = 1;
+        component.form.tipoRelatorio = 2;
+        const el = await renderizar();
+
+        expect(component.camposSolicitacaoDesabilitados).toBeTrue();
+        expect(component.camposRddvDesabilitados).toBeFalse();
+        const numeroDocumento = el.querySelector('#numeroDocumento') as HTMLInputElement;
+        expect(numeroDocumento.disabled).toBeTrue();
+        expect(numeroDocumento.value).toBe('NF-99');
+        expect((el.querySelector('#tipoSolicitacao') as HTMLElement).getAttribute('aria-disabled')).toBe('true');
+        expect((el.querySelector('#tipoPagamento') as HTMLElement).getAttribute('aria-disabled')).toBe('true');
+        expect((el.querySelector('#formaPagamento') as HTMLElement).getAttribute('aria-disabled')).toBe('true');
+        expect((el.querySelector('#tipoRelatorio') as HTMLElement).getAttribute('aria-disabled')).not.toBe('true');
+        expect(component.form.numeroDocumento).toBe('NF-99');
+        expect(component.form.tipoSolicitacao).toBe(1);
+      });
+
+      it('SOL-12 desabilita na tela o tipo de relatório e deixa os campos de Solicitação habilitados', async () => {
+        montarTela();
+        component.form.tipoTitulo = EnumTipoTituloExportacao.Ambos;
+        component.form.codigo = 'SOL-12';
+        component.form.tipoRelatorio = 3;
+        const el = await renderizar();
+
+        expect(component.camposRddvDesabilitados).toBeTrue();
+        expect(component.camposSolicitacaoDesabilitados).toBeFalse();
+        expect((el.querySelector('#tipoRelatorio') as HTMLElement).getAttribute('aria-disabled')).toBe('true');
+        expect((el.querySelector('#numeroDocumento') as HTMLInputElement).disabled).toBeFalse();
+        expect((el.querySelector('#tipoSolicitacao') as HTMLElement).getAttribute('aria-disabled')).not.toBe('true');
+        expect(component.form.tipoRelatorio).toBe(3);
+      });
+
+      it('o aviso do prefixo continua aparecendo junto com os campos desabilitados', async () => {
+        montarTela();
+        component.form.codigo = 'RDDV-45';
+        const el = await renderizar();
+
+        expect(el.querySelector('.aviso-ambos')?.textContent)
+          .toContain('O código RDDV-000045 é de um RDDV: as solicitações ficam de fora.');
+      });
+
+      it('os campos voltam a ficar habilitados quando o código vira número puro, e o valor digitado segue lá', async () => {
+        montarTela();
+        component.form.codigo = 'RDDV-45';
+        component.form.numeroDocumento = 'NF-99';
+        await renderizar();
+        expect(component.camposSolicitacaoDesabilitados).toBeTrue();
+
+        component.form.codigo = '45';
+        const el = await renderizar();
+
+        expect(component.camposSolicitacaoDesabilitados).toBeFalse();
+        expect(component.camposRddvDesabilitados).toBeFalse();
+        const numeroDocumento = el.querySelector('#numeroDocumento') as HTMLInputElement;
+        expect(numeroDocumento.disabled).toBeFalse();
+        expect(numeroDocumento.value).toBe('NF-99');
+      });
+
+      it('com tipo escolhido diferente do prefixo (código recusado) vale o tipo escolhido', () => {
+        const c = criar();
+        c.form.tipoTitulo = EnumTipoTituloExportacao.Solicitacao;
+        c.form.codigo = 'RDDV-45';
+
+        expect(c.camposRddvDesabilitados).toBeTrue();
+        expect(c.camposSolicitacaoDesabilitados).toBeFalse();
+      });
+    });
   });
 
   describe('polling da lista', () => {

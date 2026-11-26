@@ -177,14 +177,16 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   // ---------- Formulário ----------
 
-  // Campos que só existem em Solicitação ficam desabilitados quando o tipo escolhido é RDDV.
+  // Campos que só existem em Solicitação ficam desabilitados quando o tipo que vale é RDDV: o escolhido ou, com "Ambos",
+  // o do prefixo do código (RDDV-). Os valores já digitados não são apagados, como também não são na troca explícita do
+  // tipo: o campo fica desabilitado, o valor fica visível e o filtro enviado o ignora.
   get camposSolicitacaoDesabilitados(): boolean {
-    return this.form.tipoTitulo === EnumTipoTituloExportacao.Rddv;
+    return this.tipoEfetivo === EnumTipoTituloExportacao.Rddv;
   }
 
-  // Campos que só existem em RDDV ficam desabilitados quando o tipo escolhido é Solicitação.
+  // Campos que só existem em RDDV ficam desabilitados quando o tipo que vale é Solicitação (escolhido ou do prefixo SOL-).
   get camposRddvDesabilitados(): boolean {
-    return this.form.tipoTitulo === EnumTipoTituloExportacao.Solicitacao;
+    return this.tipoEfetivo === EnumTipoTituloExportacao.Solicitacao;
   }
 
   // Tipo que vale para a exportação: o do prefixo do código (SOL-, RDDV-) quando o tipo escolhido é "Ambos".
@@ -244,8 +246,8 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   montarFiltro(): FiltroExportacaoModel {
     const f = this.form;
     const tipo = this.tipoEfetivo;
-    const solicitacaoDesabilitada = tipo === EnumTipoTituloExportacao.Rddv;
-    const rddvDesabilitado = tipo === EnumTipoTituloExportacao.Solicitacao;
+    const solicitacaoDesabilitada = this.camposSolicitacaoDesabilitados;
+    const rddvDesabilitado = this.camposRddvDesabilitados;
     const filtro: FiltroExportacaoModel = {
       tipoTitulo: tipo,
       incluirAnexos: f.incluirAnexos,
