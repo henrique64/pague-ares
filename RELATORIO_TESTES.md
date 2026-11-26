@@ -1,6 +1,6 @@
 # Relatório de Execução de Testes — PagueAres
-**Data:** 23/11/2026 (última execução; o detalhamento por teste abaixo é da execução de 09/06/2026)  
-**Branch:** `main` (após o merge de `feature/general-improvements`, commit `4a0c32a`)  
+**Data:** 26/11/2026 (totais da última execução, na branch `fix/achados-tela`; o detalhamento por teste abaixo é da execução de 09/06/2026)  
+**Branch:** `fix/achados-tela` (exportação de títulos com anexos e correções dos achados do manual, integradas em `4caeec7`)  
 **Responsável:** Alexandre Henrique Moreira
 
 ---
@@ -9,11 +9,13 @@
 
 | Suite | Total | Aprovados | Reprovados | Duração |
 |-------|-------|-----------|------------|---------|
-| Backend — Integração | 47 | **47** | 0 | 5s |
-| Backend — Unitários | 20 | **20** | 0 | 2s |
-| Frontend — Unitários (Karma, Edge headless) | 73 | **73** | 0 | ~0,7s |
+| Backend — Integração | 294 | **294** | 0 | — |
+| Backend — Unitários | 143 | **143** | 0 | — |
+| Frontend — Unitários (Karma, Edge headless) | 218 | **218** | 0 | — |
 | E2E (Cypress) | — | — | — | *não executado* |
-| **TOTAL** | **140** | **140** | **0** | |
+| **TOTAL** | **655** | **655** | **0** | |
+
+Totais de 26/11/2026: Integração e Unitários conforme `docs/evidencias/dados/tdd/achados-B3-verde.txt` e Karma conforme `docs/evidencias/dados/tdd/achados-F3-verde.txt` (na execução anterior, de 23/11/2026, eram 47, 20 e 73 testes, 140 no total; a entrega da exportação de títulos e as correções dos achados do manual acrescentaram os demais). A coluna de duração não foi remedida nesta execução.
 
 Smoke test em Docker (`docker compose up -d --build`, 23/11/2026): banco saudável com migrations aplicadas (16 tabelas), OpenAPI e Scalar respondendo 200, frontend em Nginx respondendo 200, login `admin@local` via proxy `/api/Auth` devolvendo JWT, endpoints protegidos com 200 com token e 401 sem token.
 
@@ -21,7 +23,7 @@ Smoke test em Docker (`docker compose up -d --build`, 23/11/2026): banco saudáv
 
 ---
 
-> As tabelas por teste abaixo são da execução de 09/06/2026 e não listam os testes adicionados depois (por exemplo `DepartmentControllerTests` e `EndpointExposureTests`). Os totais por suíte são os da execução de 23/11/2026.
+> As tabelas por teste abaixo são da execução de 09/06/2026 (47 de integração, 20 unitários e 73 da tela) e não listam os testes adicionados depois (por exemplo `DepartmentControllerTests`, `EndpointExposureTests` e os da exportação de títulos). Os totais por suíte do Resumo Executivo são os da execução de 26/11/2026; os testes da exportação estão detalhados em `docs/evidencias/exportacao-tecnica.md`.
 
 ## Backend — Testes de Integração (47/47)
 
