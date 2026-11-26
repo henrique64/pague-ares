@@ -467,6 +467,7 @@ namespace Ares.PagueAres.Infrastructure
                 entity.Property(e => e.DataInicio).HasColumnType("datetime2");
                 entity.Property(e => e.DataConclusao).HasColumnType("datetime2");
                 entity.Property(e => e.DataExpiracao).HasColumnType("datetime2");
+                entity.Property(e => e.DataRemocaoDaLista).HasColumnType("datetime2");
 
                 entity.Property(e => e.TotalTitulos).IsRequired().HasDefaultValue(0);
                 entity.Property(e => e.TitulosProcessados).IsRequired().HasDefaultValue(0);

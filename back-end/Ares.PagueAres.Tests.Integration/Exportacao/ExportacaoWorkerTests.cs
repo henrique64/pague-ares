@@ -46,7 +46,8 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
 
         private static readonly StatusExportacao[] StatusFinais =
         [
-            StatusExportacao.Concluido, StatusExportacao.Falhou, StatusExportacao.Expirado, StatusExportacao.Cancelado
+            StatusExportacao.Concluido, StatusExportacao.Falhou, StatusExportacao.Expirado, StatusExportacao.Cancelado,
+            StatusExportacao.Excluido
         ];
 
         /// <summary>
@@ -269,6 +270,31 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
             File.Exists(Final(id)).Should().BeFalse();
         }
 
+        [Fact]
+        public async Task JobExcluidoNaFila_NaoEReivindicadoNemGravadoPeloWorker()
+        {
+            // Um id que ficou na fila de um processo depois de o usuário excluir o pacote em outro.
+            var processo = await IniciarProcessoAsync();
+            var agora = DateTime.UtcNow;
+            var excluido = CriarJob(StatusExportacao.Excluido, j =>
+            {
+                j.DataConclusao = agora.AddMinutes(-10);
+                j.DataExpiracao = agora.AddHours(47);
+            });
+            var antes = LerJob(excluido);
+
+            processo.Fila.Enfileirar(excluido);
+            var sentinela = CriarJob();
+            processo.Fila.Enfileirar(sentinela);
+            await AguardarStatusAsync(sentinela, StatusExportacao.Concluido);
+
+            _gerador.Chamadas(excluido).Should().Be(0);
+            var depois = LerJob(excluido);
+            Status(depois).Should().Be(StatusExportacao.Excluido);
+            depois.DataExpiracao.Should().Be(antes.DataExpiracao);
+            depois.Versao.Should().Be(antes.Versao, "o worker não grava um job Excluido");
+        }
+
         // -----------------------------------------------------------------------------------------------------
         // Cenário 5: parada do host
         // -----------------------------------------------------------------------------------------------------
@@ -394,6 +420,33 @@ namespace Ares.PagueAres.Tests.Integration.Exportacao
             Status(LerJob(valido)).Should().Be(StatusExportacao.Concluido);
             File.Exists(orfaoRecente).Should().BeTrue("um órfão mais novo que a retenção é mantido");
             File.Exists(naoExportacao).Should().BeTrue("a limpeza só considera exportacao-*.zip");
+        }
+
+        [Fact]
+        public async Task Limpeza_JobExcluidoComPrazoVencido_NaoEAlterado_EArquivoQueSobrouSaiComoOrfao()
+        {
+            var processo = NovoProcesso(s => s.RetencaoHoras = 48);
+            var agora = DateTime.UtcNow;
+            Directory.CreateDirectory(_pasta);
+
+            // O usuário excluiu o pacote, mas o arquivo estava preso e ficou na pasta. O prazo original já venceu:
+            // se a limpeza tratasse a Excluída como Concluída, ela viraria Expirada.
+            var excluido = CriarJob(StatusExportacao.Excluido, j =>
+            {
+                j.DataConclusao = agora.AddHours(-50);
+                j.DataExpiracao = agora.AddHours(-2);
+            });
+            AlterarJob(excluido, j => j.NomeArquivo = $"exportacao-{excluido}.zip");
+            var antes = LerJob(excluido);
+            CriarArquivo(Final(excluido), agora.AddHours(-72));
+
+            await processo.Provedor.GetRequiredService<ExportacaoLimpeza>().LimparAsync(CancellationToken.None);
+
+            File.Exists(Final(excluido)).Should().BeFalse("o arquivo de uma Excluída é órfão e sai depois da retenção");
+            var depois = LerJob(excluido);
+            Status(depois).Should().Be(StatusExportacao.Excluido, "a limpeza só expira job Concluido");
+            depois.DataExpiracao.Should().Be(antes.DataExpiracao, "o \"Expira em\" original fica gravado");
+            depois.Versao.Should().Be(antes.Versao, "a limpeza não grava o job Excluido");
         }
 
         // -----------------------------------------------------------------------------------------------------
