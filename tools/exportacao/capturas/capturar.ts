@@ -90,10 +90,9 @@ try {
   await foto(fin, "01-menu-exportacoes.png");
 
   await escolher(fin, "Tipo de título", "Solicitação");
-  // O datepicker do app usa o NativeDateAdapter, cujo parse do texto digitado lê mês/dia/ano (en-US),
-  // embora exiba dd/MM/aaaa. Para o campo mostrar 01/11/2025 a 31/12/2025, digita-se 11/01/2025 e 12/31/2025.
-  await fin.locator('input[placeholder="Início"]').first().fill("11/01/2025");
-  await fin.locator('input[placeholder="Fim"]').first().fill("12/31/2025");
+  // As datas são digitadas no formato natural dd/MM/aaaa, que o PtBrDateAdapter do app lê como dia/mês/ano.
+  await fin.locator('input[placeholder="Início"]').first().fill("01/11/2025");
+  await fin.locator('input[placeholder="Fim"]').first().fill("31/12/2025");
   await escolher(fin, "Status Gestor", "Autorizado");
   await escolher(fin, "Status Financeiro", "Autorizado");
   await escolher(fin, "Solicitante", "Usuario Ficticio Solicitante 01");
@@ -102,11 +101,14 @@ try {
   await foto(fin, "02-formulario-filtros.png");
 
   // Exportação completa (todos os títulos da semente), para dar tempo de ver o andamento.
-  // Recarrega a tela em vez de usar "Limpar Filtros", que deixa o texto da data final visível no campo.
-  await fin.reload();
-  await fin.waitForSelector("#btnGerar", { timeout: 30000 });
-  await fin.waitForSelector("tbody tr", { timeout: 30000 });
+  // "Limpar Filtros" devolve o formulário ao estado vazio; confere que nenhum campo de data ficou com texto.
+  await fin.getByRole("button", { name: "Limpar Filtros" }).click();
   await fin.waitForTimeout(500);
+  const camposData = fin.locator('input[placeholder="Início"], input[placeholder="Fim"]');
+  for (let i = 0; i < (await camposData.count()); i++) {
+    if ((await camposData.nth(i).inputValue()) !== "") throw new Error("Limpar Filtros deixou texto num campo de data");
+  }
+  await fin.waitForSelector("tbody tr", { timeout: 30000 });
   await fin.locator("#btnGerar").click();
   log("Exportação completa solicitada.");
   const barra = fin.locator("tbody tr").first().locator("[role=progressbar]");
