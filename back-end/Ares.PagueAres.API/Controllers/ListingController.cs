@@ -97,11 +97,18 @@ namespace Ares.PagueAres.API.Controllers
                 ? PaymentListView.MyView
                 : filter.ViewMode.Value;
 
+            // Visão financeira: Financeiro e Administrador veem todos os aprovados; Contabilidade, só os atribuídos a ela;
+            // os demais perfis, nada, mesmo que algum título tenha sido atribuído a eles.
+            var escopoVisaoFinanceira =
+                this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador) ? EscopoVisaoFinanceira.Todos
+                : this.CurrentUserIsInRole(Funcoes.Contabilidade) ? EscopoVisaoFinanceira.Atribuidos
+                : EscopoVisaoFinanceira.Nenhum;
+
             query = ApplyViewModeFilter(
                 query,
                 viewMode,
                 currentUser.IdUsuario,
-                veTodosNaVisaoFinanceira: this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador),
+                escopoVisaoFinanceira,
                 veFilaDoDashboard: this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Contabilidade, Funcoes.Administrador));
 
             var sortField = string.IsNullOrEmpty(filter.SortField) ?
@@ -215,10 +222,12 @@ namespace Ares.PagueAres.API.Controllers
         /// Toda visão tem escopo: Undefined (0) e qualquer valor fora do enum valem como Minhas Solicitações, e nunca
         /// devolvem a lista inteira.
         /// </summary>
-        /// <param name="veTodosNaVisaoFinanceira">
-        /// Verdadeiro quando o usuário tem o perfil Financeiro ou Administrador: na visão financeira (aba
-        /// Financeiro/Contábil) ele vê todos os títulos aprovados pelo gestor. Falso nos demais perfis (Contabilidade,
-        /// por exemplo), que veem só os títulos atribuídos a eles. As outras visões não usam este parâmetro.
+        /// <param name="escopoVisaoFinanceira">
+        /// O que a visão financeira (aba Financeiro/Contábil) mostra: <see cref="EscopoVisaoFinanceira.Todos"/> os títulos
+        /// aprovados pelo gestor (Financeiro e Administrador), <see cref="EscopoVisaoFinanceira.Atribuidos"/> só os
+        /// aprovados e atribuídos ao usuário (Contabilidade) ou <see cref="EscopoVisaoFinanceira.Nenhum"/> (os demais
+        /// perfis, mesmo com título atribuído a eles: a atribuição sozinha não dá acesso à visão). As outras visões não
+        /// usam este parâmetro.
         /// </param>
         /// <param name="veFilaDoDashboard">
         /// Verdadeiro quando o usuário tem o perfil Financeiro, Contabilidade ou Administrador, os perfis que veem a tela
@@ -229,7 +238,7 @@ namespace Ares.PagueAres.API.Controllers
             IQueryable<ViewListagemSolicitacoes> query,
             PaymentListView viewMode,
             int currentUserId,
-            bool veTodosNaVisaoFinanceira,
+            EscopoVisaoFinanceira escopoVisaoFinanceira,
             bool veFilaDoDashboard)
         {
             switch (viewMode)
@@ -239,11 +248,19 @@ namespace Ares.PagueAres.API.Controllers
                         r.Rascunho != true && r.Cancelado != true);
 
                 case PaymentListView.FinancialView:
-                    return veTodosNaVisaoFinanceira
-                        ? query.Where(r => r.AprovadoGestor == true &&
-                            r.Rascunho != true && r.Cancelado != true)
-                        : query.Where(r => r.AprovadoGestor == true && r.IdUsuarioAtribuido == currentUserId &&
-                            r.Rascunho != true && r.Cancelado != true);
+                    switch (escopoVisaoFinanceira)
+                    {
+                        case EscopoVisaoFinanceira.Todos:
+                            return query.Where(r => r.AprovadoGestor == true &&
+                                r.Rascunho != true && r.Cancelado != true);
+
+                        case EscopoVisaoFinanceira.Atribuidos:
+                            return query.Where(r => r.AprovadoGestor == true && r.IdUsuarioAtribuido == currentUserId &&
+                                r.Rascunho != true && r.Cancelado != true);
+
+                        default:
+                            return query.Where(r => false);
+                    }
 
                 case PaymentListView.Dashboard:
                     if (!veFilaDoDashboard)

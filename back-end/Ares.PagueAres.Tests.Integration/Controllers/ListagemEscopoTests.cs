@@ -14,6 +14,10 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
     /// <item>o rascunho de outro usuário nunca aparece, em nenhuma visão e para nenhum perfil;</item>
     /// <item>o Dashboard (fila de títulos aprovados pelo gestor e sem atribuição) só devolve títulos para Financeiro,
     /// Contabilidade e Administrador, os perfis que veem a tela inicial;</item>
+    /// <item>cada perfil recebe, em cada visão, exatamente o conjunto do escopo dele: a visão do gestor só traz os títulos
+    /// de que o usuário é gestor; a visão financeira traz todos os aprovados pelo gestor ao Financeiro e ao
+    /// Administrador, só os atribuídos a ela à Contabilidade, e nada aos demais perfis, mesmo com título atribuído a
+    /// eles;</item>
     /// <item>um <c>viewMode</c> fora do enum é recusado com 400.</item>
     /// </list>
     /// </summary>
@@ -27,9 +31,13 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         private const int IdSolicitacaoDoGestor = 904;
         private const int IdSolicitacaoDaContabilidade = 905;
         private const int IdSolicitacaoDoAdministrador = 906;
+        private const int IdSolicitacaoDeOutroAtribuidaAoSolicitante = 907;
+        private const int IdSolicitacaoDeOutroAtribuidaAoGestor = 908;
+        private const int IdSolicitacaoDeOutroCancelada = 909;
         private const int IdRddvDoSolicitanteAprovado = 910;
         private const int IdRddvDeOutroRascunho = 911;
         private const int IdRddvDoFinanceiro = 912;
+        private const int IdRddvDeOutroComOutroGestor = 913;
 
         /// <summary>Títulos de cada usuário, como "S&lt;código&gt;" (solicitação) e "R&lt;código&gt;" (RDDV).</summary>
         private static readonly Dictionary<int, string[]> TitulosDoProprioUsuario = new()
@@ -39,8 +47,43 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
             [3] = ["S" + IdSolicitacaoDoSolicitanteAprovada, "S" + IdSolicitacaoDoSolicitanteRascunho, "R" + IdRddvDoSolicitanteAprovado],
             [4] = ["R" + IdRddvDoFinanceiro],
             [5] = ["S" + IdSolicitacaoDaContabilidade],
-            [6] = ["S" + IdSolicitacaoDeOutroAprovada, "S" + IdSolicitacaoDeOutroRascunho, "R" + IdRddvDeOutroRascunho]
+            [6] =
+            [
+                "S" + IdSolicitacaoDeOutroAprovada, "S" + IdSolicitacaoDeOutroRascunho, "S" + IdSolicitacaoDeOutroAtribuidaAoSolicitante,
+                "S" + IdSolicitacaoDeOutroAtribuidaAoGestor, "S" + IdSolicitacaoDeOutroCancelada, "R" + IdRddvDeOutroRascunho,
+                "R" + IdRddvDeOutroComOutroGestor
+            ]
         };
+
+        /// <summary>
+        /// Visão do gestor 2: os títulos de que ele é gestor, menos rascunhos (S901, S903, R911) e cancelados (S909). O
+        /// R913 é do gestor 1 e fica de fora.
+        /// </summary>
+        private static readonly string[] TitulosDoGestor2 =
+        [
+            "S" + IdSolicitacaoDoSolicitanteAprovada, "S" + IdSolicitacaoDeOutroAprovada, "S" + IdSolicitacaoDoGestor,
+            "S" + IdSolicitacaoDaContabilidade, "S" + IdSolicitacaoDoAdministrador, "S" + IdSolicitacaoDeOutroAtribuidaAoSolicitante,
+            "S" + IdSolicitacaoDeOutroAtribuidaAoGestor, "R" + IdRddvDoSolicitanteAprovado, "R" + IdRddvDoFinanceiro
+        ];
+
+        /// <summary>
+        /// Visão financeira do Financeiro e do Administrador: todos os aprovados pelo gestor, menos rascunhos (S903, R911)
+        /// e cancelados (S909), com ou sem atribuição.
+        /// </summary>
+        private static readonly string[] AprovadosDoFluxo =
+        [
+            "S" + IdSolicitacaoDoSolicitanteAprovada, "S" + IdSolicitacaoDeOutroAprovada, "S" + IdSolicitacaoDaContabilidade,
+            "S" + IdSolicitacaoDeOutroAtribuidaAoSolicitante, "S" + IdSolicitacaoDeOutroAtribuidaAoGestor, "R" + IdRddvDoSolicitanteAprovado
+        ];
+
+        /// <summary>
+        /// Visão financeira da Contabilidade (5): só o aprovado atribuído a ela. Os outros atribuídos a ela são rascunho
+        /// (S903, R911) ou cancelado (S909).
+        /// </summary>
+        private static readonly string[] AtribuidosAContabilidade =
+        [
+            "S" + IdSolicitacaoDaContabilidade
+        ];
 
         /// <summary>Fila do Dashboard: aprovados pelo gestor, sem atribuição, não negados, sem rascunho e sem cancelado.</summary>
         private static readonly string[] FilaDoDashboard =
@@ -69,7 +112,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         }
 
         private static Solicitacao NovaSolicitacao(int id, int idUsuario, bool rascunho = false, bool aprovadaPeloGestor = false,
-            int? idUsuarioAtribuido = null)
+            int? idUsuarioAtribuido = null, bool cancelada = false)
         {
             return new Solicitacao
             {
@@ -99,7 +142,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
                 TipoSolicitacao = 2,
                 TipoPagamento = 1,
                 Rascunho = rascunho,
-                Cancelado = false,
+                Cancelado = cancelada,
                 StatusGestor = aprovadaPeloGestor ? 2 : 1,
                 StatusFinanceiro = 1,
                 StatusContabilidade = 1,
@@ -108,13 +151,13 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
         }
 
         private static Rddv NovoRddv(int id, int idUsuario, bool rascunho = false, bool aprovadoPeloGestor = false,
-            int? idUsuarioAtribuido = null)
+            int? idUsuarioAtribuido = null, int idGestor = 2)
         {
             return new Rddv
             {
                 IdRelatorio = id,
                 IdUsuario = idUsuario,
-                IdGestor = 2,
+                IdGestor = idGestor,
                 IdUsuarioAtribuido = idUsuarioAtribuido,
                 IdDepartamento = 1,
                 NomeFuncionario = "Funcionário Fictício",
@@ -155,12 +198,20 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
                 NovaSolicitacao(IdSolicitacaoDeOutroRascunho, idUsuario: 6, rascunho: true, aprovadaPeloGestor: true, idUsuarioAtribuido: 5),
                 NovaSolicitacao(IdSolicitacaoDoGestor, idUsuario: 2),
                 NovaSolicitacao(IdSolicitacaoDaContabilidade, idUsuario: 5, aprovadaPeloGestor: true, idUsuarioAtribuido: 5),
-                NovaSolicitacao(IdSolicitacaoDoAdministrador, idUsuario: 1));
+                NovaSolicitacao(IdSolicitacaoDoAdministrador, idUsuario: 1),
+                // Títulos alheios aprovados e atribuídos a perfis de fora da área financeira (o solicitante 3 e o gestor
+                // 2), como ficavam quando a atribuição não conferia o destino: a visão financeira não os mostra a eles.
+                NovaSolicitacao(IdSolicitacaoDeOutroAtribuidaAoSolicitante, idUsuario: 6, aprovadaPeloGestor: true, idUsuarioAtribuido: 3),
+                NovaSolicitacao(IdSolicitacaoDeOutroAtribuidaAoGestor, idUsuario: 6, aprovadaPeloGestor: true, idUsuarioAtribuido: 2),
+                // Cancelada depois de aprovada e atribuída à Contabilidade: sai de todas as visões do fluxo.
+                NovaSolicitacao(IdSolicitacaoDeOutroCancelada, idUsuario: 6, aprovadaPeloGestor: true, idUsuarioAtribuido: 5, cancelada: true));
 
             ctx.Rddv.AddRange(
                 NovoRddv(IdRddvDoSolicitanteAprovado, idUsuario: 3, aprovadoPeloGestor: true),
                 NovoRddv(IdRddvDeOutroRascunho, idUsuario: 6, rascunho: true, aprovadoPeloGestor: true, idUsuarioAtribuido: 5),
-                NovoRddv(IdRddvDoFinanceiro, idUsuario: 4));
+                NovoRddv(IdRddvDoFinanceiro, idUsuario: 4),
+                // Pendente com outro gestor (o Administrador): fica fora da visão do gestor 2.
+                NovoRddv(IdRddvDeOutroComOutroGestor, idUsuario: 6, idGestor: 1));
 
             ctx.SaveChanges();
         }
@@ -237,6 +288,50 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 
             titulos.Should().NotContain(RascunhosDoOutroSolicitante,
                 "o rascunho só aparece para o próprio dono, em Minhas Solicitações");
+        }
+
+        /// <summary>
+        /// Conjunto exato de cada perfil nas visões Minhas Solicitações (1), Gestor (2) e Financeiro/Contábil (3). O
+        /// Dashboard (4) tem os próprios testes, logo abaixo.
+        /// </summary>
+        public static TheoryData<string, int, string, string[]> EscopoPorVisaoEPerfil()
+        {
+            var dados = new TheoryData<string, int, string, string[]>();
+
+            foreach (var (idUsuario, papel) in new[] { (3, "SOL"), (6, "SOL"), (2, "GES"), (5, "CON"), (4, "FIN"), (1, "ADM") })
+            {
+                dados.Add("viewMode=1&", idUsuario, papel, TitulosDoProprioUsuario[idUsuario]);
+            }
+
+            dados.Add("viewMode=2&", 3, "SOL", []);
+            dados.Add("viewMode=2&", 6, "SOL", []);
+            dados.Add("viewMode=2&", 2, "GES", TitulosDoGestor2);
+            dados.Add("viewMode=2&", 5, "CON", []);
+            dados.Add("viewMode=2&", 4, "FIN", []);
+            dados.Add("viewMode=2&", 1, "ADM", ["R" + IdRddvDeOutroComOutroGestor]);
+
+            // O S907 está atribuído ao solicitante 3 e o S908 ao gestor 2: sem perfil da área financeira, a visão vem
+            // vazia assim mesmo.
+            dados.Add("viewMode=3&", 3, "SOL", []);
+            dados.Add("viewMode=3&", 6, "SOL", []);
+            dados.Add("viewMode=3&", 2, "GES", []);
+            dados.Add("viewMode=3&", 5, "CON", AtribuidosAContabilidade);
+            dados.Add("viewMode=3&", 4, "FIN", AprovadosDoFluxo);
+            dados.Add("viewMode=3&", 1, "ADM", AprovadosDoFluxo);
+
+            return dados;
+        }
+
+        [Theory]
+        [MemberData(nameof(EscopoPorVisaoEPerfil))]
+        public async Task Listagem_PorVisaoEPerfil_DevolveExatamenteOsTitulosDoEscopo(string consulta, int idUsuario, string papel,
+            string[] esperado)
+        {
+            var titulos = await ListarAsync(idUsuario, papel, consulta);
+
+            titulos.Should().BeEquivalentTo(esperado,
+                "cada perfil recebe, em cada visão, só os títulos do escopo dele: na visão do gestor, os de que é gestor; na " +
+                "financeira, todos os aprovados para FIN e ADM, os atribuídos a ela para CON e nada para os demais perfis");
         }
 
         [Theory]

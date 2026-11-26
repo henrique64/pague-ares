@@ -28,7 +28,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void ManagerView_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.ManagerView, currentUserId: 2, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.ManagerView, currentUserId: 2, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -40,7 +40,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void MyView_RetornaPropriosRegistrosInclusiveRascunho()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.MyView, currentUserId: 3, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.MyView, currentUserId: 3, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -52,7 +52,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void FinancialView_FinanceiroOuAdministrador_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, veTodosNaVisaoFinanceira: true, veFilaDoDashboard: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, escopoVisaoFinanceira: EscopoVisaoFinanceira.Todos, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -61,10 +61,10 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         }
 
         [Fact]
-        public void FinancialView_SemPerfilFinanceiroNemAdministrador_SomenteAtribuidosSemRascunho()
+        public void FinancialView_Contabilidade_SomenteAtribuidosSemRascunho()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, escopoVisaoFinanceira: EscopoVisaoFinanceira.Atribuidos, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -73,10 +73,22 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         }
 
         [Fact]
+        public void FinancialView_SemPerfilDaAreaFinanceira_NaoRetornaNadaMesmoComTituloAtribuido()
+        {
+            var result = ListingController
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
+                .Select(r => r.Codigo)
+                .ToList();
+
+            // O 5 está atribuído ao usuário 4, mas sem perfil Financeiro, Contabilidade nem Administrador a visão vem vazia.
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
         public void Dashboard_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 1, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: true)
+                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 1, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: true)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -88,7 +100,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void Dashboard_SemPerfilFinanceiroContabilidadeNemAdministrador_NaoRetornaNada()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 3, veTodosNaVisaoFinanceira: false, veFilaDoDashboard: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 3, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -104,7 +116,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void VisaoIndefinidaOuForaDoEnum_RetornaSoOsPropriosRegistros(int visao)
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), (PaymentListView)visao, currentUserId: 3, veTodosNaVisaoFinanceira: true, veFilaDoDashboard: true)
+                .ApplyViewModeFilter(Sample(), (PaymentListView)visao, currentUserId: 3, escopoVisaoFinanceira: EscopoVisaoFinanceira.Todos, veFilaDoDashboard: true)
                 .Select(r => r.Codigo)
                 .ToList();
 

@@ -210,8 +210,8 @@ Todos os controllers usam `[Route("api/[controller]")]` e `[Authorize]` (JWT Bea
 | Controller | Rota Base | Endpoints |
 |-----------|-----------|-----------|
 | `AuthController` | `/api/auth` | `POST /` — login e geração de JWT |
-| `RequestController` | `/api/request` | `GET /{id}`, `POST /` (cria/atualiza, rascunho, aprovação), `GET /dashboard` (consolidado: Solicitações + RDDVs), `GET /{id}/user?userId=` (atribuição) |
-| `RddvController` | `/api/rddv` | `GET /{id}`, `POST /`, `GET /dashboard` (só RDDVs), `GET /{id}/user?userId=` |
+| `RequestController` | `/api/request` | `GET /{id}`, `POST /` (cria/atualiza, rascunho, aprovação), `GET /dashboard` (consolidado: Solicitações + RDDVs), `GET /{id}/user?userId=` (atribuição; só FIN ou ADM, ver Segurança) |
+| `RddvController` | `/api/rddv` | `GET /{id}`, `POST /`, `GET /dashboard` (só RDDVs), `GET /{id}/user?userId=` (atribuição; só FIN ou ADM, ver Segurança) |
 | `ListingController` | `/api/listing` | `GET /` — listagem unificada com filtros, ordenação, paginação e `ViewMode` (sem `ViewMode`, vale `MyView`; ver ViewModes) |
 | `UsersController` | `/api/users` | `GET /` (ADM), `GET /{id}` (próprio perfil ou ADM), `POST /` (ADM), `GET /directory?userName=` (busca no AD), `GET /list?roles=` |
 | `ExportController` | `/api/export` | `GET /payments` (Excel), `GET /rddv/attachment/{id}` e `GET /request/attachment/{id}` (ZIP) — todos com `?key=` |
@@ -233,7 +233,7 @@ Os jobs ficam na tabela `ExportacaoJob` (mapeada com `ToTable("ExportacaoJob")` 
 
 Observações:
 - **Não existem** mais `GET /api/request` nem `GET /api/rddv` (listagem crua sem escopo de usuário foi removida; use `/api/listing`).
-- Quase todas as respostas de negócio (inclusive falhas) voltam com HTTP 200 e `success=false`; HTTP 401 vem do JWT ausente/inválido/expirado e das preview keys inválidas. `GET /{id}/user` usa `BadRequest` para erros.
+- Quase todas as respostas de negócio (inclusive falhas) voltam com HTTP 200 e `success=false`; HTTP 401 vem do JWT ausente/inválido/expirado e das preview keys inválidas. `GET /{id}/user` (atribuição) responde 403 para perfil sem permissão, 404 para título inexistente e 400 para destino inválido ou erro inesperado, sempre com `success=false` e mensagem.
 - `Listing`: `PageSize` padrão 100, `Page` padrão 1; filtros: `DocumentNumber`, `DocumentId`, `RequestStart/End`, `DueStart/End`, `PartnerName`, `RequesterId`, `AssigneeId`, `IsAssigned`, `ManagerStatus`, `FinanceStatus`, `AccountingStatus`, `ViewMode`, `SortField`, `SortOrder`.
 
 ---
@@ -282,7 +282,12 @@ Regras aplicadas em `RequestController` (Solicitação):
 - mudar `AprovadoGestor` exige ADM ou GES; mudar `AprovadoSetor` exige ADM ou FIN; mudar `StatusContabilidade` exige ADM, FIN ou CON;
 - registro cancelado não pode ser editado.
 
-> Atenção: `RddvController.POST` **não** aplica as checagens de papel/propriedade para edição nem para as transições de aprovação (só `GET /{id}` verifica propriedade). `SetUser` (`GET /{id}/user`) em Solicitação e RDDV também não verifica papel. `TravelTypeController.POST`, `ProviderController`, `Users/list` e `Users/directory` não têm checagem de papel além de estar autenticado. Ver pendências abaixo.
+Atribuição (`SetUser`, `GET /{id}/user?userId=`, em `RequestController` e `RddvController`, regras em `API/Helpers/AtribuicaoHelper`):
+- só FIN ou ADM, pelo papel do JWT; os demais perfis recebem 403, conferido antes da busca do título, para que um id inexistente não se distinga de um existente. A tela libera a lista "Atribuir" só para o FIN (`home.component.ts`); o ADM entra porque tem acesso total;
+- título inexistente → 404;
+- o destino (`userId`) tem de ser usuário ativo com perfil FIN ou CON, o mesmo conjunto que a tela oferece (`GET /api/users/list?roles=FIN,CON`); outro destino (inexistente, zero, inativo, SOL, GES, ADM sem FIN nem CON) → 400 com mensagem, sem gravar nem mandar e-mail.
+
+> Atenção: `RddvController.POST` **não** aplica as checagens de papel/propriedade para edição nem para as transições de aprovação (só `GET /{id}` verifica propriedade). `TravelTypeController.POST`, `ProviderController`, `Users/list` e `Users/directory` não têm checagem de papel além de estar autenticado. Ver pendências abaixo.
 
 ### Preview key (links temporários)
 `POST /api/preview/generate-preview-key` (autenticado; exige ser dono do registro ou ADM/GES/FIN/CON) devolve uma chave GUID guardada em `IMemoryCache` com validade de **1 minuto**, associada a `(entityId, requestType)`. `RequestType` ∈ `Solicitacao`, `Rddv`, `Exportacao`. As rotas anônimas de download (`/api/preview/...`, `/api/export/...`) só respondem com `?key=` válida; caso contrário 401. Nos previews a chave precisa ser do mesmo tipo **e** do mesmo `entityId`; nos ZIPs de `/api/export/*/attachment/{id}` a comparação usa `&&` (só recusa quando ambos divergem), portanto é mais fraca — ver pendências.
@@ -290,7 +295,7 @@ Regras aplicadas em `RequestController` (Solicitação):
 ### ViewModes (ListingController)
 - `MyView` — próprias solicitações (inclui rascunhos)
 - `ManagerView` — onde o usuário é gestor (sem rascunhos/cancelados)
-- `FinancialView` — aprovadas pelo gestor (todas se FIN ou ADM, somente atribuídas ao usuário caso contrário, por exemplo CON; sem rascunhos/cancelados)
+- `FinancialView` — aprovadas pelo gestor, sem rascunhos/cancelados: todas para FIN ou ADM; só as atribuídas ao usuário para CON; nenhuma para os demais perfis (SOL, GES), mesmo que algum título esteja atribuído a eles (defesa em profundidade: a atribuição sozinha não dá acesso à visão). O escopo vai para `ApplyViewModeFilter` como `EscopoVisaoFinanceira` (`Todos`, `Atribuidos`, `Nenhum`).
 - `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados); só para FIN, CON e ADM, os perfis que veem a tela inicial. Nos demais perfis a fila vem vazia, porque traz títulos de todos os usuários.
 
 A visão é sempre aplicada: `GET /api/listing` sem `viewMode`, ou com `viewMode=0` (`Undefined`), vale como `MyView`, em qualquer perfil, e nunca devolve os títulos de todos os usuários. Um `viewMode` fora do enum (por exemplo `5`, `99`, `-1` ou texto) é recusado pelo model binding com 400; em `ApplyViewModeFilter`, qualquer valor que não seja uma das quatro visões também cai em `MyView`. O rascunho só aparece para o próprio dono, em `MyView`.
@@ -337,7 +342,7 @@ Os serviços são registrados em `Application/Extensions/ApplicationServiceExten
 2. **CORS**: definir `AllowedOrigins` com as origens do frontend (vazio = qualquer origem). Atrás do Nginx do compose não é necessário.
 3. **Ambiente**: `docker compose up` carrega automaticamente `docker-compose.override.yml`, que força `ASPNETCORE_ENVIRONMENT=Development` (expõe OpenAPI/Scalar e publica o SQL na porta 14330). Em produção rode apenas com `docker-compose.yml` (`docker compose -f docker-compose.yml up`).
 4. **HTTPS**: `UseHttpsRedirection()` está ativo, exceto no ambiente `Docker`.
-5. **RBAC do RDDV e atribuição**: replicar em `RddvController.POST`, `SetUser` e `TravelTypeController.POST` as checagens de papel/propriedade já existentes em `RequestController`.
+5. **RBAC do RDDV**: replicar em `RddvController.POST` e `TravelTypeController.POST` as checagens de papel/propriedade já existentes em `RequestController`. A atribuição (`SetUser`, Solicitação e RDDV) já confere papel e destino (ver Segurança). Ainda não confere o estado do título: a tela só atribui título aprovado pelo gestor e autorizado pelo financeiro, mas a API aceita qualquer título existente.
    **Preview key nos ZIPs**: trocar `&&` por `||` na validação de `ExportController` (`rddv/attachment/{id}` e `request/attachment/{id}`), como já é feito em `PreviewController`.
 6. **Arquivos em base64** armazenados direto no banco — avaliar armazenamento externo (blob storage) para escala.
 7. **Cache em memória**: lockout de login e preview keys vivem em `IMemoryCache` do processo; com mais de uma instância da API os contadores/chaves não são compartilhados.
