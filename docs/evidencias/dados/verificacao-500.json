@@ -1,0 +1,137 @@
+{
+  "zip": "zip-500.zip",
+  "tamanhoZipBytes": 2765438530,
+  "verificadoEm": "2026-11-25T19:44:51.9200774-03:00",
+  "aprovado": true,
+  "resumo": {
+    "entradas": 1027,
+    "anexos": 1023,
+    "bytesAnexos": 2621439561,
+    "linhasSolicitacoes": 300,
+    "linhasRddvs": 200,
+    "linhasDespesas": 980,
+    "linhasAnexos": 1023,
+    "solicitacoes": 300,
+    "rddvs": 200,
+    "despesas": 980,
+    "titulosNoIndice": 500,
+    "pastasNoZip": 500
+  },
+  "verificacoes": [
+    {
+      "regra": "zip-legivel",
+      "descricao": "O arquivo é um ZIP legível",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "raiz",
+      "descricao": "As quatro entradas da raiz existem (LEIA-ME.txt, titulos.xlsx, indice.csv, indice.json)",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "estrutura",
+      "descricao": "Toda entrada fora da raiz casa ^(SOL|RDDV)-\\d{6,}/[^/]+$",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "nomes-seguros",
+      "descricao": "Nenhum nome tem .., \\, : ou caractere inválido no Windows, nem nome reservado ou fim com espaço/ponto",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "nomes-unicos",
+      "descricao": "Sem entradas repetidas nem nomes repetidos (sem diferenciar caixa) na mesma pasta",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "indice-json",
+      "descricao": "indice.json tem o formato de C4 (UTF-8 sem BOM, camelCase, indentado)",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "indice-arquivos",
+      "descricao": "Cada item do índice tem entrada no ZIP com o mesmo tamanho e o mesmo SHA-256",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "indice-completo",
+      "descricao": "Cada entrada de anexo tem item no índice",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "indice-totais",
+      "descricao": "Totais e títulos do índice batem com os arquivos",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "csv-json",
+      "descricao": "indice.csv (UTF-8 com BOM, separador ;) e indice.json têm o mesmo conteúdo na mesma ordem",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "planilha-abas",
+      "descricao": "titulos.xlsx tem as quatro abas, nesta ordem e com estes nomes",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "planilha-cabecalhos",
+      "descricao": "Os cabeçalhos de cada aba são os de C3",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "planilha-tipos",
+      "descricao": "Colunas de data, data-hora, valor e inteiro têm células DateTime/Number; texto e sim/não são texto",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "planilha-hiperlinks",
+      "descricao": "Hiperlinks de Código e de Arquivo no pacote apontam para entradas existentes",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "planilha-totais",
+      "descricao": "Linhas das abas batem com os totais do índice e entre si",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    },
+    {
+      "regra": "leia-me",
+      "descricao": "LEIA-ME.txt existe, é UTF-8 e descreve o pacote",
+      "verificada": true,
+      "ok": true,
+      "falhas": 0
+    }
+  ],
+  "falhas": [],
+  "falhasTotal": 0,
+  "avisos": []
+}

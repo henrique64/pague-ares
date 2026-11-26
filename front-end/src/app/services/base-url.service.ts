@@ -73,4 +73,11 @@ export class BaseUrlService {
       FinanceAccountingPaymentList: this.BaseUrl + "/api/Export/payments"
     }
   }
+
+  get Exportacao() {
+    return {
+      Base: this.BaseUrl + "/api/exportacao",
+      Download: this.BaseUrl + "/api/exportacao/download"
+    }
+  }
 }

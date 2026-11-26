@@ -1,0 +1,314 @@
+<div class="main-content">
+  <mat-card class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <h4 class="titulo-secao">Exportar títulos com anexos</h4>
+        <p class="aviso">
+          O sistema prepara um arquivo ZIP em segundo plano. Quando ele ficar pronto, use o botão
+          <strong>Baixar</strong> na lista abaixo. <strong>Extraia o ZIP antes de abrir o Excel</strong>
+          (<code>titulos.xlsx</code>); assim os links para os anexos funcionam.
+        </p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Tipo de título</mat-label>
+          <mat-select id="tipoTitulo" [(ngModel)]="form.tipoTitulo">
+            <mat-option [value]="EnumTipoTitulo.Ambos">Ambos (Solicitações e RDDVs)</mat-option>
+            <mat-option [value]="EnumTipoTitulo.Solicitacao">Solicitação</mat-option>
+            <mat-option [value]="EnumTipoTitulo.Rddv">RDDV</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Código</mat-label>
+          <input id="codigo" matInput type="number" min="1" [(ngModel)]="form.codigo" />
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Número do Documento (só Solicitação)</mat-label>
+          <input
+            id="numeroDocumento"
+            matInput
+            [(ngModel)]="form.numeroDocumento"
+            [disabled]="camposSolicitacaoDesabilitados"
+          />
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Departamento</mat-label>
+          <mat-select [(ngModel)]="form.idDepartamento">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let dep of departamentos" [value]="dep.idDepartamento">{{ dep.nome }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <mat-form-field appearance="outline">
+          <mat-label>Nome do parceiro (RDDV: funcionário)</mat-label>
+          <input id="nomeParceiro" matInput [(ngModel)]="form.nomeParceiro" />
+        </mat-form-field>
+      </div>
+      <div class="col-md-6">
+        <mat-form-field appearance="outline">
+          <mat-label>CPF/CNPJ do parceiro (RDDV: CPF do funcionário)</mat-label>
+          <input id="documentoParceiro" matInput [(ngModel)]="form.documentoParceiro" />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Solicitante</mat-label>
+          <mat-select [(ngModel)]="form.idSolicitante">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let user of userList" [value]="user.idUsuario">{{ user.nome }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Atribuído a</mat-label>
+          <mat-select [(ngModel)]="form.idAtribuido">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let user of userList" [value]="user.idUsuario">{{ user.nome }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Tipo de solicitação (só Solicitação)</mat-label>
+          <mat-select id="tipoSolicitacao" [(ngModel)]="form.tipoSolicitacao" [disabled]="camposSolicitacaoDesabilitados">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listTipoSolicitacao" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Tipo de relatório (só RDDV)</mat-label>
+          <mat-select id="tipoRelatorio" [(ngModel)]="form.tipoRelatorio" [disabled]="camposRddvDesabilitados">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listTipoRelatorio" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Tipo de pagamento (só Solicitação)</mat-label>
+          <mat-select id="tipoPagamento" [(ngModel)]="form.tipoPagamento" [disabled]="camposSolicitacaoDesabilitados">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listTipoPagamento" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-3">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Forma de pagamento (só Solicitação)</mat-label>
+          <mat-select id="formaPagamento" [(ngModel)]="form.formaPagamento" [disabled]="camposSolicitacaoDesabilitados">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listFormaPagamento" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4">
+        <mat-form-field class="filter-datepicker-range" appearance="outline">
+          <mat-label>Período da Solicitação (RDDV: cadastro)</mat-label>
+          <mat-date-range-input [rangePicker]="pickerSolicitacao">
+            <input matStartDate placeholder="Início" [(ngModel)]="form.dataSolicitacaoInicio" />
+            <input matEndDate placeholder="Fim" [(ngModel)]="form.dataSolicitacaoFim" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matSuffix [for]="pickerSolicitacao"></mat-datepicker-toggle>
+          <mat-date-range-picker #pickerSolicitacao></mat-date-range-picker>
+        </mat-form-field>
+      </div>
+      <div class="col-md-4">
+        <mat-form-field class="filter-datepicker-range" appearance="outline">
+          <mat-label>Período de Vencimento</mat-label>
+          <mat-date-range-input [rangePicker]="pickerVencimento">
+            <input matStartDate placeholder="Início" [(ngModel)]="form.dataVencimentoInicio" />
+            <input matEndDate placeholder="Fim" [(ngModel)]="form.dataVencimentoFim" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matSuffix [for]="pickerVencimento"></mat-datepicker-toggle>
+          <mat-date-range-picker #pickerVencimento></mat-date-range-picker>
+        </mat-form-field>
+      </div>
+      <div class="col-md-4">
+        <mat-form-field class="filter-datepicker-range" appearance="outline">
+          <mat-label>Período de Aprovação do Financeiro</mat-label>
+          <mat-date-range-input [rangePicker]="pickerFinanceiro">
+            <input matStartDate placeholder="Início" [(ngModel)]="form.dataAprovacaoFinanceiroInicio" />
+            <input matEndDate placeholder="Fim" [(ngModel)]="form.dataAprovacaoFinanceiroFim" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matSuffix [for]="pickerFinanceiro"></mat-datepicker-toggle>
+          <mat-date-range-picker #pickerFinanceiro></mat-date-range-picker>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Status Gestor</mat-label>
+          <mat-select [(ngModel)]="form.statusGestor">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listStatusGestor" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-4">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Status Financeiro</mat-label>
+          <mat-select [(ngModel)]="form.statusFinanceiro">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listStatusFinanceiro" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="col-md-4">
+        <mat-form-field class="example-full-width" appearance="outline">
+          <mat-label>Status Contabilidade</mat-label>
+          <mat-select [(ngModel)]="form.statusContabil">
+            <mat-option [value]="0">Todos</mat-option>
+            <mat-option *ngFor="let item of listStatusContabil" [value]="item.id">{{ item.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <mat-checkbox id="incluirAnexos" [(ngModel)]="form.incluirAnexos">Incluir anexos</mat-checkbox>
+      </div>
+      <div class="col-md-6">
+        <div class="pull-right">
+          <button mat-raised-button type="button" class="btn btn-danger" (click)="limparFormulario()" [disabled]="isBusy">
+            Limpar Filtros
+          </button>
+          <button
+            id="btnGerar"
+            mat-raised-button
+            type="button"
+            class="btn btn-danger"
+            (click)="gerarExportacao()"
+            [disabled]="isBusy"
+          >
+            Gerar exportação
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-danger">
+            <h4 class="card-title">Minhas exportações</h4>
+            <p class="card-category">Os arquivos ficam disponíveis por tempo limitado.</p>
+          </div>
+
+          <div class="loader" *ngIf="isLoadingLista && jobs.length === 0">
+            <mat-progress-spinner diameter="48" mode="indeterminate" color="primary"></mat-progress-spinner>
+            <span class="loader-text">Carregando exportações...</span>
+          </div>
+
+          <div class="card-body">
+            <p class="vazio" *ngIf="!isLoadingLista && jobs.length === 0">
+              Você ainda não gerou nenhuma exportação nos últimos 30 dias.
+            </p>
+
+            <div class="table-responsive" *ngIf="jobs.length > 0">
+              <table class="table">
+                <thead class="text-primary">
+                  <th>Ações</th>
+                  <th>Solicitada em</th>
+                  <th>Filtros</th>
+                  <th>Situação</th>
+                  <th>Andamento</th>
+                  <th>Tamanho</th>
+                  <th>Expira em</th>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let job of jobs">
+                    <td class="acoes">
+                      <button
+                        mat-button
+                        type="button"
+                        class="acao-baixar"
+                        *ngIf="podeBaixar(job)"
+                        (click)="baixar(job)"
+                        [disabled]="isBusy"
+                      >
+                        Baixar
+                      </button>
+                      <button
+                        mat-button
+                        type="button"
+                        class="acao-cancelar"
+                        *ngIf="podeCancelar(job)"
+                        (click)="cancelar(job)"
+                        [disabled]="isBusy"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        mat-button
+                        type="button"
+                        class="acao-excluir"
+                        *ngIf="podeExcluir(job)"
+                        (click)="excluir(job)"
+                        [disabled]="isBusy"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                    <td>{{ paraData(job.dataCriacao) | date: "dd/MM/yyyy HH:mm" }}</td>
+                    <td class="filtros">{{ resumoFiltros(job) }}</td>
+                    <td>
+                      <span class="status" [ngClass]="statusClasse(job)">{{ job.statusDescricao }}</span>
+                      <div class="erro" *ngIf="job.mensagemErro">{{ job.mensagemErro }}</div>
+                    </td>
+                    <td class="andamento">
+                      <div
+                        class="barra"
+                        role="progressbar"
+                        [attr.aria-valuenow]="job.percentual"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      >
+                        <div class="barra-preenchida" [style.width.%]="job.percentual"></div>
+                      </div>
+                      <small>
+                        {{ job.percentual }}%
+                        <span *ngIf="job.totalTitulos > 0">({{ job.titulosProcessados }} de {{ job.totalTitulos }} títulos)</span>
+                      </small>
+                    </td>
+                    <td>{{ tamanhoLegivel(job.tamanhoBytes) }}</td>
+                    <td>{{ paraData(job.dataExpiracao) | date: "dd/MM/yyyy HH:mm" }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

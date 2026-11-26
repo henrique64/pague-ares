@@ -1,0 +1,43 @@
+# Amostra do pacote de exportação com 500 títulos (dados fictícios da semente)
+
+## Primeiras 30 entradas do ZIP (ordem de escrita)
+RDDV-000001/Boleto - ordem de compra.jpg  (1457677 bytes)
+RDDV-000001/Comprovantes - contrato assinado.jpg  (1588910 bytes)
+RDDV-000001/Outros Documentos - CWindowsx.exe  (2196292 bytes)
+RDDV-000002/Comprovantes - autorizacao do gestor.pdf  (1516959 bytes)
+RDDV-000002/Comprovantes - comprovante de pagamento.pdf  (3725920 bytes)
+RDDV-000003/Fatura - boleto março.pdf  (2360277 bytes)
+RDDV-000003/Outros Documentos - nota fiscal 1234.pdf  (2882602 bytes)
+RDDV-000004/Autorização - nome com espaco final .pdf  (5242880 bytes)
+RDDV-000005/Comprovantes - orcamento.jpg  (5242880 bytes)
+RDDV-000006/Nota Fiscal - boleto março (2).jpg  (2372741 bytes)
+RDDV-000006/Nota Fiscal - boleto março.jpg  (2870138 bytes)
+RDDV-000007/Fatura - orcamento.pdf  (5242880 bytes)
+RDDV-000008/Boleto - extrato.pdf  (1009348 bytes)
+RDDV-000008/Comprovantes - comprovante de pagamento.jpg  (2232725 bytes)
+RDDV-000008/Nota Fiscal - boleto março.jpg  (2000806 bytes)
+RDDV-000009/Fatura - recibo.pdf  (5242880 bytes)
+RDDV-000010/Comprovantes - comprovante de pagamento.pdf  (2380804 bytes)
+RDDV-000010/RDDV - contrato assinado.jpg  (2862075 bytes)
+RDDV-000011/Comprovantes - autorizacao do gestor.jpg  (1396931 bytes)
+RDDV-000011/Comprovantes - nota fiscal 1234.pdf  (1591045 bytes)
+RDDV-000011/Fatura - orcamento.jpg  (2254902 bytes)
+RDDV-000012/RDDV - recibo.pdf  (5242880 bytes)
+RDDV-000013/Autorização - autorizacao do gestor.pdf  (1410437 bytes)
+RDDV-000013/Comprovantes - boleto março.jpg  (1943301 bytes)
+RDDV-000013/RDDV - ordem de compra.pdf  (1889141 bytes)
+RDDV-000014/Autorização - recibo.pdf  (5242880 bytes)
+RDDV-000015/Nota de Débito - autorizacao do gestor.jpg  (4125428 bytes)
+RDDV-000015/RDDV - boleto março.pdf  (1117451 bytes)
+RDDV-000016/Boleto - nota fiscal 1234.jpg  (5242880 bytes)
+RDDV-000017/Arquivo Zipado - relatorio de viagem.pdf  (2721243 bytes)
+
+Total de entradas: 1027
+
+## Cabeçalho e 5 linhas do indice.csv
+titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256
+RDDV-000001;Rddv;Boleto;ordem de compra.jpg;Boleto - ordem de compra.jpg;RDDV-000001/Boleto - ordem de compra.jpg;1457677;f6d844c12545448189aef786f573e5bf0601f53bfcbaee055e9475c46ca2ea7c
+RDDV-000001;Rddv;Comprovantes;contrato assinado.jpg;Comprovantes - contrato assinado.jpg;RDDV-000001/Comprovantes - contrato assinado.jpg;1588910;b4ae3c815047aa025ba8604bf30c0d5c598a55667a6c08d2d59c926e9dde047c
+RDDV-000001;Rddv;Outros Documentos;C:\Windows\x.exe;Outros Documentos - CWindowsx.exe;RDDV-000001/Outros Documentos - CWindowsx.exe;2196292;19981dadeab74f7d3992d26fb8117bd6936641b08fdee075d68075a0089e1e04
+RDDV-000002;Rddv;Comprovantes;autorizacao do gestor.pdf;Comprovantes - autorizacao do gestor.pdf;RDDV-000002/Comprovantes - autorizacao do gestor.pdf;1516959;91e586e04e55266f6d0311d0328040a91fd384b20162e2c523338e3ab5a4e690
+RDDV-000002;Rddv;Comprovantes;comprovante de pagamento.pdf;Comprovantes - comprovante de pagamento.pdf;RDDV-000002/Comprovantes - comprovante de pagamento.pdf;3725920;2965a5b1b4b938cf14b1f8c01a333075ac68ab5fd88f2590fa39107040a6f430

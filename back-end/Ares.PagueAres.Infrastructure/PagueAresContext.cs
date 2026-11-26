@@ -30,6 +30,35 @@ namespace Ares.PagueAres.Infrastructure
         public virtual DbSet<Fornecedor> Fornecedors { get; set; } = null!;
         public virtual DbSet<TipoViagem> TipoViagems { get; set; } = null!;
         public virtual DbSet<ViewListagemSolicitacoes> ViewListagemSolicitacoes { get; set; } = null!;
+        public virtual DbSet<ExportacaoJob> ExportacaoJobs { get; set; } = null!;
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            RenovarVersaoExportacaoJobs();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            RenovarVersaoExportacaoJobs();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        /// <summary>
+        /// Troca o token de concorrência <see cref="ExportacaoJob.Versao"/> de todo job incluído ou
+        /// alterado nesta gravação. O valor original (o lido do banco) continua sendo o comparado no
+        /// UPDATE, então uma segunda gravação feita a partir da mesma leitura falha com
+        /// <see cref="DbUpdateConcurrencyException"/>, tanto no SQL Server quanto no InMemory.
+        /// As sobrecargas sem <c>acceptAllChangesOnSuccess</c> delegam para estas duas.
+        /// </summary>
+        private void RenovarVersaoExportacaoJobs()
+        {
+            foreach (var entry in ChangeTracker.Entries<ExportacaoJob>())
+            {
+                if (entry.State is EntityState.Added or EntityState.Modified)
+                    entry.Entity.Versao = Guid.NewGuid();
+            }
+        }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -417,6 +446,57 @@ namespace Ares.PagueAres.Infrastructure
             {
                 entity.HasNoKey().ToView("vListagemSolicitacoes");
                 entity.Property(e => e.Valor).HasColumnType("decimal(18,2)");
+            });
+
+            modelBuilder.Entity<ExportacaoJob>(entity =>
+            {
+                entity.HasKey(e => e.IdExportacaoJob);
+
+                entity.ToTable("ExportacaoJob");
+
+                entity.Property(e => e.Status).IsRequired();
+
+                entity.Property(e => e.FiltrosJson)
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.DataCriacao)
+                    .IsRequired()
+                    .HasColumnType("datetime2");
+
+                entity.Property(e => e.DataInicio).HasColumnType("datetime2");
+                entity.Property(e => e.DataConclusao).HasColumnType("datetime2");
+                entity.Property(e => e.DataExpiracao).HasColumnType("datetime2");
+
+                entity.Property(e => e.TotalTitulos).IsRequired().HasDefaultValue(0);
+                entity.Property(e => e.TitulosProcessados).IsRequired().HasDefaultValue(0);
+                entity.Property(e => e.TotalAnexos).IsRequired().HasDefaultValue(0);
+
+                entity.Property(e => e.NomeArquivo).HasMaxLength(260);
+
+                entity.Property(e => e.MensagemErro).HasMaxLength(500);
+
+                entity.Property(e => e.CancelamentoSolicitado)
+                    .IsRequired()
+                    .HasColumnType("bit")
+                    .HasDefaultValue(false);
+
+                // Token de concorrência: renovado a cada gravação em RenovarVersaoExportacaoJobs.
+                entity.Property(e => e.Versao)
+                    .IsRequired()
+                    .IsConcurrencyToken();
+
+                entity.HasOne<Usuario>()
+                    .WithMany()
+                    .HasForeignKey(e => e.IdUsuario)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_ExportacaoJob_Usuario");
+
+                entity.HasIndex(e => new { e.IdUsuario, e.DataCriacao })
+                    .HasDatabaseName("IX_ExportacaoJob_IdUsuario_DataCriacao");
+
+                entity.HasIndex(e => e.Status)
+                    .HasDatabaseName("IX_ExportacaoJob_Status");
             });
 
             OnModelCreatingPartial(modelBuilder);

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>PagueAres: exportação de títulos com anexos</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm 14mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.38; color: #222; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 4px 0; color: #9b1717; }
+  h2 { font-size: 14pt; margin: 0 0 8px 0; padding-bottom: 4px; border-bottom: 2px solid #9b1717; color: #9b1717; }
+  h3 { font-size: 11pt; margin: 12px 0 4px 0; color: #333; }
+  p { margin: 0 0 6px 0; }
+  .sub { color: #555; margin-bottom: 10px; }
+  section { page-break-before: always; break-before: page; }
+  section.primeira { page-break-before: auto; break-before: auto; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0 8px 0; font-size: 9.5pt; }
+  th, td { border: 1px solid #bbb; padding: 4px 6px; vertical-align: top; text-align: left; }
+  th { background: #f1e3e3; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  ol, ul { margin: 4px 0 8px 0; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  figure { margin: 6px 0 8px 0; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+  figure img { border: 1px solid #aaa; max-width: 100%; }
+  figcaption { font-size: 8.5pt; color: #555; margin-top: 2px; }
+  .nota { background: #fff6e0; border-left: 4px solid #e0a300; padding: 6px 10px; margin: 8px 0; }
+  .info { background: #eaf4fb; border-left: 4px solid #2a7db5; padding: 6px 10px; margin: 8px 0; }
+  .ok { color: #1b6e2a; font-weight: 600; }
+  .par { display: flex; gap: 8px; align-items: flex-start; }
+  .par figure { flex: 1; margin: 4px 0; }
+  .grande { font-size: 15pt; font-weight: 700; color: #9b1717; }
+  .numeros { display: flex; gap: 8px; margin: 8px 0; }
+  .numeros div { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 6px 8px; text-align: center; }
+  .numeros small { display: block; color: #555; font-size: 8.5pt; }
+  .rodape { font-size: 8.5pt; color: #666; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<section class="primeira">
+  <h1>Exportação de títulos com anexos</h1>
+  <p class="sub">PagueAres · Documento de entrega para a equipe do Financeiro · Novembro de 2026</p>
+
+  <p>Este documento mostra o que foi pedido, o que foi entregue e como usar a nova tela <strong>Exportações</strong>. A funcionalidade foi criada para reunir, num único arquivo, os títulos e os anexos que serão compartilhados com a auditoria externa. Uma sigla aparece várias vezes: <strong>RDDV</strong> significa Relatório de Despesas com Deslocamento e Viagem, a prestação de contas de uma viagem.</p>
+
+  <div class="info">
+    <strong>Em uma frase:</strong> o Financeiro escolhe um período e alguns filtros, o PagueAres prepara um <strong>arquivo ZIP (uma pasta compactada)</strong> em segundo plano, e esse arquivo traz uma planilha de Excel, uma pasta com os anexos de cada título e um índice para conferência.
+  </div>
+
+  <h2>O que foi pedido e o que foi entregue</h2>
+  <table>
+    <tr><th style="width:30%">Pedido</th><th>Entregue</th></tr>
+    <tr><td>Excel com as informações dos títulos e as datas de aprovação</td><td><span class="ok">Entregue.</span> A planilha <em>titulos.xlsx</em> tem quatro abas: Solicitações, RDDVs, Despesas dos RDDVs e Anexos. Para cada título há a situação e a data e hora de aprovação do Gestor, do Financeiro e da Contabilidade, com as observações do Gestor e do Financeiro (a Contabilidade tem só a situação e a data).</td></tr>
+    <tr><td>Anexos de cada título</td><td><span class="ok">Entregue.</span> Todos os anexos do título vão dentro do pacote, com o mesmo conteúdo enviado no PagueAres.</td></tr>
+    <tr><td>Uma pasta por título, com o código do PagueAres</td><td><span class="ok">Entregue.</span> Cada título com anexo ganha uma pasta com o seu código, por exemplo <em>SOL-000631</em> (solicitação) ou <em>RDDV-000421</em> (RDDV: Relatório de Despesas com Deslocamento e Viagem). Cada anexo recebe o nome do tipo de documento seguido do nome original, como <em>Nota Fiscal - boleto março.pdf</em>.</td></tr>
+    <tr><td>Ligação entre a planilha e os arquivos</td><td><span class="ok">Entregue.</span> A planilha traz links para as pastas e para os arquivos: o código do título é um link para a pasta, e a aba Anexos tem um link para cada arquivo. Os links funcionam com o ZIP extraído (orientação de uso: extraia o ZIP antes de abrir a planilha).</td></tr>
+    <tr><td>Índice para conferência e análises futuras</td><td><span class="ok">Entregue.</span> O pacote traz o <em>indice.csv</em> (abre no Excel) e o <em>indice.json</em> (para sistemas de análise). Os dois listam cada arquivo com o tamanho e um <strong>código de conferência</strong>: se o arquivo mudar um único byte, o código muda. Assim a auditoria confere que nada foi alterado.</td></tr>
+    <tr><td>Funcionar mesmo com muitos anexos</td><td><span class="ok">Entregue.</span> O arquivo é preparado em segundo plano, sem travar a tela, e a pessoa acompanha o andamento na própria tela.</td></tr>
+    <tr><td>Quem pode usar</td><td><span class="ok">Entregue.</span> Somente os perfis <strong>Financeiro</strong> e <strong>Administrador</strong>.</td></tr>
+    <tr><td>Dados completos</td><td><span class="ok">Entregue.</span> CPF, banco, agência e conta saem completos na planilha, como o pedido previa.</td></tr>
+  </table>
+  <p>Além do pedido, o PagueAres passou a ler as datas digitadas no formato brasileiro em todas as telas (veja a última página).</p>
+</section>
+
+<section>
+  <h2>Como gerar uma exportação (passo a passo)</h2>
+  <p class="sub">Você precisa entrar no PagueAres com um usuário do perfil Financeiro ou Administrador.</p>
+
+  <ol>
+    <li>No menu à esquerda, clique em <strong>Exportações</strong>. O item só aparece para o Financeiro e o Administrador.</li>
+  </ol>
+  <figure>
+    <img src="img/01-menu-exportacoes.png" style="width:13.5cm" alt="Tela Exportações com o menu lateral">
+    <figcaption>Figura 1: item Exportações no menu e formulário de filtros (dados fictícios).</figcaption>
+  </figure>
+
+  <ol start="2">
+    <li>Escolha os filtros. Todos são opcionais: tipo de título (solicitação, RDDV ou ambos), departamento, solicitante, parceiro, status, e os períodos de solicitação, vencimento e aprovação do Financeiro. Campo em branco não filtra. Para os períodos, digite as datas no formato dia/mês/ano, como <em>01/11/2025</em>.</li>
+    <li>Deixe marcada a opção <strong>Incluir anexos</strong> para receber os arquivos junto com a planilha.</li>
+    <li>Clique em <strong>Gerar exportação</strong>. Se quiser recomeçar, use <strong>Limpar Filtros</strong>.</li>
+  </ol>
+  <figure>
+    <img src="img/02-formulario-filtros.png" style="width:13.5cm" alt="Formulário de filtros preenchido">
+    <figcaption>Figura 2: exemplo de filtros preenchidos (solicitações autorizadas entre 01/11/2025 e 31/12/2025).</figcaption>
+  </figure>
+
+  <div class="nota">
+    <strong>Dica de tamanho:</strong> exporte por período, <strong>um mês de cada vez</strong>. Pelo volume estimado (25 títulos por dia útil, cerca de 5 MB de anexos cada), um mês gera <strong>cerca de 2,5 GB</strong>. Cada exportação aceita até 5.000 títulos e até 20 GB, e cada pessoa pode ter até 2 exportações em preparo ao mesmo tempo. Se passar do limite, o PagueAres avisa e pede um filtro menor.
+  </div>
+</section>
+
+<section>
+  <h2>Acompanhar e baixar o arquivo</h2>
+  <ol start="5">
+    <li>Logo depois de clicar em <strong>Gerar exportação</strong>, a exportação aparece na lista <strong>Minhas exportações</strong> com a situação <em>Em processamento</em> e uma barra de andamento. Você pode continuar usando o PagueAres ou fechar a tela; a preparação segue no servidor. Para desistir, use <strong>Cancelar</strong>.</li>
+  </ol>
+  <figure>
+    <img src="img/03-exportacao-em-andamento.png" style="width:13.5cm" alt="Lista de exportações com uma em processamento">
+    <figcaption>Figura 3: exportação em andamento (30%, 150 de 500 títulos) e duas já concluídas.</figcaption>
+  </figure>
+
+  <ol start="6">
+    <li>Quando a situação mudar para <strong>Concluída</strong>, clique em <strong>Baixar</strong>. O arquivo ZIP é baixado pelo navegador. A lista mostra o tamanho e a data em que o arquivo será apagado.</li>
+    <li>Para apagar um pacote antes do prazo, clique em <strong>Excluir</strong>.</li>
+  </ol>
+  <figure>
+    <img src="img/04-exportacao-concluida.png" style="width:13.5cm" alt="Lista de exportações concluídas">
+    <figcaption>Figura 4: exportações concluídas, com os botões Baixar e Excluir e a data de expiração.</figcaption>
+  </figure>
+
+  <div class="nota">
+    <strong>Cuidados com o download</strong>
+    <ul>
+      <li>O pacote fica disponível por <strong>48 horas</strong> depois de pronto. Passado o prazo, o PagueAres o apaga e será preciso gerar de novo. O prazo pode ser mudado pela equipe de TI.</li>
+      <li>Ao clicar em Baixar, o PagueAres cria um link de download que vale <strong>uma única vez</strong> e por <strong>cerca de 2 minutos</strong>. Se o link vencer ou o download falhar, basta clicar em Baixar de novo.</li>
+      <li>Se o servidor for reiniciado durante a preparação, a exportação aparece como <em>Falhou</em> com uma mensagem clara, sem deixar arquivo pela metade. Gere de novo.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>O que vem no pacote e como abrir</h2>
+  <p>Ao baixar, você recebe um único arquivo ZIP (uma pasta compactada). Dentro dele:</p>
+  <table>
+    <tr><th style="width:36%">Item</th><th>O que é</th></tr>
+    <tr><td><strong>LEIA-ME.txt</strong></td><td>Instruções curtas, data de geração e os filtros usados.</td></tr>
+    <tr><td><strong>titulos.xlsx</strong></td><td>A planilha com as quatro abas: Solicitações, RDDVs, Despesas dos RDDVs e Anexos.</td></tr>
+    <tr><td><strong>indice.csv</strong> (abre no Excel) e <strong>indice.json</strong> (para sistemas de análise)</td><td>Lista de todos os anexos com tamanho e código de conferência de cada arquivo.</td></tr>
+    <tr><td><strong>SOL-000631/</strong>, <strong>RDDV-000421/</strong> ...</td><td>Uma pasta por título que tenha anexos, com os arquivos dentro.</td></tr>
+  </table>
+
+  <div class="nota">
+    <strong>Importante:</strong> extraia (descompacte) todo o ZIP numa pasta do computador <strong>antes</strong> de abrir o Excel. Se abrir o <em>titulos.xlsx</em> direto de dentro do ZIP, os links para as pastas e os anexos podem não funcionar.
+  </div>
+
+  <figure>
+    <img src="img/07-previa-planilha.png" style="width:13.5cm" alt="Prévia das abas da planilha">
+    <figcaption>Figura 5: prévia das abas da planilha (os dados são fictícios). A aba Solicitações continua à direita com valores, status e datas de aprovação.</figcaption>
+  </figure>
+  <figure>
+    <img src="img/08-arvore-pacote.png" style="width:13.5cm" alt="Árvore de pastas do pacote">
+    <figcaption>Figura 6: arquivos da raiz do pacote e uma pasta por título, com os anexos nomeados pelo tipo de documento.</figcaption>
+  </figure>
+  <p>Se um título tiver dois anexos com o mesmo nome, o segundo recebe <em>(2)</em> no fim, para que nenhum arquivo seja substituído. O código de conferência pode ser recalculado por qualquer programa de verificação e comparado com o do índice.</p>
+</section>
+
+<section>
+  <h2>Quem pode usar, segurança e cuidados</h2>
+
+  <h3>Quem tem acesso</h3>
+  <p>Só os perfis <strong>Financeiro</strong> e <strong>Administrador</strong> veem o item Exportações no menu e conseguem gerar pacotes. Os demais perfis, como Contabilidade, Gestor e Solicitante, não veem o item. Quem digitar o endereço da tela mesmo assim volta para a lista de solicitações.</p>
+  <div class="par">
+    <figure>
+      <img src="img/05-menu-contabilidade.png" style="width:100%" alt="Menu da Contabilidade sem Exportações">
+      <figcaption>Figura 7: menu de um usuário da Contabilidade, sem Exportações.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/06-acesso-negado-redireciona.png" style="width:100%" alt="Acesso negado e retorno às solicitações">
+      <figcaption>Figura 8: a Contabilidade tenta abrir a tela e volta para Solicitações.</figcaption>
+    </figure>
+  </div>
+  <div class="par">
+    <figure style="flex:0 0 52%">
+      <img src="img/09-botao-exportar-legado.png" style="width:100%" alt="Botão Exportar na tela Solicitações">
+      <figcaption>Figura 9: o botão Exportar da tela Solicitações (planilha simples, sem anexos) foi mantido, só para Financeiro e Administrador.</figcaption>
+    </figure>
+    <div style="flex:1">
+      <h3 style="margin-top:4px">Segurança, em poucas palavras</h3>
+      <ul>
+        <li>Só Financeiro e Administrador geram e baixam exportações.</li>
+        <li>Cada pessoa vê <strong>somente as próprias exportações</strong>; ninguém abre o pacote de outra pessoa.</li>
+        <li>O link de download vale uma vez e por pouco tempo.</li>
+        <li>Entram só títulos que já foram aprovados pelo Gestor, que não são rascunho e não foram cancelados.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Correções de segurança feitas junto</h3>
+  <p>Ao revisar o que já existia, foram corrigidos pontos antigos que afetavam as exportações e a visualização de anexos:</p>
+  <ul>
+    <li>O botão Exportar da tela Solicitações agora também é restrito ao Financeiro e ao Administrador.</li>
+    <li>O Administrador passou a receber todos os títulos aprovados pelo Gestor na exportação, e não só os atribuídos a ele.</li>
+    <li>A autorização de um anexo agora vale apenas para o título para o qual foi dada, e rascunhos de outra pessoa não ficam acessíveis.</li>
+    <li>Os nomes dos arquivos dentro dos ZIPs ficaram seguros: nenhum arquivo é gravado fora da pasta escolhida ao extrair.</li>
+    <li>Quando algo dá errado, a tela mostra uma mensagem simples e não revela detalhes internos do sistema.</li>
+  </ul>
+
+  <div class="nota">
+    <strong>Cuidado com o conteúdo:</strong> a planilha traz CPF e dados bancários completos. Compartilhe o pacote só com quem precisa, por um canal seguro, e apague as cópias quando a auditoria terminar.
+  </div>
+</section>
+
+<section>
+  <h2>Resultados dos testes</h2>
+  <p>Os testes foram feitos num ambiente separado, com <strong>dados fictícios</strong>, no volume esperado de um mês de operação.</p>
+
+  <div class="numeros">
+    <div><span class="grande">500</span><small>títulos exportados<br>(300 solicitações e 200 RDDVs)</small></div>
+    <div><span class="grande">995</span><small>anexos, somando<br>cerca de 2,6 GB</small></div>
+    <div><span class="grande">1 min 32 s</span><small>até o pacote ficar pronto</small></div>
+    <div><span class="grande">12 s</span><small>para baixar o ZIP<br>(cerca de 2,6 GB)</small></div>
+  </div>
+
+  <p class="rodape" style="margin-top:0">O pacote de 500 títulos tem cerca de 2,6 GB. A tela mostra o tamanho em outra unidade de medida, por isso os números podem diferir um pouco.</p>
+
+  <table>
+    <tr><th style="width:42%">O que foi testado</th><th>Resultado</th></tr>
+    <tr><td>500 títulos com cerca de 2,6 GB de anexos</td><td>Pacote pronto em cerca de 1 min 32 s e baixado em cerca de 12 s.</td></tr>
+    <tr><td>100 títulos (98 encontrados, 194 anexos, 514 MB)</td><td>Pacote pronto em cerca de 20 s e baixado em cerca de 3 s.</td></tr>
+    <tr><td>Uso de memória do servidor</td><td>No máximo cerca de 375 MB de memória. O uso cresceu pouco quando o volume quintuplicou, porque os anexos são lidos um de cada vez.</td></tr>
+    <tr><td>Conferência do pacote de 500 títulos</td><td><span class="ok">Aprovado.</span> Foram conferidas 16 regras, entre elas estrutura de pastas, nomes dos arquivos, abas e colunas da planilha, links e totais. O tamanho e o código de conferência dos 995 anexos foram recalculados e batem com o índice.</td></tr>
+    <tr><td>Reinício do servidor no meio de uma exportação</td><td><span class="ok">Aprovado.</span> A exportação ficou como Falhou com mensagem clara, não sobrou arquivo pela metade, e uma nova exportação foi concluída normalmente.</td></tr>
+    <tr><td>Segurança com usuários de cada perfil</td><td><span class="ok">Aprovado.</span> Sem login ou com perfil Contabilidade, Gestor ou Solicitante, o acesso é negado. Um Administrador não enxerga a exportação de outra pessoa. O link de download funciona uma vez; na segunda tentativa é recusado.</td></tr>
+    <tr><td>Testes automáticos do sistema</td><td><span class="ok">Aprovado.</span> 385 testes automáticos do servidor e 138 da tela, sem nenhuma falha. Os testes de segurança foram escritos antes da correção e primeiro mostraram a falha.</td></tr>
+  </table>
+  <p class="rodape">Os tempos foram medidos num computador de testes. No servidor do cliente podem variar um pouco, conforme a máquina e a rede.</p>
+
+  <h3>Datas no formato brasileiro, em todo o sistema</h3>
+  <p>Durante os testes, notamos que o PagueAres lia algumas datas digitadas como mês/dia (por exemplo, <em>05/12/2025</em> virava 12 de maio). Isso já existia e valia para várias telas. Agora as datas digitadas são lidas como <strong>dia/mês/ano</strong> em todo o sistema: Exportações, Solicitações, Nova solicitação e RDDV. O botão <strong>Limpar Filtros</strong> também passou a apagar o texto dos campos de data.</p>
+</section>
+
+</body>
+</html>

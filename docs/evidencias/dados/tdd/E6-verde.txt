@@ -1,0 +1,62 @@
+E6 — Fila e serviço em segundo plano da exportação — fase VERDE (testes depois da implementação)
+Data: 2026-11-25
+Branch: feature/exportacao-anexos-e6
+Comando: dotnet test back-end/Ares.PagueAres.sln --filter "FullyQualifiedName~ExportacaoWorker"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Exportacao/ExportacaoWorkerTests.cs
+Banco: EF Core InMemory (mesma InMemoryDatabaseRoot para simular dois processos), só dados fictícios.
+Gerador: falso, controlado por TaskCompletionSource; pasta temporária própria por teste.
+
+Resultado: 17 testes — 17 aprovados, 0 com falha, em 3 execuções seguidas (para pegar instabilidade de concorrência).
+  Execução 1: 17/17 aprovados
+  Execução 2: 17/17 aprovados
+  Execução 3: 17/17 aprovados
+
+Cenários do brief (verdes agora)
+------------------------------------------------------------------------------------------
+[PASSOU] 1. DoisJobsNaFila_GeradorNuncaRodaDoisAoMesmoTempo_EAmbosConcluem
+         o segundo job só começa depois de o primeiro ser liberado; concorrência máxima do gerador = 1; os dois Concluido
+[PASSOU] 2. DoisWorkersNoMesmoBanco_JobPendenteEGeradoExatamenteUmaVez
+         8 jobs enfileirados nos dois workers: cada um gerado exatamente uma vez (reivindicação pelo token Versao)
+[PASSOU] 3. Inicio_ProcessandoViraFalhou_ParciaisApagados_PendentesProcessadosPorDataDeCriacao
+         Processando -> Falhou com "A exportação foi interrompida por um reinício do servidor. Gere a exportação de novo.";
+         todo *.parcial apagado, .zip mantido; os Pendente retomados na ordem da DataCriacao
+[PASSOU] 4. CancelamentoDePendente_ViraCanceladoSemChamarOGerador
+         job marcado Cancelado pela API e job com CancelamentoSolicitado no banco: nenhum chega ao gerador
+[PASSOU] 4. CancelamentoEmProcessando_PelaFila_ViraCanceladoEApagaParcial
+         ExportacaoFila.SolicitarCancelamento interrompe a geração na hora; Cancelado, sem .parcial e sem .zip
+[PASSOU] 4. CancelamentoEmProcessando_SoPeloBanco_ViraCanceladoEApagaParcial
+         pedido gravado só no banco (outro processo): o acompanhamento de progresso percebe em até 2 s
+[PASSOU] 5. ParadaDoHostDuranteAGeracao_ViraFalhouComMensagemDeInterrupcao
+         StopAsync no meio da geração: Falhou com a mensagem de interrupção, sem .parcial
+[PASSOU] 6. ExportacaoException_ViraFalhouComAMensagemDela
+[PASSOU] 6. ExcecaoGenerica_ViraFalhouComMensagemGenericaSemOTextoDaExcecao
+         MensagemErro = "Não foi possível gerar a exportação. Gere de novo; se o erro continuar, acione o suporte."
+         e sem nenhum trecho do texto da exceção
+[PASSOU] 7. EspacoLivreAbaixoDoMinimo_ViraFalhouComMensagemAmigavelSemChamarOGerador
+[PASSOU] 8. Limpeza_ExpiraConcluidoVencido_ApagaOrfaoVelho_MantemArquivoDeJobValido
+         Concluido vencido -> Expirado e arquivo apagado; órfão velho apagado; órfão recente, arquivo de job válido
+         (mesmo velho) e arquivo fora do padrão exportacao-*.zip mantidos
+[PASSOU] 9. Sucesso_ArquivoFinalSemParcial_TamanhoEExpiracaoGravados
+         exportacao-<id>.zip existe, .parcial não; TamanhoBytes = tamanho do arquivo; DataExpiracao = DataConclusao + RetencaoHoras
+
+Casos complementares (mesma classe)
+------------------------------------------------------------------------------------------
+[PASSOU] Progresso_EGravadoDuranteAGeracao
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: True)
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: False)
+[PASSOU] Factory_RegistraWorkerELimpeza_UsaPastaPropria_EApagaAPastaNoDispose
+[PASSOU] FactoryComWorkerDesabilitado_NaoRegistraWorkerNemLimpeza
+
+Conferência dos testes de concorrência por mutação (alterações temporárias, desfeitas antes do commit)
+------------------------------------------------------------------------------------------
+- Reivindicação sem o token: aceitar job já Processando e seguir após DbUpdateConcurrencyException
+  -> DoisWorkersNoMesmoBanco_JobPendenteEGeradoExatamenteUmaVez FALHOU (job gerado pelos dois executores).
+- Worker disparando os jobs sem esperar e fila sem o semáforo de um job por vez
+  -> DoisJobsNaFila_GeradorNuncaRodaDoisAoMesmoTempo_EAmbosConcluem FALHOU (o segundo job começou junto com o primeiro).
+
+Regressão
+------------------------------------------------------------------------------------------
+Comando: dotnet test back-end/Ares.PagueAres.sln
+  Ares.PagueAres.Tests.Unit:        119 aprovados, 0 com falha
+  Ares.PagueAres.Tests.Integration: 151 aprovados, 0 com falha (134 anteriores + 17 da E6)
+Build: dotnet build back-end/Ares.PagueAres.sln -c Debug -> 0 erros

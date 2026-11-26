@@ -56,8 +56,8 @@ Ambos os módulos seguem um **fluxo de aprovação em três estágios**: Gestor 
 | Autenticação | JWT HS256 (`JwtBearer` 10.0.8) + Active Directory (LDAP) | — |
 | Hash de senha | BCrypt.Net-Next | 4.0.3 |
 | E-mail | SMTP (`System.Net.Mail`) | — |
-| Compressão | SharpZipLib | 1.4.2 |
-| Excel | FreeSpire.XLS | 16.4.0 |
+| Compressão | SharpZipLib (ZIPs legados por título) / `System.IO.Compression` (pacote da exportação) | 1.4.2 / .NET 10 |
+| Excel | ClosedXML (planilha da exportação de títulos e Excel de pagamentos) | ver `Ares.PagueAres.Application.csproj` |
 | Serialização | Newtonsoft.Json | 13.0.4 |
 | Documentação da API | OpenAPI (`Microsoft.AspNetCore.OpenApi`) + Scalar UI (`Scalar.AspNetCore`) | 10.0.8 / 2.14.14 |
 | Testes Backend | xUnit, FluentAssertions, Moq, EF Core InMemory, `Mvc.Testing` | xUnit 2.9.2, FluentAssertions 6.12.2, Moq 4.20.72 |
@@ -128,7 +128,7 @@ O backend adota **Clean Architecture** em 4 projetos (mais 2 projetos de teste).
 | Serviço | Imagem/Build | Porta no host (padrão) | Observação |
 |---------|--------------|------------------------|------------|
 | `db` | `mssql/server:2022-latest` | só no override de desenvolvimento: `${DB_PORT:-14330}` → 1433 | volume `pagueares-db-data`, healthcheck com `sqlcmd`. O compose base não publica a porta do banco; usado sozinho (`docker compose -f docker-compose.yml up`), o SQL fica acessível apenas na rede interna `pagueares-net` |
-| `api` | `back-end/Dockerfile` (.NET 10) | `${API_PORT:-5000}` → 8080 | `ConnectionStrings__ConexaoPadrao` apontando para `db,1433`; roda migrations no startup |
+| `api` | `back-end/Dockerfile` (.NET 10) | `${API_PORT:-5000}` → 8080 | `ConnectionStrings__ConexaoPadrao` apontando para `db,1433`; roda migrations no startup; volume `pagueares-exportacao` em `/var/pagueares/exportacao` (`Exportacao__Pasta`) para os pacotes da exportação |
 | `frontend` | `front-end/Dockerfile` (Node build + Nginx) | `${FRONTEND_PORT:-80}` → 80 | Nginx faz proxy de `/api/` para `http://api:8080` |
 
 ---
@@ -144,6 +144,7 @@ pague-ares/
 ├── docker-compose.yml               # SQL Server + API + frontend
 ├── docker-compose.override.yml      # Dev local: SQL na porta 14330, API em Development
 ├── .env.example                     # Variáveis do compose (copiar para .env)
+├── docs/implantacao/iis-exportacao.md  # Guia de implantação da exportação no IIS
 ├── DOCUMENTACAO.md                  # Este documento
 ├── RELATORIO_TESTES.md              # Relatório de execução de testes
 └── RELATORIO_MELHORIAS_CLIENTE.md   # Relatório de melhorias (versão para o cliente; há também um PDF)
@@ -318,11 +319,25 @@ Filtros (query string): `DocumentNumber`, `DocumentId`, `RequestStart`/`RequestE
 #### ExportController — `/api/export`
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/export/payments?sFilter=&userId=&key=` | Exporta lista de pagamentos em Excel (`Pagamentos.xlsx`) |
+| GET | `/api/export/payments?sFilter=&userId=&key=` | Exporta lista de pagamentos em Excel (`Pagamentos.xlsx`); `userId` é aceito mas ignorado |
 | GET | `/api/export/rddv/attachment/{id}?key=` | Exporta anexos de RDDV como ZIP |
 | GET | `/api/export/request/attachment/{id}?key=` | Exporta anexos de solicitação como ZIP |
 
-As três rotas são `[AllowAnonymous]` e protegidas pela *preview key* (ver 9.5). A exportação Excel exclui rascunhos e cancelados.
+As três rotas são `[AllowAnonymous]` e protegidas pela *preview key* (ver 9.5). A exportação Excel só inclui títulos não rascunho, não cancelados e aprovados pelo gestor, para quem tem chave `Exportacao` (somente FIN e ADM). Erros nunca devolvem texto de exceção: filtro inválido → 400 `"Filtro de exportação inválido."`; demais falhas → 500 `"Não foi possível concluir a operação. Tente de novo."` (a exceção completa vai para o log).
+
+---
+
+#### ExportacaoController — `/api/exportacao`
+Exportação de títulos com anexos em pacote ZIP gerado em segundo plano (ver seção 11.1). Todas as rotas exigem JWT e papel **FIN ou ADM** vindo do token, exceto o download. Respostas no envelope `GenericResponse<T>`. O parâmetro `{id}` é sempre `{id:int}`; a identidade do usuário vem sempre do JWT (nunca do corpo ou da query).
+
+| Método | Rota | Descrição | Respostas |
+|--------|------|-----------|-----------|
+| POST | `/api/exportacao` | Corpo `FiltroExportacaoDto`. Cria e enfileira a exportação | 202 com `ExportacaoJobDto` (Pendente); 401; 403; 400 (filtro inválido, nenhum título ou mais que `MaxTitulosPorExportacao`); 429 (usuário já tem `MaxJobsAtivosPorUsuario` exportações Pendente/Processando) |
+| GET | `/api/exportacao` | Exportações **do próprio usuário** dos últimos 30 dias, mais recentes primeiro | 200 com lista de `ExportacaoJobDto`; 401; 403 |
+| GET | `/api/exportacao/{id}` | Status e progresso de uma exportação | 200; 401; 403; 404 (não existe **ou é de outro usuário**) |
+| POST | `/api/exportacao/{id}/link-download` | Gera o link de download (token de uso único) | 200 com `LinkDownloadExportacaoDto` (`token`, `expiraEm`); 401; 403; 404; 409 (não está Concluída); 410 (expirada ou arquivo ausente) |
+| GET | `/api/exportacao/download?token=` | `[AllowAnonymous]`. Baixa o ZIP em streaming | 200 `application/zip`; 401 (token ausente, inválido, já usado ou vencido); 410 (arquivo expirado ou ausente) |
+| DELETE | `/api/exportacao/{id}` | Pendente → Cancelada; Processando → pede cancelamento; Concluída → apaga o arquivo e vira Expirada | 204; 401; 403; 404; 409 (já Falhou, Expirada ou Cancelada) |
 
 ---
 
@@ -364,7 +379,7 @@ Substitui as listas fixas de departamentos que existiam no frontend.
 #### PreviewController — `/api/preview`
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| POST | `/api/preview/generate-preview-key?entityId=&requestType=` | Gera a chave temporária (autenticado; dono do registro ou ADM/GES/FIN/CON) |
+| POST | `/api/preview/generate-preview-key?entityId=&requestType=` | Gera a chave temporária (autenticado). Solicitação/RDDV: dono do registro ou ADM/GES/FIN/CON, e título em rascunho só dá chave ao dono. `Exportacao`: somente FIN ou ADM (403 para os demais) |
 | GET | `/api/preview/payment/{id}/{attachmentId}?key=` | Serve um anexo de solicitação (`[AllowAnonymous]` + chave) |
 | GET | `/api/preview/rddv/{id}/{attachmentId}?key=` | Serve um anexo de RDDV (`[AllowAnonymous]` + chave) |
 
@@ -439,6 +454,7 @@ O app usa **rotas com hash** (`useHash: true`), por exemplo `http://localhost:42
 /                         → AdminLayoutComponent (redireciona para /login se não autenticado)
   /home                   → HomeComponent
   /payments               → PaymentsComponent
+  /exportacoes            → ExportacoesComponent (só FIN e ADM, via papelGuard)
   /rddv                   → RddvComponent
   /config                 → ConfigurationComponent
   /icons                  → IconsComponent
@@ -447,7 +463,7 @@ O app usa **rotas com hash** (`useHash: true`), por exemplo `http://localhost:42
   /create-user[/:id]      → CreateUserComponent
 ```
 
-O `AdminLayoutModule` é carregado via **lazy loading**. Após login bem-sucedido o app navega para `/payments`. O menu lateral varia por papel: ADM (Home, Solicitações, Configurações), FIN/CON (Home, Solicitações), GES/SOL (Solicitações).
+O `AdminLayoutModule` é carregado via **lazy loading**. A rota `/exportacoes` é a única com guarda de papel (`papelGuard(EnumFuncao.Financeiro, EnumFuncao.Administrador)`, em `guards/papel.guard.ts`): quem não é FIN nem ADM é redirecionado para `/payments`. Após login bem-sucedido o app navega para `/payments`. O menu lateral varia por papel: ADM (Home, Solicitações, Exportações, Configurações), FIN (Home, Solicitações, Exportações), CON (Home, Solicitações; não exporta), GES/SOL (Solicitações).
 
 ---
 
@@ -515,6 +531,7 @@ Componentes declarados no módulo do layout (`/rddv` tem rota; `RefundsComponent
 | `TravelTypeService` | CRUD de tipos de viagem |
 | `DepartmentService` | Lista de departamentos |
 | `ExportService` | URLs de exportação Excel e ZIP de anexos |
+| `ExportacaoService` | Exportações de títulos com anexos em `/api/exportacao`: criar, listar, obter, gerar link de download de uso único e cancelar (o download usa `/api/exportacao/download?token=`) |
 | `PreviewTokenService` | Geração da preview key temporária |
 | `ConfigService` | Leitura e escrita de configurações do sistema |
 | `SystemService` | Inicialização da aplicação (`APP_INITIALIZER`) — carrega `assets/config.json` |
@@ -842,7 +859,8 @@ Usuários AD são criados automaticamente no primeiro login com dados do diretó
 | `GET /api/users`, `POST /api/users` | Somente ADM |
 | `GET /api/users/{id}` | O próprio usuário ou ADM |
 | `POST /api/config` | Somente ADM |
-| `GET /api/request/{id}`, `GET /api/rddv/{id}`, `POST /api/preview/generate-preview-key` | Dono do registro ou ADM/GES/FIN/CON |
+| `GET /api/request/{id}`, `GET /api/rddv/{id}`, `POST /api/preview/generate-preview-key` (Solicitação/RDDV) | Dono do registro ou ADM/GES/FIN/CON |
+| `POST /api/preview/generate-preview-key` (`Exportacao`), `GET /api/export/payments`, todas as rotas de `/api/exportacao` (exceto o download por token) | Somente FIN ou ADM |
 | `POST /api/request` — editar registro existente | Dono do registro ou ADM/GES/FIN/CON; registro cancelado é recusado |
 | `POST /api/request` — alterar `AprovadoGestor` | ADM ou GES |
 | `POST /api/request` — alterar `AprovadoSetor` | ADM ou FIN |
@@ -862,11 +880,14 @@ No frontend, o `viewMode` é validado contra o papel do usuário; a proteção e
 ### 9.5 Preview Key
 
 Para baixar anexos e exportações em novas abas/links (sem enviar o header `Authorization`):
-- `POST /api/preview/generate-preview-key?entityId=&requestType=` (autenticado) devolve uma chave GUID guardada em `IMemoryCache` com validade de **1 minuto**
+- `POST /api/preview/generate-preview-key?entityId=&requestType=` (autenticado) devolve uma chave GUID guardada em `IMemoryCache` com validade de **1 minuto**. A chave registra internamente o `IdUsuario` do token (campo não serializado na resposta JSON)
 - `requestType` pode ser `Solicitacao` (0), `Rddv` (1) ou `Exportacao` (2)
-- As rotas anônimas `/api/preview/payment|rddv/...` exigem chave do mesmo tipo **e** do mesmo `entityId`; `/api/export/payments` exige tipo `Exportacao`
-- Os ZIPs de `/api/export/*/attachment/{id}` exigem uma chave válida, mas a comparação de tipo/`entityId` ali usa `&&` (só recusa quando **ambos** divergem) — ver [Limitações Conhecidas](#15-limitações-conhecidas)
+- Quem pode gerar: para `Solicitacao`/`Rddv`, o dono do registro ou ADM/GES/FIN/CON, e **título em rascunho só dá chave ao dono**; para `Exportacao`, **somente FIN ou ADM** (os demais recebem 403 "Exportação permitida apenas para os perfis Financeiro e Administrador.")
+- As rotas anônimas `/api/preview/payment|rddv/...` exigem chave do mesmo tipo **e** do mesmo `entityId`
+- `/api/export/payments` exige chave do tipo `Exportacao`, que é de **uso único** (removida do cache ao ser validada: a segunda tentativa recebe 401). O escopo do Excel é sempre o de FIN/ADM; o `userId` da query é ignorado
+- Os ZIPs de `/api/export/request/attachment/{id}` e `/api/export/rddv/attachment/{id}` exigem chave do tipo correto **e** do mesmo `entityId`: chave de outro tipo **ou** de outro id → 401
 - Chave ausente, inválida, expirada ou de tipo/entidade diferente → HTTP 401
+- O download do pacote de `/api/exportacao` **não** usa a preview key: usa um token próprio de uso único (ver 11.1)
 
 ---
 
@@ -908,18 +929,77 @@ O envio é feito após a gravação da transação; falhas de SMTP são registra
 
 ## 11. Exportação de Dados
 
-### Excel — Lista de Pagamentos
+### 11.1 Exportação de títulos com anexos (pacote ZIP em segundo plano)
+
+Recurso recorrente do Financeiro: um usuário com papel **FIN ou ADM** (e só esses) escolhe filtros e dispara a exportação; o servidor gera **em segundo plano** um pacote ZIP, que o usuário baixa manualmente quando estiver pronto. Volume de referência: 25 títulos por dia útil com cerca de 5 MB de anexos cada (cerca de 2,5 GB por mês). Os anexos ficam no banco em base64 e são lidos **um a um**, nunca todos em memória.
+
+**Visibilidade.** Entram somente títulos com `Rascunho = false`, `Cancelado = false` e `AprovadoGestor = true`, mais os filtros pedidos.
+
+**Fluxo.**
+1. `POST /api/exportacao` com o `FiltroExportacaoDto` cria um registro na tabela `ExportacaoJob` (status Pendente) e o enfileira (202).
+2. O `ExportacaoWorker` (`BackgroundService`) processa **um job por vez**: reivindica o job (Pendente → Processando, com o token de concorrência `Versao`), confere o espaço livre em disco, gera o pacote em `exportacao-<id>.zip.parcial` e, ao final, renomeia para `exportacao-<id>.zip` e grava Concluída com tamanho, total de anexos e `DataExpiracao` (conclusão + `RetencaoHoras`). O progresso (`TitulosProcessados`/`TotalTitulos`, `Percentual`) é gravado no máximo a cada 2 s ou 10 títulos.
+3. A tela "Exportações" (somente FIN/ADM) acompanha o status por `GET /api/exportacao`.
+4. O botão de download chama `POST /api/exportacao/{id}/link-download`, que devolve um token de uso único (32 bytes aleatórios em base64url, válido por `ValidadeLinkDownloadSegundos`, guardado em memória e emitido só ao dono de um job Concluído), e abre `GET /api/exportacao/download?token=`, que serve o ZIP em streaming (sem blob em memória, sem `Range`) com o nome `exportacao-titulos-<id>-<yyyyMMdd-HHmm>.zip`.
+5. O `ExportacaoLimpeza` (`BackgroundService`), a cada `IntervaloLimpezaMinutos`, apaga o arquivo dos jobs Concluídos com `DataExpiracao` vencida (viram Expirada) e os `exportacao-*.zip` órfãos mais velhos que a retenção.
+
+**Estados** (`StatusExportacao`): Pendente (0), Processando (1), Concluída (2), Falhou (3), Expirada (4), Cancelada (5). Em toda falha o `.parcial` é apagado. Falha prevista (`ExportacaoException`) mostra a própria mensagem amigável; qualquer outra exceção é registrada por completo no log e o usuário vê "Não foi possível gerar a exportação. Gere de novo; se o erro continuar, acione o suporte.". Se o servidor reiniciar durante a geração, o job vira Falhou com a mensagem de interrupção; os jobs Pendente são reenfileirados na subida.
+
+**Filtros** (`FiltroExportacaoDto`, JSON em camelCase): `tipoTitulo` (`Ambos` 0, `Solicitacao` 1, `Rddv` 2), `codigo`, `numeroDocumento` (só Solicitação, igualdade exata), `dataSolicitacaoInicio/Fim` (Solicitação: `DataSolicitacao`; RDDV: `DataCadastro`), `dataVencimentoInicio/Fim`, `dataAprovacaoFinanceiroInicio/Fim`, `idSolicitante`, `idAtribuido`, `idDepartamento`, `statusGestor`, `statusFinanceiro`, `statusContabil`, `nomeParceiro` (Solicitação: parceiro; RDDV: funcionário; contém, sem diferenciar caixa), `documentoParceiro` (Solicitação: documento do parceiro; RDDV: CPF; contém, ignorando `.`, `-`, `/` e espaços), `tipoSolicitacao`, `tipoPagamento`, `formaPagamento` (só Solicitação), `tipoRelatorio` (só RDDV) e `incluirAnexos` (padrão `true`). Campo nulo ou vazio e inteiro `0` não filtram; datas valem sozinhas e o fim é inclusivo pelo dia inteiro; filtro que só vale para um tipo de título exclui o outro quando informado. Fim antes do início ou `tipoTitulo` fora do enum → 400.
+
+**Limites e proteção.** Máximo de `MaxTitulosPorExportacao` títulos por pedido (400), `MaxJobsAtivosPorUsuario` pedidos ativos por usuário (429), `MaxBytesPorExportacao` de anexos e `EspacoLivreMinimoMb` de disco livre para iniciar. Um usuário só enxerga e baixa as próprias exportações (404 para as de outros). A identidade vem sempre do JWT. Mensagens de erro nunca expõem texto de exceção. O pacote usa só nomes sanitizados (sem `..`, `/`, `\`, `:`, nomes reservados do Windows), então a extração não pode gravar fora da pasta escolhida (proteção contra *zip-slip*).
+
+**Configuração** (seção `Exportacao` do `appsettings.json`, classe `ExportacaoSettings`; sobrescrita por variável de ambiente `Exportacao__<Chave>`):
+
+| Chave | Padrão | Descrição |
+|-------|--------|-----------|
+| `Pasta` | vazio (`<temp>/PagueAres/Exportacao`) | Pasta dos pacotes. Em produção e no Docker, defina sempre |
+| `RetencaoHoras` | 48 | Horas de disponibilidade de um pacote concluído |
+| `IntervaloLimpezaMinutos` | 30 | Intervalo da limpeza de pacotes vencidos |
+| `MaxTitulosPorExportacao` | 5000 | Máximo de títulos por exportação |
+| `MaxJobsAtivosPorUsuario` | 2 | Exportações Pendente + Processando por usuário |
+| `MaxBytesPorExportacao` | 21474836480 (20 GiB) | Teto da soma dos anexos |
+| `EspacoLivreMinimoMb` | 2048 | Espaço livre mínimo da unidade da pasta para iniciar |
+| `ValidadeLinkDownloadSegundos` | 120 | Validade do token de download |
+| `WorkerHabilitado` | `true` | Com `false`, worker e limpeza não são registrados (os pedidos ficam Pendente) |
+
+No Docker, o `docker-compose.yml` monta o volume nomeado `pagueares-exportacao` em `/var/pagueares/exportacao` e define `Exportacao__Pasta` com esse caminho. No IIS, siga o guia [`docs/implantacao/iis-exportacao.md`](docs/implantacao/iis-exportacao.md) (pool com `AlwaysRunning`, sem *idle timeout*, **um único processo de trabalho**, pasta fora do site, timeouts de download).
+
+**Tabela `ExportacaoJob`** (migration `AdicionaExportacaoJob`): `IdExportacaoJob` (PK), `IdUsuario` (FK para `Usuario`), `Status`, `FiltrosJson`, `DataCriacao`, `DataInicio`, `DataConclusao`, `DataExpiracao` (todas UTC), `TotalTitulos`, `TitulosProcessados`, `TotalAnexos`, `NomeArquivo` (só o nome, nunca caminho), `TamanhoBytes`, `MensagemErro` (só mensagem amigável), `CancelamentoSolicitado` e `Versao` (token de concorrência trocado a cada gravação). Índices `IX_ExportacaoJob_IdUsuario_DataCriacao` e `IX_ExportacaoJob_Status`.
+
+#### Estrutura do pacote ZIP
+
+```
+LEIA-ME.txt          texto curto em pt-BR: extraia o ZIP antes de abrir o Excel (para os links funcionarem), o que é cada arquivo, data de geração e filtros usados
+titulos.xlsx         planilha com as abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos
+indice.csv           índice dos anexos com tamanho e SHA-256
+indice.json          o mesmo índice em JSON, com totais, títulos e filtros
+SOL-000123/Nota Fiscal - boleto.pdf
+RDDV-000045/Comprovante - recibo.jpg
+```
+
+- **Código do título**: `SOL-` + `IdSolicitacao` ou `RDDV-` + `IdRelatorio`, com no mínimo 6 dígitos (`SOL-000123`); ids acima de 999999 saem com todos os dígitos. Só títulos com ao menos um anexo ganham pasta.
+- **Nome do anexo**: `<tipo de documento> - <nome original sanitizado>`; sem tipo ou tipo desconhecido, o rótulo é `Documento`; nome original vazio vira `anexo-<IdAnexo>`. Sanitização: remove caracteres de controle e `< > : " / \ | ? *`, troca `..` por `.`, tira espaços e pontos do fim, prefixa `_` em nomes reservados do Windows (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`) e limita o nome final a 120 caracteres preservando a extensão. Duplicados na mesma pasta (sem diferenciar caixa) ganham `(2)`, `(3)` e assim por diante.
+- **Geração**: `System.IO.Compression.ZipArchive` sobre um `FileStream` em disco (Zip64 automático), `CompressionLevel.Fastest`. Ordem de escrita: anexos primeiro (tamanho e SHA-256 calculados durante o streaming, decodificando o base64 em blocos), depois `titulos.xlsx`, `indice.csv`, `indice.json` e `LEIA-ME.txt`. Um anexo com base64 inválido interrompe a exportação com mensagem amigável.
+- **`titulos.xlsx`** (ClosedXML): linha 1 é o cabeçalho (negrito, congelado, com filtro automático). Datas são células `DateTime` (`dd/mm/aaaa`; datas e horas em `dd/mm/aaaa hh:mm`), valores são números (`#,##0.00`) e CPF, CNPJ, conta, agência e número de documento são sempre texto, para não perder zeros. Dado nulo = célula vazia; CPF, banco, agência e conta saem completos. A coluna Código das abas Solicitações e RDDVs e a coluna "Arquivo no pacote" da aba Anexos têm hiperlinks relativos para a pasta ou o arquivo no pacote.
+  - **Solicitações**: uma linha por solicitação, com identificação, tipo, forma e tipo de pagamento, departamento, solicitante, atribuído, gestor, datas, número do documento, descrição, valor, parcelamento, centro de custo, projeto, PCA, dados do parceiro e bancários, observação, as três trilhas de aprovação (status, data e observação do gestor, do financeiro e da contabilidade) e a quantidade de anexos.
+  - **RDDVs**: uma linha por relatório, com tipo de relatório, funcionário e CPF, finalidade, tipo e local da viagem, datas, moeda, diárias, valor do km, adiantamento, saldo do cartão VTM, total das despesas (view `vDespesasRddv`), rateio contábil, dados bancários, as três trilhas de aprovação e a quantidade de anexos.
+  - **Despesas dos RDDVs**: código do RDDV, id e data da despesa, tipo, moeda, quantidade e valor.
+  - **Anexos**: código e tipo do título, tipo de documento, nome original, arquivo no pacote, tamanho em bytes, SHA-256 e data de envio.
+- **`indice.csv`**: UTF-8 com BOM, separador `;` (aspas duplas quando o campo contém `;`, `"` ou quebra de linha). Cabeçalho: `titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256` (`tipo_titulo` = `Solicitacao` ou `Rddv`; SHA-256 em hexadecimal minúsculo). Uma linha por anexo, ordenada por título e depois por arquivo.
+- **`indice.json`**: UTF-8 sem BOM, camelCase, indentado: `versao` (1), `exportacaoId`, `geradoEm`, `filtros`, `totais` (`solicitacoes`, `rddvs`, `despesas`, `anexos`, `bytesAnexos`), `titulos` (todos os exportados, inclusive sem anexo, com `pasta: null`) e `arquivos` (plano, um item por anexo, na mesma ordem do CSV).
+
+### 11.2 Excel — Lista de Pagamentos (legado)
 - Endpoint: `GET /api/export/payments?sFilter=<json>&userId=<id>&key=<previewKey>`
-- Biblioteca: **FreeSpire.XLS 16.4.0**
-- Autenticação: preview key do tipo `Exportacao`
-- Conteúdo: lista filtrada de pagamentos em planilha (`Pagamentos.xlsx`; colunas Código, Tipo, Data de Inclusão, Data de Vencimento, Doc. Número, Solicitante, Parceiro, Valor, Status Gestor/Contábil/Financeiro), sem rascunhos nem cancelados; o escopo depende do papel de `userId` (FIN vê todas as aprovadas pelo gestor; os demais, as atribuídas a si)
+- Biblioteca: **ClosedXML**
+- Autenticação: preview key do tipo `Exportacao`, **de uso único**, que só é emitida para FIN e ADM. O `userId` da query ainda é aceito (o frontend o envia), mas é ignorado
+- Conteúdo: lista filtrada de pagamentos em planilha (`Pagamentos.xlsx`; colunas Código, Tipo, Data de Inclusão, Data de Vencimento, Doc. Número, Solicitante, Parceiro, Valor, Status Gestor/Contábil/Financeiro), com datas e valores tipados, sem rascunhos nem cancelados. O escopo é sempre o de FIN/ADM: títulos aprovados pelo gestor
 - No frontend, o botão "Exportar" aparece na visão financeira
 
-### ZIP — Anexos de Solicitação / RDDV
+### 11.3 ZIP — Anexos de Solicitação / RDDV (legado)
 - Endpoints: `GET /api/export/request/attachment/{id}?key=` e `GET /api/export/rddv/attachment/{id}?key=`
 - Biblioteca: **SharpZipLib 1.4.2**
 - Conteúdo: todos os arquivos anexados à solicitação/relatório compactados em ZIP (`Anexos-Solicitacao-{id}.zip`, `Anexos-RDDV-{id}.zip`)
-- Autenticação: preview key
+- Autenticação: preview key do mesmo tipo e do mesmo `entityId` da rota
 
 ---
 
@@ -927,7 +1007,7 @@ O envio é feito após a gravação da transação; falhas de SMTP são registra
 
 **URLs em desenvolvimento:** `https://localhost:7219` e `http://localhost:5219` (`dotnet run`); `http://localhost:5000` na API em Docker. Documentação interativa (somente em `Development`): `/scalar/v1`; OpenAPI: `/openapi/v1.json`.
 
-Todos os endpoints exigem o header abaixo, exceto `POST /api/auth` e as rotas marcadas com **chave** (que usam `?key=` — preview key):
+Todos os endpoints exigem o header abaixo, exceto `POST /api/auth`, as rotas marcadas com **chave** (que usam `?key=` — preview key) e `GET /api/exportacao/download` (que usa `?token=`, um token de uso único):
 ```
 Authorization: Bearer <token>
 ```
@@ -949,9 +1029,15 @@ Authorization: Bearer <token>
 | Users | POST | `/api/users` | Criar/Atualizar usuário (ADM) |
 | Users | GET | `/api/users/directory` | Busca no AD |
 | Users | GET | `/api/users/list` | Usuários por papel |
-| Export | GET | `/api/export/payments` | Exportar Excel (**chave**) |
+| Export | GET | `/api/export/payments` | Exportar Excel (**chave** `Exportacao`, uso único, FIN/ADM) |
 | Export | GET | `/api/export/rddv/attachment/{id}` | ZIP de anexos RDDV (**chave**) |
 | Export | GET | `/api/export/request/attachment/{id}` | ZIP de anexos solicitação (**chave**) |
+| Exportacao | POST | `/api/exportacao` | Criar exportação de títulos com anexos (FIN/ADM) |
+| Exportacao | GET | `/api/exportacao` | Exportações do próprio usuário (30 dias) |
+| Exportacao | GET | `/api/exportacao/{id}` | Status e progresso da exportação |
+| Exportacao | POST | `/api/exportacao/{id}/link-download` | Gerar link de download de uso único |
+| Exportacao | GET | `/api/exportacao/download` | Baixar o pacote ZIP (**token** `?token=`, anônimo) |
+| Exportacao | DELETE | `/api/exportacao/{id}` | Cancelar ou apagar a exportação |
 | Config | GET | `/api/config` | Ler configurações |
 | Config | POST | `/api/config` | Salvar configurações (ADM) |
 | Provider | GET | `/api/provider` | Lista fornecedores |
@@ -999,9 +1085,22 @@ Authorization: Bearer <token>
     "DefaultSender": "<remetente>"
   },
   "RunMigrations": "false",
-  "AllowedOrigins": ""
+  "AllowedOrigins": "",
+  "Exportacao": {
+    "Pasta": "",
+    "RetencaoHoras": 48,
+    "IntervaloLimpezaMinutos": 30,
+    "MaxTitulosPorExportacao": 5000,
+    "MaxJobsAtivosPorUsuario": 2,
+    "MaxBytesPorExportacao": 21474836480,
+    "EspacoLivreMinimoMb": 2048,
+    "ValidadeLinkDownloadSegundos": 120,
+    "WorkerHabilitado": true
+  }
 }
 ```
+
+A seção `Exportacao` configura a exportação de títulos com anexos (ver 11.1). Em produção defina `Exportacao:Pasta` (variável `Exportacao__Pasta`) para uma pasta fora do site; a implantação no IIS está em [`docs/implantacao/iis-exportacao.md`](docs/implantacao/iis-exportacao.md).
 
 **CORS.** `AllowedOrigins` (lista separada por vírgula). Vazio = qualquer origem; preenchido = restrito às origens listadas. Atrás do Nginx do compose (proxy `/api/`) não há chamadas cross-origin.
 
@@ -1019,6 +1118,7 @@ docker compose up --build
 - A API aplica as migrations no startup (`ASPNETCORE_RUN_MIGRATIONS=true`) e aguarda o SQL Server (`entrypoint.sh`).
 - `FRONTEND_API_BASE_URL` vazio = frontend chama `/api/*` relativo (proxy Nginx). Defina uma URL absoluta se a API estiver em outro domínio.
 - Para produção, use apenas o arquivo base: `docker compose -f docker-compose.yml up -d` (ambiente `Production`; o SQL fica acessível só na rede interna `pagueares-net`, sem porta publicada no host).
+- O volume nomeado `pagueares-exportacao` (montado em `/var/pagueares/exportacao`, com `Exportacao__Pasta` apontando para ele) guarda os pacotes da exportação de títulos e sobrevive à recriação do contêiner da API; a imagem da API roda como root, então a pasta é gravável. O Nginx do contêiner `frontend` repassa `/api/` para a API com `proxy_read_timeout` de 300 s (intervalo entre leituras, não a duração total do download).
 - Variáveis em `.env.example`: `SA_PASSWORD`, `MSSQL_PID`, `ASPNETCORE_ENVIRONMENT`, `JWT_SECRET`, `ASPNETCORE_RUN_MIGRATIONS`, `FRONTEND_API_BASE_URL`, `DB_PORT`, `API_PORT`, `FRONTEND_PORT`.
 
 ### 13.3 Execução local sem Docker para a aplicação (SQL Server em Docker)
@@ -1087,12 +1187,10 @@ Pontos observados no código atual (documentados para planejamento, sem alteraç
 1. **RDDV sem checagens de papel/propriedade na gravação**: `POST /api/rddv` não verifica se o usuário é dono do registro nem se possui o papel exigido para alterar `AprovadoGestor`, `AprovadoSetor` ou `StatusContabilidade` (a Solicitação tem essas regras; o RDDV só verifica propriedade em `GET /api/rddv/{id}`).
 2. **Atribuição sem verificação de papel**: `GET /api/request/{id}/user` e `GET /api/rddv/{id}/user` aceitam qualquer usuário autenticado.
 3. **Rotas sem restrição de papel**: `POST /api/traveltype`, `GET /api/users/list`, `GET /api/users/directory`, `ProviderController` e `GET /api/config` exigem apenas autenticação.
-4. **ZIPs de anexos (`/api/export/*/attachment/{id}`)**: a validação da preview key usa `&&` (diferente dos endpoints de `/api/preview`, que usam `||`), então uma chave válida do mesmo tipo, mas de outra entidade, é aceita durante o minuto de validade.
-5. **Exportação Excel**: o escopo usa o `userId` recebido na query string (a autorização é a preview key `Exportacao`, de 1 minuto), não o usuário do token.
-6. **JWT de exemplo versionado**: o `appsettings.json` contém um `JwtSettings:Secret` de exemplo (também usado pelos testes); sobrescreva por variável de ambiente.
-7. **E-mail**: a opção `Smtp:EnableEmailService` não tem efeito no código atual.
-8. **Estado em memória**: lockout de login e preview keys ficam no `IMemoryCache` do processo (não compartilhado entre instâncias).
-9. **Arquivos em base64** no banco: avaliar armazenamento externo (blob storage) para escala.
+4. **JWT de exemplo versionado**: o `appsettings.json` contém um `JwtSettings:Secret` de exemplo (também usado pelos testes); sobrescreva por variável de ambiente.
+5. **E-mail**: a opção `Smtp:EnableEmailService` não tem efeito no código atual.
+6. **Estado em memória**: lockout de login e preview keys ficam no `IMemoryCache` do processo; a fila da exportação, o cancelamento em andamento e os tokens de download também ficam em memória e os pacotes em disco local. Nada disso é compartilhado entre instâncias: a API deve rodar em **um único processo** (no IIS, `Maximum Worker Processes = 1`).
+7. **Arquivos em base64** no banco: avaliar armazenamento externo (blob storage) para escala.
 
 ---
 

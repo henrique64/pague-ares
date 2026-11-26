@@ -18,6 +18,13 @@ namespace Ares.PagueAres.Tests.Integration.Infrastructure
 
         private readonly string _dbName = "TestDb_" + Guid.NewGuid();
 
+        /// <summary>
+        /// Pasta de exportação (<c>Exportacao:Pasta</c>) exclusiva desta factory, para que o worker e a limpeza de
+        /// uma instância nunca toquem nos pacotes de outra. É apagada no <see cref="Dispose(bool)"/>.
+        /// </summary>
+        public string PastaExportacao { get; } =
+            Path.Combine(Path.GetTempPath(), "PagueAresTestes", "Exportacao_" + Guid.NewGuid().ToString("N"));
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.ConfigureServices(services =>
@@ -41,6 +48,26 @@ namespace Ares.PagueAres.Tests.Integration.Infrastructure
             builder.UseSetting("Smtp:SmtpHost", "");
             builder.UseSetting("RunMigrations", "false");
             builder.UseSetting("ASPNETCORE_ENVIRONMENT", "Test");
+            builder.UseSetting("Exportacao:Pasta", PastaExportacao);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            // A base para o host (e com ele o worker e a limpeza) antes de a pasta ser apagada.
+            base.Dispose(disposing);
+
+            if (!disposing)
+                return;
+
+            try
+            {
+                if (Directory.Exists(PastaExportacao))
+                    Directory.Delete(PastaExportacao, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Pasta temporária: se algum arquivo ainda estiver preso, o sistema a limpa depois.
+            }
         }
 
         public HttpClient GetAuthenticatedClient(int userId, string userName, params string[] roles)

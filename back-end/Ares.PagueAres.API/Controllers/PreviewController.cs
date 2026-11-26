@@ -14,8 +14,9 @@ namespace Ares.PagueAres.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class PreviewController(PagueAresContext dbContext, IMemoryCache memoryCache) : ControllerBase
+    public class PreviewController(PagueAresContext dbContext, IMemoryCache memoryCache, ILogger<PreviewController> logger) : ControllerBase
     {
+        private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
 
         [AllowAnonymous]
         [HttpGet("payment/{id}/{attachmentId}")]
@@ -38,7 +39,11 @@ namespace Ares.PagueAres.API.Controllers
                     return Unauthorized("Chave de visualização inválida ou expirada.");
                 }
 
-                var data = await dbContext.DocumentoSolicitacaos.Where(x => x.IdDocumentoSolicitacao == attachmentId).FirstOrDefaultAsync();
+                // A chave autoriza só a solicitação {id}: o anexo precisa ser dela. Anexo de outro título
+                // responde como anexo inexistente, para não confirmar que ele existe.
+                var data = await dbContext.DocumentoSolicitacaos
+                    .Where(x => x.IdDocumentoSolicitacao == attachmentId && x.IdSolicitacao == id)
+                    .FirstOrDefaultAsync();
 
                 if (data == null)
                 {
@@ -59,7 +64,8 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest($"Ocorreu um erro ao deserializar os dados do arquivo: {ex.Message}");
+                logger.LogError(ex, "Falha ao abrir o anexo {AttachmentId} da solicitação {Id} para visualização.", attachmentId, id);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
         }
 
@@ -84,7 +90,11 @@ namespace Ares.PagueAres.API.Controllers
                     return Unauthorized("Chave de visualização inválida ou expirada.");
                 }
 
-                var data = await dbContext.DocumentoRddv.Where(x => x.IdDocumentoRddv == attachmentId).FirstOrDefaultAsync();
+                // A chave autoriza só o RDDV {id}: o anexo precisa ser dele. Anexo de outro título
+                // responde como anexo inexistente, para não confirmar que ele existe.
+                var data = await dbContext.DocumentoRddv
+                    .Where(x => x.IdDocumentoRddv == attachmentId && x.IdRelatorio == id)
+                    .FirstOrDefaultAsync();
 
                 if (data == null)
                 {
@@ -105,7 +115,8 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest($"Ocorreu um erro ao deserializar os dados do arquivo: {ex.Message}");
+                logger.LogError(ex, "Falha ao abrir o anexo {AttachmentId} do RDDV {Id} para visualização.", attachmentId, id);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
         }
 
@@ -116,59 +127,95 @@ namespace Ares.PagueAres.API.Controllers
         {
             try
             {
-                int entityUserId = 0;
+                var currentUser = this.GetUserFromToken();
 
-                if(requestType == EnumRequestType.Solicitacao)
+                if (currentUser == null)
                 {
-                    var request = await dbContext
-                                    .Solicitacaos
-                                    .Where(s => s.IdSolicitacao == entityId)
-                                    .FirstOrDefaultAsync();
-
-                    if (request == null)
+                    return Unauthorized(new GenericResponse<object>()
                     {
-                        return Ok(new GenericResponse<object>()
+                        Success = false,
+                        Message = "Usuário não identificado.",
+                        Data = null,
+                        Page = 1,
+                        Pages = 1,
+                        Records = 0
+                    });
+                }
+
+                if (requestType == EnumRequestType.Exportacao)
+                {
+                    // A exportação traz títulos de todos os usuários: só FIN e ADM, pelo papel do JWT.
+                    if (!this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador))
+                    {
+                        return StatusCode(StatusCodes.Status403Forbidden, new GenericResponse<object>()
                         {
                             Success = false,
-                            Message = "O registro solicitado não foi localizado.",
+                            Message = "Exportação permitida apenas para os perfis Financeiro e Administrador.",
                             Data = null,
                             Page = 1,
                             Pages = 1,
                             Records = 0
                         });
                     }
-
-                    entityUserId = request.IdUsuario;
                 }
-                else if (requestType == EnumRequestType.Rddv)
+                else
                 {
-                    var rddv = await dbContext
-                                    .Rddv
-                                    .Where(s => s.IdRelatorio == entityId)
-                                    .FirstOrDefaultAsync();
+                    int entityUserId = 0;
+                    bool rascunho = false;
 
-                    if (rddv == null)
+                    if (requestType == EnumRequestType.Solicitacao)
                     {
-                        return Ok(new GenericResponse<object>()
+                        var request = await dbContext
+                                        .Solicitacaos
+                                        .Where(s => s.IdSolicitacao == entityId)
+                                        .FirstOrDefaultAsync();
+
+                        if (request == null)
                         {
-                            Success = false,
-                            Message = "O registro solicitado não foi localizado.",
-                            Data = null,
-                            Page = 1,
-                            Pages = 1,
-                            Records = 0
-                        });
+                            return Ok(new GenericResponse<object>()
+                            {
+                                Success = false,
+                                Message = "O registro solicitado não foi localizado.",
+                                Data = null,
+                                Page = 1,
+                                Pages = 1,
+                                Records = 0
+                            });
+                        }
+
+                        entityUserId = request.IdUsuario;
+                        rascunho = request.Rascunho;
+                    }
+                    else if (requestType == EnumRequestType.Rddv)
+                    {
+                        var rddv = await dbContext
+                                        .Rddv
+                                        .Where(s => s.IdRelatorio == entityId)
+                                        .FirstOrDefaultAsync();
+
+                        if (rddv == null)
+                        {
+                            return Ok(new GenericResponse<object>()
+                            {
+                                Success = false,
+                                Message = "O registro solicitado não foi localizado.",
+                                Data = null,
+                                Page = 1,
+                                Pages = 1,
+                                Records = 0
+                            });
+                        }
+
+                        entityUserId = rddv.IdUsuario;
+                        rascunho = rddv.Rascunho;
                     }
 
-                    entityUserId = rddv.IdUsuario;
-                }
+                    bool isOwner = entityUserId == currentUser.IdUsuario;
 
-                if (requestType != EnumRequestType.Exportacao)
-                {
-                    var currentUser = this.GetUserFromToken();
-
-                    if (entityUserId != currentUser.IdUsuario &&
-                        !this.CurrentUserIsInRole(["ADM", "GES", "FIN", "CON"]))
+                    // O dono sempre vê o próprio título. Os papéis do fluxo de aprovação veem os títulos
+                    // de outros usuários, mas nunca um rascunho, que ainda não entrou no fluxo.
+                    if (!isOwner &&
+                        (rascunho || !this.CurrentUserIsInRole(["ADM", "GES", "FIN", "CON"])))
                     {
                         return Ok(new GenericResponse<object>()
                         {
@@ -185,7 +232,8 @@ namespace Ares.PagueAres.API.Controllers
                 var previewKey = new PreviewKeyDto(
                     Guid.NewGuid(),
                     requestType,
-                    entityId);
+                    entityId,
+                    currentUser.IdUsuario);
 
                 memoryCache.Set(
                     "preview-key-" + previewKey.PreviewKey.ToString(), 
@@ -204,7 +252,16 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest($"Ocorreu um erro ao deserializar os dados do arquivo: {ex.Message}");
+                logger.LogError(ex, "Falha ao gerar a chave de visualização para {RequestType} {EntityId}.", requestType, entityId);
+                return StatusCode(StatusCodes.Status500InternalServerError, new GenericResponse<object>()
+                {
+                    Success = false,
+                    Message = MensagemErroGenerica,
+                    Data = null,
+                    Page = 1,
+                    Pages = 1,
+                    Records = 0
+                });
             }
         }
 

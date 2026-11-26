@@ -1,0 +1,13 @@
+{
+  "name": "pagueares-exportacao-capturas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capturas de tela do fluxo de exportação de títulos (dados fictícios da semente), com Playwright e o Edge instalado.",
+  "type": "module",
+  "scripts": {
+    "capturar": "node capturar.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.65.1"
+  }
+}

@@ -1,0 +1,97 @@
+F4 — Correção dos achados da reconferência da F2 (serviço em segundo plano da exportação) — fase VERDE
+Data: 2026-11-25
+Branch: feature/exportacao-anexos-f4 (testes do commit 70a1f7f rodados com a correção aplicada)
+Comando: dotnet test back-end/Ares.PagueAres.Tests.Integration/Ares.PagueAres.Tests.Integration.csproj --filter "FullyQualifiedName~ExportacaoWorker"
+Arquivo de teste: back-end/Ares.PagueAres.Tests.Integration/Exportacao/ExportacaoWorkerTests.cs
+Banco: EF Core InMemory, só dados fictícios.
+
+Resultado: 43 testes — 43 aprovados, 0 com falha, em 3 execuções seguidas (para pegar instabilidade de concorrência).
+  Execução 1: 43/43 aprovados (--no-build, depois de dotnet build da solução)   1,52 min
+  Execução 2: 43/43 aprovados (com build, depois da mutação desfeita)            1,54 min
+  Execução 3: 43/43 aprovados (--no-build)                                       1,47 min
+
+Suíte inteira: dotnet build back-end/Ares.PagueAres.sln -c Debug → 0 erros;
+  dotnet test back-end/Ares.PagueAres.sln → Ares.PagueAres.Tests.Unit 131/131 aprovados;
+  Ares.PagueAres.Tests.Integration 254/254 aprovados.
+
+Achado 1 [baixo] — configuração da reconciliação fora da faixa
+------------------------------------------------------------------------------------------
+Correção: IntervaloReconciliacaoSegundos limitado a 1–3600 s e LimiteSemSinalDeVidaSegundos a 10–86400 s, lidos uma
+  vez no construtor do worker; fora da faixa (inclusive infinito) vira o extremo mais próximo, NaN vira o padrão
+  (60 s e 300 s), com aviso no log "Exportacao:<chave> = <valor> está fora da faixa aceita ...". O laço da
+  reconciliação termina na parada do host qualquer que seja a exceção em curso.
+[PASSOU] ConfiguracaoDaReconciliacaoForaDaFaixa_WorkerProcessaNormalmente_EParaRapido(intervalo: "5000000", limite: "NaN") [92 ms]
+[PASSOU] ConfiguracaoDaReconciliacaoForaDaFaixa_WorkerProcessaNormalmente_EParaRapido(intervalo: "NaN", limite: "5000000") [99 ms]
+[PASSOU] ConfiguracaoDaReconciliacaoForaDaFaixa_WorkerProcessaNormalmente_EParaRapido(intervalo: "60", limite: "NaN") [90 ms]
+         o job conclui; StopAsync termina em menos de 5 s com o ExecuteTask concluído; aviso no log só para a chave
+         ajustada
+
+Achado 2 [baixo] — teste que prove a guarda "em execução neste processo"
+------------------------------------------------------------------------------------------
+[PASSOU] JobEmExecucaoNesteProcesso_NaoEReconciliadoMesmoPassandoOLimite [15 s]
+         sinal de vida impedido (gravações sem mudança de Status falham); Versao parada por 1,5 x o limite; o job
+         continua Processando e depois conclui
+Mutação no código final (guardas removidas de EncerrarOrfaosAsync, linha 358, e de EncerrarOrfaoAsync, linha 391):
+         dotnet test ... --filter "FullyQualifiedName~ExportacaoWorkerTests.JobEmExecucaoNesteProcesso"
+[FALHOU] JobEmExecucaoNesteProcesso_NaoEReconciliadoMesmoPassandoOLimite [15 s]
+         Expected Status(job) to be Processando because o job está em execução neste processo, but found Falhou.
+         Arquivo restaurado da cópia do código final logo depois; a execução 2 acima recompilou sem a mutação.
+
+Achado 3 [baixo] — pacote mantido quando o resultado da gravação da conclusão é desconhecido
+------------------------------------------------------------------------------------------
+Correção: GravarEstadoFinalAsync devolve Gravada, Recusada ou Desconhecida (tentativas esgotadas por erro, ou parada
+  do host no meio delas). ConcluirAsync só manda apagar o pacote quando a gravação é recusada ou o cancelamento foi
+  pedido; com resultado desconhecido o pacote fica (aviso no log). Complemento: a recuperação do início apaga o .zip
+  de cada job Processando que ela marca Falhou, como a reconciliação já fazia.
+[PASSOU] GravacaoDaConclusaoSemRespostaEmTodasAsTentativas_ComConcluidoNoBanco_MantemOPacote [15 s]
+         1a gravação confirmada sem resposta, tentativas 2 a 5 sem conseguir ler o job: banco com Concluido e o .zip
+         continua na pasta, com TamanhoBytes igual ao tamanho do arquivo
+[PASSOU] Inicio_ProcessandoComPacoteJaPublicado_ViraFalhouEApagaOPacote [11 ms]
+[PASSOU] ConclusaoRecusadaPorqueOJobDeixouDeEstarProcessando_ApagaOPacote (controle) [73 ms]
+
+Achado 4 [baixo] — falha ao encerrar um órfão
+------------------------------------------------------------------------------------------
+Correção: a observação do órfão só sai de "observados" depois do encerramento bem-sucedido, e a exceção do
+  encerramento é capturada por job (log de erro), sem interromper a volta.
+[PASSOU] EncerramentoDeOrfaoFalhaUmaVez_RepeteNaVoltaSeguinteSemEsperarOLimite_EOutroOrfaoDaMesmaVoltaEEncerrado [14 s]
+         o outro órfão é encerrado até 1 s depois da falha (mesma volta); o que falhou, até 5 s depois (volta seguinte,
+         sem esperar de novo o limite de 10 s)
+
+Pergunta 5 [aceita] — Pasta vazia só em Development
+------------------------------------------------------------------------------------------
+Correção: PastaObrigatoriaAusente = Pasta vazia e ambiente diferente de Development (constante AmbienteTestes
+  removida); guia IIS e comentários atualizados.
+[PASSOU] PastaVaziaForaDeDesenvolvimento_WorkerELimpezaNaoSobem_EJobFicaPendente(ambiente: "Test") [311 ms]
+[PASSOU] PastaVaziaForaDeDesenvolvimento_WorkerELimpezaNaoSobem_EJobFicaPendente(ambiente: "Production") [310 ms]
+[PASSOU] PastaObrigatoriaAusente_SoDevelopmentAceitaPastaVazia — 6 casos (Development vazio → aceita; Test, Staging e
+         Production vazios → ausente; Production e Test com pasta → aceita)
+[PASSOU] PastaVaziaForaDeDesenvolvimento_ApiRecusaNovaExportacaoCom503 [1 s]
+
+Cenários já existentes, todos aprovados nas 3 execuções
+------------------------------------------------------------------------------------------
+[PASSOU] DoisJobsNaFila_GeradorNuncaRodaDoisAoMesmoTempo_EAmbosConcluem
+[PASSOU] DoisWorkersNoMesmoBanco_JobPendenteEGeradoExatamenteUmaVez
+[PASSOU] Inicio_ProcessandoViraFalhou_ParciaisApagados_PendentesProcessadosPorDataDeCriacao
+[PASSOU] CancelamentoDePendente_ViraCanceladoSemChamarOGerador
+[PASSOU] CancelamentoEmProcessando_PelaFila_ViraCanceladoEApagaParcial
+[PASSOU] CancelamentoEmProcessando_SoPeloBanco_ViraCanceladoEApagaParcial
+[PASSOU] ParadaDoHostDuranteAGeracao_ViraFalhouComMensagemDeInterrupcao
+[PASSOU] ExportacaoException_ViraFalhouComAMensagemDela
+[PASSOU] ExcecaoGenerica_ViraFalhouComMensagemGenericaSemOTextoDaExcecao
+[PASSOU] EspacoLivreAbaixoDoMinimo_ViraFalhouComMensagemAmigavelSemChamarOGerador
+[PASSOU] Limpeza_ExpiraConcluidoVencido_ApagaOrfaoVelho_MantemArquivoDeJobValido
+[PASSOU] Sucesso_ArquivoFinalSemParcial_TamanhoEExpiracaoGravados
+[PASSOU] Progresso_EGravadoDuranteAGeracao
+[PASSOU] GravacaoDaConclusaoFalhaNasPrimeirasTentativas_RepeteEGravaConcluido
+[PASSOU] GravacaoDaFalhaFalhaNasPrimeirasTentativas_RepeteEGravaFalhou
+[PASSOU] ProcessandoSemExecutor_ViraFalhouNaReconciliacao_EComPedidoDeCancelamentoViraCancelado
+[PASSOU] JobEmExecucaoEmOutroProcessoComSinalDeVida_NaoEReconciliado
+[PASSOU] PendenteForaDaFila_EReenfileiradoPelaReconciliacaoEProcessado
+[PASSOU] ReivindicacaoFalha_PendenteVoltaAFilaPelaReconciliacao
+[PASSOU] EspacoCaiAbaixoDoMinimoDuranteAGeracao_ViraFalhouComMensagemDeEspacoEApagaParcial
+[PASSOU] DiscoCheioDuranteAGeracao_ViraFalhouComMensagemDeEspaco
+[PASSOU] EspacoNaoMensuravel_GeracaoSegueEConclui
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: True)
+[PASSOU] Registro_FonteGeradorEFila_EServicosSoComWorkerHabilitado(habilitado: False)
+[PASSOU] Factory_RegistraWorkerELimpeza_UsaPastaPropria_EApagaAPastaNoDispose
+[PASSOU] FactoryComWorkerDesabilitado_NaoRegistraWorkerNemLimpeza

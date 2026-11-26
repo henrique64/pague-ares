@@ -26,8 +26,10 @@ import { CurrencyMaskModule } from "ng2-currency-mask";
 import { CreateRddvComponent } from "app/create-rddv/create-rddv.component";
 import { ConfigurationComponent } from "app/configuration/configuration.component";
 import { TravelTypeListComponent } from "app/configuration/travel-type-list/travel-type-list.component";
+import { ExportacoesComponent } from "app/exportacoes/exportacoes.component";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
 import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginator";
+import { PROVIDERS_DATA_PT_BR } from "app/core/date/pt-br-date-adapter";
 
 @NgModule({
   imports: [
@@ -53,7 +55,7 @@ import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginato
     MatProgressSpinnerModule,
     MatPaginatorModule
   ],
-  providers: [provideNgxMask()],
+  providers: [provideNgxMask(), ...PROVIDERS_DATA_PT_BR],
   declarations: [
     HomeComponent,
     PaymentsComponent,
@@ -64,7 +66,8 @@ import { MatPaginatorIntl, MatPaginatorModule } from "@angular/material/paginato
     CreateRequestComponent,
     CreateRddvComponent,
     CreateUserComponent,
-    TravelTypeListComponent
+    TravelTypeListComponent,
+    ExportacoesComponent
   ]
 })
 export class AdminLayoutModule {}

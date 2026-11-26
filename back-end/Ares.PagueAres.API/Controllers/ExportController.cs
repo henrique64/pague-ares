@@ -1,14 +1,15 @@
 ﻿using Ares.PagueAres.API.Dtos;
+using Ares.PagueAres.Application.Exportacao;
 using Ares.PagueAres.Domain.Dtos.Authentication;
 using Ares.PagueAres.Infrastructure;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
-using Spire.Xls;
 using System.Collections.Concurrent;
 
 namespace Ares.PagueAres.API.Controllers
@@ -16,41 +17,42 @@ namespace Ares.PagueAres.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class ExportController(PagueAresContext dbContext, IMemoryCache memoryCache) : ControllerBase
+    public class ExportController(PagueAresContext dbContext, IMemoryCache memoryCache, ILogger<ExportController> logger) : ControllerBase
     {
-        private Dictionary<int, string> StatusGestor = new Dictionary<int, string>() {
-            {0, "Aguardando Autorização"},
-            {1, "Aguardando Autorização"},
-            {2, "Autorizado"},
-            {3, "Negado"}
-        };
+        private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
+        private const string MensagemFiltroInvalido = "Filtro de exportação inválido.";
 
-        private Dictionary<int, string> StatusContabil = new Dictionary<int, string>() {
-            {0, "Aguardando Lançamento"},
-            {1, "Aguardando Lançamento"},
-            {2, "Lançado"},
-            {3, "Negado"}
-        };
+        // Garante que a leitura e a remoção da chave de exportação aconteçam juntas (uso único).
+        private static readonly Lock TravaChaveExportacao = new();
 
-        private Dictionary<int, string> StatusFinanceiro = new Dictionary<int, string>() {
-            {0, "Aguardando Autorização"},
-            {1, "Aguardando Autorização"},
-            {2, "Autorizado"},
-            {3, "Negado" }
-        };
+        /// <summary>
+        /// Valida a chave de exportação e a remove do cache na mesma operação, para que ela só
+        /// possa ser usada uma vez. Devolve a resposta de recusa, ou null quando a chave é válida.
+        /// </summary>
+        private ActionResult? ConsumirChaveExportacao(string key)
+        {
+            lock (TravaChaveExportacao)
+            {
+                if (!memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
+                {
+                    return Unauthorized("Chave de visualização inválida ou expirada.");
+                }
 
-        private Dictionary<int, string> DocumentTypes = new Dictionary<int, string>() {
-            {1, "Adiantamento"},
-            {2, "Pagamento"},
-            {3, "Movimento Almoxarifado"}
-        };
+                if (previewKey?.RequestType != Domain.Enums.EnumRequestType.Exportacao)
+                {
+                    return Unauthorized("Chave de visualização inválida para esta solicitação.");
+                }
 
-        private Dictionary<int, string> RddvReportType = new Dictionary<int, string>() {
-            {1, "Adiantamento" },
-            {2, "Prestação de Contas" },
-            {3, "Reembolso"}
-        };
+                memoryCache.Remove("preview-key-" + key);
 
+                return null;
+            }
+        }
+
+        /// <param name="userId">
+        /// Ignorado. Continua aceito porque o front-end ainda o envia, mas o escopo da exportação
+        /// não depende de quem diz ser o usuário: a chave só é emitida para FIN e ADM.
+        /// </param>
         [HttpGet]
         [Route("payments")]
         [AllowAnonymous]
@@ -58,16 +60,11 @@ namespace Ares.PagueAres.API.Controllers
         {
             if (string.IsNullOrEmpty(key)) return Unauthorized("Chave de visualização não informada.");
 
-            if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
+            var recusaChave = ConsumirChaveExportacao(key);
+
+            if (recusaChave != null)
             {
-                if (previewKey?.RequestType != Domain.Enums.EnumRequestType.Exportacao)
-                {
-                    return Unauthorized("Chave de visualização inválida para esta solicitação.");
-                }
-            }
-            else
-            {
-                return Unauthorized("Chave de visualização inválida ou expirada.");
+                return recusaChave;
             }
 
             ListFilterDto? nFilter;
@@ -75,15 +72,16 @@ namespace Ares.PagueAres.API.Controllers
             try
             {
                 nFilter = JsonConvert.DeserializeObject<ListFilterDto>(sFilter);
-
-                if (nFilter == null)
-                {
-                    throw new Exception("Nenhum filtro foi informado.");
-                }
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogWarning(ex, "Filtro da exportação de pagamentos inválido.");
+                return BadRequest(MensagemFiltroInvalido);
+            }
+
+            if (nFilter == null)
+            {
+                return BadRequest(MensagemFiltroInvalido);
             }
 
             ListFilterDto filter = nFilter;
@@ -92,25 +90,10 @@ namespace Ares.PagueAres.API.Controllers
             {
                 var requests = dbContext.Solicitacaos.AsQueryable();
 
-                // Rascunhos e cancelados nunca entram na exportação do fluxo de aprovação
+                // Escopo de FIN e ADM, os únicos papéis que recebem a chave de exportação:
+                // rascunhos e cancelados nunca entram, e só títulos aprovados pelo gestor.
                 requests = requests.Where(d => !d.Rascunho && !d.Cancelado);
-
-                var roles = await (from u in dbContext.UsuarioFuncaos
-                                   from f in dbContext.Funcaos.Where(x => x.IdFuncao == u.IdFuncao)
-                                   where u.IdUsuario == userId
-                                   select f).ToListAsync();
-
-                bool isFinancial = roles.Any(f => f.Alias == "FIN");
-                bool isAccounting = roles.Any(f => f.Alias == "CON");
-
-                if (isFinancial)
-                {
-                    requests = requests.Where(r => (r.AprovadoGestor ?? false));
-                }
-                else
-                {
-                    requests = requests.Where(r => (r.AprovadoGestor ?? false) && r.IdUsuarioAtribuido == userId);
-                }
+                requests = requests.Where(r => (r.AprovadoGestor ?? false));
 
                 if (!string.IsNullOrEmpty(filter.DocumentNumber))
                 {
@@ -154,12 +137,12 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (!string.IsNullOrEmpty(filter.PartnerName))
                 {
-                    requests = requests.Where(d => d.NomeParceiro.ToLower().Contains(filter.PartnerName));
+                    requests = requests.Where(d => d.NomeParceiro.ToLower().Contains(filter.PartnerName.ToLower()));
                 }
 
                 if (!string.IsNullOrEmpty(filter.PartnerDocument))
                 {
-                    requests = requests.Where(d => d.NumDocParceiro.ToLower().Contains(filter.PartnerDocument));
+                    requests = requests.Where(d => d.NumDocParceiro.ToLower().Contains(filter.PartnerDocument.ToLower()));
                 }
 
                 if (filter.DocumentId.HasValue)
@@ -174,30 +157,22 @@ namespace Ares.PagueAres.API.Controllers
                                      {
                                          Codigo = r.IdSolicitacao.ToString(),
                                          Tipo = "Pagamento",
-                                         DataInclusao = r.DataSolicitacao.ToString("dd/MM/yyyy"),
-                                         DataVencimento = r.DataVencimento.HasValue ? r.DataVencimento.Value.ToString("dd/MM/yyyy") : "",
+                                         DataInclusao = r.DataSolicitacao,
+                                         DataVencimento = r.DataVencimento,
                                          DocNumero = r.NumeroDocumento ?? "",
                                          Solicitante = u.Nome,
                                          Parceiro = r.NomeParceiro,
-                                         Valor = r.Valor.ToString("0.00"),
-                                         StatusGestor = StatusGestor[r.StatusGestor ?? 0],
-                                         StatusContabil = StatusContabil[r.StatusContabilidade ?? 0],
-                                         StatusFinanceiro = StatusFinanceiro[r.StatusFinanceiro ?? 0]
+                                         Valor = r.Valor,
+                                         StatusGestor = RotulosExportacao.StatusGestor(r.StatusGestor),
+                                         StatusContabil = RotulosExportacao.StatusContabil(r.StatusContabilidade),
+                                         StatusFinanceiro = RotulosExportacao.StatusFinanceiro(r.StatusFinanceiro)
                                      });
 
                 var rddv = dbContext.Rddv.AsQueryable();
 
-                // Rascunhos e cancelados nunca entram na exportação do fluxo de aprovação
+                // Mesmo escopo de FIN e ADM das solicitações.
                 rddv = rddv.Where(d => !d.Rascunho && !d.Cancelado);
-
-                if (isFinancial)
-                {
-                    rddv = rddv.Where(r => (r.AprovadoGestor ?? false));
-                }
-                else
-                {
-                    rddv = rddv.Where(r => (r.AprovadoGestor ?? false) && r.IdUsuarioAtribuido == userId);
-                }
+                rddv = rddv.Where(r => (r.AprovadoGestor ?? false));
 
                 if (filter.RequestStart.HasValue && filter.RequestEnd.HasValue)
                 {
@@ -246,16 +221,16 @@ namespace Ares.PagueAres.API.Controllers
                                  select new PaymentListItem()
                                  {
                                      Codigo = r.IdRelatorio.ToString(),
-                                     Tipo = "RDDV - " + RddvReportType[r.TipoRelatorio],
-                                     DataInclusao = r.DataCadastro.ToString("dd/MM/yyyy"),
-                                     DataVencimento = r.DataVencimento.HasValue ? r.DataVencimento.Value.ToString("dd/MM/yyyy") : "",
+                                     Tipo = "RDDV - " + RotulosExportacao.TipoRelatorio(r.TipoRelatorio),
+                                     DataInclusao = r.DataCadastro,
+                                     DataVencimento = r.DataVencimento,
                                      DocNumero = "#",
                                      Solicitante = u.Nome ?? "",
                                      Parceiro = u.Nome ?? "",
-                                     Valor = d.Valor.ToString("0.00"),
-                                     StatusGestor = StatusGestor[r.StatusGestor ?? 0],
-                                     StatusContabil = StatusContabil[r.StatusContabilidade ?? 0],
-                                     StatusFinanceiro = StatusFinanceiro[r.StatusFinanceiro ?? 0]
+                                     Valor = (decimal?)d.Valor ?? 0m,
+                                     StatusGestor = RotulosExportacao.StatusGestor(r.StatusGestor),
+                                     StatusContabil = RotulosExportacao.StatusContabil(r.StatusContabilidade),
+                                     StatusFinanceiro = RotulosExportacao.StatusFinanceiro(r.StatusFinanceiro)
                                  });
 
                 ConcurrentBag<IEnumerable<PaymentListItem>> items = new();
@@ -268,53 +243,53 @@ namespace Ares.PagueAres.API.Controllers
 
                 var dataset = items.SelectMany(x => x.ToList());
 
-                var book = new Workbook();
-                book.Worksheets.Clear();
-
+                using var book = new XLWorkbook();
                 var sheet = book.Worksheets.Add("Pagamentos");
 
-                var row = 1;
+                string[] cabecalho =
+                [
+                    "Codigo", "Tipo", "Data de Inclusao", "Data de Vencimento", "Doc. Número", "Solicitante",
+                    "Parceiro", "Valor", "Status Gestor", "Status Contábil", "Status Financeiro"
+                ];
 
-                sheet[row, 1].Value = "Codigo";
-                sheet[row, 2].Value = "Tipo";
-                sheet[row, 3].Value = "Data de Inclusao";
-                sheet[row, 4].Value = "Data de Vencimento";
-                sheet[row, 5].Value = "Doc. Número";
-                sheet[row, 6].Value = "Solicitante";
-                sheet[row, 7].Value = "Parceiro";
-                sheet[row, 8].Value = "Valor";
-                sheet[row, 9].Value = "Status Gestor";
-                sheet[row, 10].Value = "Status Contábil";
-                sheet[row, 11].Value = "Status Financeiro";
+                for (var coluna = 0; coluna < cabecalho.Length; coluna++)
+                {
+                    sheet.Cell(1, coluna + 1).Value = cabecalho[coluna];
+                }
 
-                row++;
+                var row = 2;
 
                 foreach (var item in dataset)
                 {
-                    sheet[row, 1].Value = item.Codigo;
-                    sheet[row, 2].Value = item.Tipo;
-                    sheet[row, 3].Value = item.DataInclusao;
-                    sheet[row, 4].Value = item.DataVencimento;
-                    sheet[row, 5].Value = item.DocNumero;
-                    sheet[row, 6].Value = item.Solicitante;
-                    sheet[row, 7].Value = item.Parceiro;
-                    sheet[row, 8].Value = item.Valor;
-                    sheet[row, 9].Value = item.StatusGestor;
-                    sheet[row, 10].Value = item.StatusContabil;
-                    sheet[row, 11].Value = item.StatusFinanceiro;
+                    sheet.Cell(row, 1).Value = item.Codigo;
+                    sheet.Cell(row, 2).Value = item.Tipo;
+                    sheet.Cell(row, 3).Value = item.DataInclusao;
+                    sheet.Cell(row, 4).Value = item.DataVencimento.HasValue ? item.DataVencimento.Value : Blank.Value;
+                    sheet.Cell(row, 5).Value = item.DocNumero;
+                    sheet.Cell(row, 6).Value = item.Solicitante;
+                    sheet.Cell(row, 7).Value = item.Parceiro;
+                    sheet.Cell(row, 8).Value = item.Valor;
+                    sheet.Cell(row, 9).Value = item.StatusGestor;
+                    sheet.Cell(row, 10).Value = item.StatusContabil;
+                    sheet.Cell(row, 11).Value = item.StatusFinanceiro;
 
                     row++;
                 }
 
-                sheet.Range[1, 1, dataset.Count() + 1, 11].BorderAround();
-                sheet.Range[1, 1, dataset.Count() + 1, 11].BorderInside();
-                sheet.Range[1, 1, dataset.Count() + 1, 11].AutoFitColumns();
+                var ultimaLinha = row - 1;
 
-                sheet.Range[1, 1, 1, 11].Style.Font.IsBold = true;
+                sheet.Range(2, 3, ultimaLinha, 4).Style.DateFormat.Format = "dd/mm/yyyy";
+                sheet.Range(2, 8, ultimaLinha, 8).Style.NumberFormat.Format = "#,##0.00";
+
+                var tabela = sheet.Range(1, 1, ultimaLinha, 11);
+                tabela.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                tabela.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                sheet.Range(1, 1, 1, 11).Style.Font.Bold = true;
+                sheet.Columns(1, 11).AdjustToContents();
 
                 var ms = new MemoryStream();
 
-                book.SaveToStream(ms, FileFormat.Version2016);
+                book.SaveAs(ms);
 
                 ms.Position = 0;
 
@@ -322,7 +297,8 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogError(ex, "Falha ao gerar o Excel da exportação de pagamentos.");
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
         }
 
@@ -337,7 +313,8 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
                 {
-                    if (previewKey?.EntityId != id && 
+                    // A chave precisa ser deste RDDV: outro id ou outro tipo de título é recusado.
+                    if (previewKey?.EntityId != id ||
                         previewKey?.RequestType != Domain.Enums.EnumRequestType.Rddv)
                     {
                         return Unauthorized("Chave de visualização não autorizada para esta solicitação.");
@@ -360,11 +337,13 @@ namespace Ares.PagueAres.API.Controllers
 
                 zipStream.SetLevel(3); //0-9, 9 being the highest level of compression
 
-                foreach (var attachment in attachments)
+                var nomesEntradas = NomesEntradasZip(attachments.Select(a => (a.IdDocumentoRddv, (string?)a.NomeArquivo)));
+
+                foreach (var (attachment, nomeEntrada) in attachments.Zip(nomesEntradas))
                 {
                     MemoryStream msAtt = new MemoryStream(Convert.FromBase64String(attachment.Arquivo.Contains(",") ? attachment.Arquivo.Split(",")[1] : attachment.Arquivo));
 
-                    ZipEntry xmlEntry = new ZipEntry(attachment.NomeArquivo);
+                    ZipEntry xmlEntry = new ZipEntry(nomeEntrada);
                     xmlEntry.DateTime = DateTime.Now;
 
                     zipStream.PutNextEntry(xmlEntry);
@@ -382,7 +361,8 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogError(ex, "Falha ao gerar o ZIP de anexos do RDDV {Id}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
         }
 
@@ -397,7 +377,8 @@ namespace Ares.PagueAres.API.Controllers
 
                 if (memoryCache.TryGetValue("preview-key-" + key, out PreviewKeyDto? previewKey))
                 {
-                    if (previewKey?.EntityId != id &&
+                    // A chave precisa ser desta solicitação: outro id ou outro tipo de título é recusado.
+                    if (previewKey?.EntityId != id ||
                         previewKey?.RequestType != Domain.Enums.EnumRequestType.Solicitacao)
                     {
                         return Unauthorized("Chave de visualização não autorizada para esta solicitação.");
@@ -420,11 +401,13 @@ namespace Ares.PagueAres.API.Controllers
 
                 zipStream.SetLevel(3); //0-9, 9 being the highest level of compression
 
-                foreach (var attachment in attachments)
+                var nomesEntradas = NomesEntradasZip(attachments.Select(a => (a.IdDocumentoSolicitacao, (string?)a.NomeArquivo)));
+
+                foreach (var (attachment, nomeEntrada) in attachments.Zip(nomesEntradas))
                 {
                     MemoryStream msAtt = new MemoryStream(Convert.FromBase64String(attachment.Arquivo.Contains(",") ? attachment.Arquivo.Split(",")[1] : attachment.Arquivo));
 
-                    ZipEntry xmlEntry = new ZipEntry(attachment.NomeArquivo);
+                    ZipEntry xmlEntry = new ZipEntry(nomeEntrada);
                     xmlEntry.DateTime = DateTime.Now;
 
                     zipStream.PutNextEntry(xmlEntry);
@@ -442,8 +425,25 @@ namespace Ares.PagueAres.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                logger.LogError(ex, "Falha ao gerar o ZIP de anexos da solicitação {Id}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
             }
+        }
+
+        /// <summary>
+        /// Nomes das entradas dos ZIPs por título, na ordem dos anexos. O nome original vem do usuário: passa
+        /// por <see cref="NomesPacote.Sanitizar"/> (sem <c>..</c>, separador de pasta nem unidade, para a extração
+        /// não escrever fora da pasta de destino) e por <see cref="NomesPacote.Deduplicar"/> (dois anexos de
+        /// mesmo nome, sem diferenciar caixa, não se sobrescrevem). Nome que já é seguro fica como está; nome que
+        /// fica vazio depois da sanitização vira <c>anexo-&lt;id do anexo&gt;</c>.
+        /// </summary>
+        private static IReadOnlyList<string> NomesEntradasZip(IEnumerable<(int IdAnexo, string? NomeArquivo)> anexos)
+        {
+            return NomesPacote.Deduplicar(anexos.Select(anexo =>
+            {
+                var nome = NomesPacote.Sanitizar(anexo.NomeArquivo);
+                return nome.Length > 0 ? nome : $"anexo-{anexo.IdAnexo}";
+            }));
         }
     }
 }

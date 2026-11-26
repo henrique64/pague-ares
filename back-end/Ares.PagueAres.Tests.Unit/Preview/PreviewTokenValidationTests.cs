@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Ares.PagueAres.Tests.Unit.Preview
 {
@@ -23,7 +24,7 @@ namespace Ares.PagueAres.Tests.Unit.Preview
 
         private static PreviewController CreateController(PagueAresContext ctx, IMemoryCache cache)
         {
-            var controller = new PreviewController(ctx, cache);
+            var controller = new PreviewController(ctx, cache, NullLogger<PreviewController>.Instance);
             controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext()
