@@ -27,11 +27,13 @@ namespace Ares.PagueAres.Application.Exportacao
 
         private readonly IFonteExportacao _fonte;
         private readonly ExportacaoSettings _settings;
+        private readonly FusoExportacao _fuso;
 
-        public GeradorPacoteExportacao(IFonteExportacao fonte, IOptions<ExportacaoSettings> settings)
+        public GeradorPacoteExportacao(IFonteExportacao fonte, IOptions<ExportacaoSettings> settings, FusoExportacao fuso)
         {
             _fonte = fonte;
             _settings = settings.Value;
+            _fuso = fuso;
         }
 
         private sealed record TituloPlanejado(string Codigo, TipoTituloExportacao Tipo, int Id);
@@ -44,7 +46,8 @@ namespace Ares.PagueAres.Application.Exportacao
             ArgumentNullException.ThrowIfNull(filtro);
             ArgumentNullException.ThrowIfNull(destino);
 
-            var agora = DateTimeOffset.Now;
+            // A hora do LEIA-ME e do índice segue o fuso configurado (padrão: Brasília), não o do processo.
+            var agora = _fuso.Agora();
             var geradoEm = new DateTimeOffset(agora.Year, agora.Month, agora.Day, agora.Hour, agora.Minute, agora.Second, agora.Offset);
 
             IReadOnlyList<SolicitacaoExportacao> solicitacoes = filtro.TipoTitulo == TipoTituloExportacao.Rddv
@@ -148,7 +151,7 @@ namespace Ares.PagueAres.Application.Exportacao
                 await using (var entrada = zip.CreateEntry(ArquivoLeiaMe, CompressionLevel.Fastest).Open())
                 {
                     await entrada.WriteAsync(BomUtf8, ct);
-                    await entrada.WriteAsync(new UTF8Encoding(false).GetBytes(MontarLeiaMe(idExportacao, geradoEm, filtro, totais)), ct);
+                    await entrada.WriteAsync(new UTF8Encoding(false).GetBytes(MontarLeiaMe(idExportacao, geradoEm, _fuso.Rotulo(geradoEm), filtro, totais)), ct);
                 }
             }
 
@@ -264,15 +267,11 @@ namespace Ares.PagueAres.Application.Exportacao
             return bytes.ToString(CultureInfo.InvariantCulture) + " bytes";
         }
 
-        private static string MontarLeiaMe(int idExportacao, DateTimeOffset geradoEm, FiltroExportacaoDto filtro, TotaisPacoteExportacao totais)
+        private static string MontarLeiaMe(int idExportacao, DateTimeOffset geradoEm, string rotuloFuso, FiltroExportacaoDto filtro, TotaisPacoteExportacao totais)
         {
-            var deslocamento = geradoEm.Offset;
-            var sinal = deslocamento < TimeSpan.Zero ? "-" : "+";
-            var fuso = $"UTC{sinal}{deslocamento.Duration():hh\\:mm}";
-
             var texto = new StringBuilder();
             texto.Append("PagueAres - Exportação de títulos com anexos\r\n");
-            texto.Append(CultureInfo.InvariantCulture, $"Exportação nº {idExportacao}, gerada em {geradoEm:dd/MM/yyyy HH:mm} (horário do servidor, {fuso}).\r\n");
+            texto.Append(CultureInfo.InvariantCulture, $"Exportação nº {idExportacao}, gerada em {geradoEm:dd/MM/yyyy HH:mm} ({rotuloFuso}).\r\n");
             texto.Append("\r\n");
             texto.Append("IMPORTANTE: extraia o arquivo ZIP inteiro para uma pasta antes de abrir o Excel. Os links da\r\n");
             texto.Append("planilha apontam para as pastas e os anexos extraídos e só funcionam depois da extração.\r\n");

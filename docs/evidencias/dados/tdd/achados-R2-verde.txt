@@ -1,0 +1,14 @@
+Achado R2 (baixo) — campos do outro tipo ficavam habilitados com Tipo "Ambos" e código com prefixo — fase VERDE (depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela
+Comando: cd front-end && CHROME_BIN=<msedge.exe> npx ng test --watch=false --karma-config=<karma.headless.js fora do repositório>; depois npx ng build
+Correção: camposSolicitacaoDesabilitados e camposRddvDesabilitados passam a olhar o tipo efetivo (o do prefixo do código quando o tipo é "Ambos"); montarFiltro usa os mesmos dois getters. Os valores já digitados não são apagados (igual à troca explícita do tipo): o campo fica desabilitado com o valor visível e o filtro enviado o ignora. O aviso do prefixo continua.
+
+Resultado: 223 testes — 223 aprovados, 0 falhas (218 da base + 5 novos); código de saída 0.
+ng build: código de saída 0.
+------------------------------------------------------------------------------------------
+[PASSOU] RDDV-45 desabilita na tela os campos só de Solicitação, mantém o valor digitado e deixa o de RDDV habilitado
+[PASSOU] SOL-12 desabilita na tela o tipo de relatório e deixa os campos de Solicitação habilitados
+[PASSOU] os campos voltam a ficar habilitados quando o código vira número puro, e o valor digitado segue lá
+[PASSOU] o aviso do prefixo continua aparecendo junto com os campos desabilitados
+[PASSOU] com tipo escolhido diferente do prefixo (código recusado) vale o tipo escolhido

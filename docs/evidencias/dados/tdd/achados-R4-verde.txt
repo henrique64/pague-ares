@@ -1,0 +1,19 @@
+R4 — Três defeitos de tela achados na recaptura do manual (front-end) — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela (correção no commit desta etapa, sobre 8714eca)
+Comandos: cd front-end; npx ng test --watch=false --karma-config=<scratchpad>/f1/karma.headless.js  (Edge headless)
+          cd front-end; npx ng build
+Arquivos de teste: os mesmos da fase vermelha.
+
+Correções
+------------------------------------------------------------------------------------------
+1. exportacoes.component.html: Tamanho mostra "—" quando a situação é Excluída (Excluido = 6); as demais situações
+   continuam com tamanhoLegivel(job.tamanhoBytes).
+2. exportacoes.component.html: dica do Código passa a "Ex.: 123, SOL-000123 ou RDDV-000045" (cabe em uma linha no
+   col-md-5); a mensagem de erro e os avisos não mudam.
+3. payments.component.ts/html: numeroDocumentoExibido(req) e parceiroExibido(req), usados nas três abas. Em linha de RDDV
+   (idTipo diferente de 0) o Nº do documento fica vazio e o Parceiro é o nome do solicitante; Solicitação não muda.
+   A view vListagemSolicitacoes não foi alterada.
+
+Resultado: Executed 225 of 225 — TOTAL: 225 SUCCESS (EXIT=0)  [223 da base + 2 casos novos; o da dica foi ajustado]
+ng build: código 0.

@@ -1,0 +1,84 @@
+R1 — Achados da revisão (back-end, crítica: autorização de dados) — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela (base 0a1f1b5)
+Comandos: dotnet test back-end/Ares.PagueAres.Tests.Unit --filter "FullyQualifiedName~ListingControllerFilterTests|FullyQualifiedName~GeradorPacoteTests.Gerar_IndiceJson_TemOFormatoDoContrato"
+          dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~ListagemEscopoTests|FullyQualifiedName~RddvTipoRelatorioTests|FullyQualifiedName~PagamentosTraducaoSqlServerTests"
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/ListagemEscopoTests.cs (novo)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/RddvTipoRelatorioTests.cs (novo)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/PagamentosTraducaoSqlServerTests.cs (asserção nova)
+                   back-end/Ares.PagueAres.Tests.Unit/Controllers/ListingControllerFilterTests.cs (teste novo)
+                   back-end/Ares.PagueAres.Tests.Unit/Exportacao/GeradorPacoteTests.cs (versão esperada 2)
+Banco: EF Core InMemory (PagueAresWebAppFactory) e SQL Server só para traduzir o SQL, sem conexão. Só dados fictícios.
+Linha de base antes da etapa: Unidade 143 aprovados, Integração 294 aprovados, 0 com falha.
+
+Achados
+------------------------------------------------------------------------------------------
+1. [alto] ListingController.BuildQuery: GET /api/listing sem viewMode, ou com viewMode=0 (Undefined), não aplicava
+   escopo; SOL, GES e CON recebiam os títulos de todos os usuários, inclusive rascunhos alheios. O Dashboard
+   (viewMode=4) devolvia a fila de títulos de todos os usuários a qualquer perfil.
+2. [baixo] ExportController.ExportPaymentList: a planilha decidia "é solicitação" por IdTipo == 0; no RDDV o IdTipo é o
+   TipoRelatorio, que o RddvController não validava. RDDV com tipo 0 saía como "Pagamento", com "#".
+3. [decisão] IndiceExportacao: indice.json com versao 1, embora o formato tenha mudado (tipo "Solicitação"/"RDDV",
+   geradoEm com o deslocamento do fuso da exportação).
+
+Passo 1 — testes escritos, sem nenhuma mudança no código de produção
+------------------------------------------------------------------------------------------
+Unidade:    10 testes — 5 com falha, 5 aprovados.
+Integração: 73 testes — 39 com falha, 34 aprovados.
+
+Cenários novos que falharam (esperado antes da correção)
+------------------------------------------------------------------------------------------
+Achado 1 — listagem sem escopo
+[FALHOU] ListagemEscopoTests.Listagem_SemVisaoDefinida_DevolveSoOsTitulosDoProprioUsuario, 15 casos:
+         consulta sem viewMode, viewMode=0 e viewMode=Undefined, para SOL (3), GES (2), CON (5), FIN (4) e ADM (1).
+         Ex.: SOL esperado {S900, S901, R910}; recebido {S900, S901, S902, S903, S904, S905, S906, R910, R911, R912}
+         GES/CON/FIN/ADM esperado 1 título (o próprio); recebido os mesmos 10 títulos de todos os usuários
+[FALHOU] ListagemEscopoTests.Listagem_RascunhoDeOutroUsuario_NuncaAparece, 10 casos (sem viewMode e viewMode=0, nos
+         cinco perfis): "Expected titulos {...} to not contain {"S903", "R911"} ... but found {"S903", "R911"}"
+         (S903 e R911 são rascunhos do usuário 6)
+[FALHOU] ListagemEscopoTests.Listagem_Dashboard_SemPerfilDaFila_NaoDevolveTitulos, 3 casos (SOL 3, SOL 6, GES 2):
+         "Expected titulos to be empty ... but found at least one item {"S900"}" (a fila traz títulos de outros usuários)
+[FALHOU] ListingControllerFilterTests.VisaoIndefinidaOuForaDoEnum_RetornaSoOsPropriosRegistros, 4 casos
+         ((PaymentListView)0, 5, 99, -1): "Expected result to be a collection with 3 item(s), but {1, 2, 3, 4, 5, 6}"
+         (o ramo default de ApplyViewModeFilter devolvia a lista inteira)
+
+Achado 2 — RDDV com tipo de relatório 0
+[FALHOU] RddvTipoRelatorioTests.PostRddv_NovoEnviadoComTipoRelatorioZero_Responde400ComMensagemENaoGrava
+         "Expected status to be HttpStatusCode.BadRequest {value: 400} because a API respondeu: Registro armazenado com
+         sucesso., but found HttpStatusCode.OK {value: 200}"
+[FALHOU] RddvTipoRelatorioTests.PostRddv_NovoComTipoRelatorioForaDaFaixa_Responde400ENaoGrava, 5 casos
+         (4, -1 e 99 enviados; 4 e -1 em rascunho): recebido 200 "Registro armazenado com sucesso."
+[FALHOU] RddvTipoRelatorioTests.PostRddv_EdicaoTrocandoOTipoParaZero_Responde400ENaoGrava: recebido 200
+[FALHOU] RddvTipoRelatorioTests.PostRddv_EnvioDeRascunhoSemTipoRelatorio_Responde400EContinuaRascunho: recebido 200
+[FALHOU] RddvTipoRelatorioTests.Planilha_RddvGravadoComTipoRelatorioZero_SaiComoRddv
+         "Expected linha.Cell(2).GetString() to be "RDDV - Código 0" ... but "Pagamento" has a length of 9"
+[FALHOU] RddvTipoRelatorioTests.Planilha_FiltroDocumentoDoParceiro_DeixaDeForaORddvComTipoZeroDeMesmoCodigo
+         "Expected titulos to be equal to {"920 Pagamento"} ... but {"920 Pagamento", "920 Pagamento"} contains 1 item(s)
+         too many" (o RDDV 920, com tipo 0, passava no filtro como se fosse a solicitação 920)
+[FALHOU] PagamentosTraducaoSqlServerTests.ExportPaymentList_TodosOsFiltros_TraduzParaSqlServerEDevolveAPlanilha
+         o SQL não tinha LIKE N'RDDV%'; tinha "[v].[IdTipo] = 0 AND EXISTS (" e "CASE WHEN [v].[IdTipo] = 0 THEN 0"
+
+Achado 3 — versão do indice.json
+[FALHOU] GeradorPacoteTests.Gerar_IndiceJson_TemOFormatoDoContrato
+         "Expected Encoding.UTF8.GetString(bytes) ... "versao": 1, ... to contain "\n  "versao": 2""
+
+Controles (passam antes e depois; fixam um comportamento que já estava certo ou que não pode quebrar)
+------------------------------------------------------------------------------------------
+[PASSOU] ListagemEscopoTests.Listagem_RascunhoDeOutroUsuario_NuncaAparece, 20 casos (viewMode 1 a 4 nos cinco perfis)
+[PASSOU] ListagemEscopoTests.Listagem_Dashboard_ComPerfilDaFila_DevolveOsAprovadosSemAtribuicao (FIN, CON, ADM)
+         a fila traz S900, S902 e R910
+[PASSOU] ListagemEscopoTests.Listagem_VisaoForaDoEnum_Responde400 ("5", "99", "-1", "abc")
+         o model binding do ASP.NET Core já recusa com 400 um valor fora do enum PaymentListView
+[PASSOU] RddvTipoRelatorioTests.PostRddv_NovoEnviadoComTipoRelatorioValido_EGravado (1, 2, 3)
+[PASSOU] RddvTipoRelatorioTests.PostRddv_NovoRascunhoSemTipoRelatorio_EGravado
+         a tela salva o rascunho sem validar, antes de o tipo ser escolhido
+[PASSOU] RddvTipoRelatorioTests.PostRddv_RascunhoSemTipoRelatorioSalvoDeNovoComoRascunho_EGravado
+[PASSOU] RddvTipoRelatorioTests.PostRddv_EdicaoDeRddvJaEnviadoComTipoZeroSemTrocarOTipo_EAceita
+         o RDDV legado, gravado com tipo 0 antes da regra, continua podendo seguir o fluxo
+[PASSOU] PagamentosTraducaoSqlServerTests.ApplyFilters_TodosOsFiltros_TraduzParaSqlServer
+[PASSOU] ListingControllerFilterTests: os 5 testes que já existiam (MyView, ManagerView, FinancialView x2, Dashboard)
+
+Resumo do console
+------------------------------------------------------------------------------------------
+Unidade:    Total de testes: 10 — Aprovados: 5 — Com falha: 5
+Integração: Total de testes: 73 — Aprovados: 34 — Com falha: 39

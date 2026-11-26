@@ -1,0 +1,58 @@
+B2 — Pacote: índices, fuso de Brasília e semente (back-end e tools) — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-back (base ce28904)
+Comandos: dotnet test back-end/Ares.PagueAres.Tests.Unit --filter "FullyQualifiedName~FusoExportacaoTests|FullyQualifiedName~GeradorPacoteTests"
+          dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~Download_TokenValido_Responde200"
+          dotnet run tools/exportacao/semente/semente.cs -- --autoteste
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Unit/Exportacao/FusoExportacaoTests.cs (novo)
+                   back-end/Ares.PagueAres.Tests.Unit/Exportacao/GeradorPacoteTests.cs
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportacaoControllerTests.cs
+Banco: nenhum (testes de unidade) e EF Core InMemory (integração), só dados fictícios.
+
+Passo 1 — testes escritos e só o andaime estrutural (FusoExportacao com o comportamento antigo, em UTC, sem rótulo de
+Brasília; construtor do gerador e do controller já recebendo o componente). Nenhuma regra nova de produção.
+------------------------------------------------------------------------------------------
+Unidade: 49 testes (FusoExportacaoTests + GeradorPacoteTests) — 13 com falha, 36 aprovados.
+
+Cenários que falharam (esperado antes da correção)
+------------------------------------------------------------------------------------------
+[FALHOU] Gerar_IndiceCsv_TemBomSeparadorCabecalhoEOrdem
+         esperado o tipo "RDDV" na linha do anexo do RDDV; recebido "Rddv"
+[FALHOU] Gerar_IndiceJson_TemOFormatoDoContrato
+         esperado tipo "Solicitação" (título e anexo) e "RDDV"; recebido "Solicitacao" e "Rddv"
+[FALHOU] Gerar_LeiaMe_HoraDeBrasiliaParaUmInstanteUtcFixo
+         esperado "gerada em 26/11/2026 12:30 (horário de Brasília, UTC-03:00)"; o LEIA-ME saiu com a hora do servidor
+[FALHOU] Gerar_LeiaMe_FusoConfiguradoDiferenteDeBrasiliaDizOIdEODeslocamento
+         esperado "gerada em 26/11/2026 15:30 (fuso UTC, UTC+00:00)"; o LEIA-ME saiu com "(horário do servidor, ...)"
+[FALHOU] Padrao_ConverteInstanteUtcParaBrasilia
+         esperado hora 12 (15:30 UTC em Brasília); recebido 15 (diferença de 3)
+[FALHOU] Padrao_AgoraUsaORelogioInjetadoNoFusoDeBrasilia
+         esperado "26/11/2026 12:30"; recebido a hora do servidor
+[FALHOU] Padrao_RotuloDizHorarioDeBrasiliaEODeslocamento
+         esperado "horário de Brasília, UTC-03:00"; recebido "horário do servidor"
+[FALHOU] IdDoWindows_TambemResolveBrasilia
+         esperado "12:30"; recebido a hora do servidor
+[FALHOU] FusoInvalido_CaiNoPadraoSemExcecaoERegistraAviso
+         esperado "12:30" (cai no padrão de Brasília); recebido a hora do servidor
+[FALHOU] FusoVazio_CaiNoPadraoSemExcecao ("" e "   ")
+         esperado "12:30"; recebido a hora do servidor
+[FALHOU] OutroFuso_RotuloTraOIdEODeslocamento
+         esperado "15:30" e "fuso UTC, UTC+00:00"; recebido a hora do servidor e "horário do servidor"
+[FALHOU] ParaLocal_TrataDataSemKindComoUtc
+         esperado "20261125-1404"; recebido "20261125-1704"
+
+Passo 2 — nome do download (integração), com o controller convertendo a conclusão sem aplicar o fuso (o que um servidor
+em UTC, como o contêiner, produz)
+------------------------------------------------------------------------------------------
+[FALHOU] Download_TokenValido_Responde200EmZipComNomeDoContratoECorpoIgualAoArquivo
+         esperado "exportacao-titulos-1-20261125-1404.zip"; recebido "exportacao-titulos-1-20261125-1704.zip"
+         (conclusão 2026-11-25 17:04 UTC; o teste antigo usava ToLocalTime() e só passava na hora do servidor de testes)
+
+Passo 3 — semente: o autoteste ganhou a conferência da distribuição para a Contabilidade; com a decisão forçada a
+"nenhum título vai para o con.semente":
+------------------------------------------------------------------------------------------
+Comando: dotnet run tools/exportacao/semente/semente.cs -- --autoteste
+Contabilidade: 0 de 365 dias de referência atribuem o título ao con.semente
+FALHA: a distribuição para a Contabilidade ficou fora do esperado: 0 de 365 dias
+AUTOTESTE FALHOU
+Código de saída: 1

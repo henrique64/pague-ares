@@ -29,6 +29,12 @@ namespace Ares.PagueAres.Infrastructure.Models
         /// <summary>Momento em que o arquivo deixa de estar disponível (conclusão + retenção), em UTC.</summary>
         public DateTime? DataExpiracao { get; set; }
 
+        /// <summary>
+        /// Momento em que o dono tirou o job da lista de exportações, em UTC; <c>null</c> enquanto o job está na lista.
+        /// Só um job encerrado (Falhou, Cancelado, Expirado ou Excluido) sai da lista, e ele continua no banco.
+        /// </summary>
+        public DateTime? DataRemocaoDaLista { get; set; }
+
         public int TotalTitulos { get; set; }
         public int TitulosProcessados { get; set; }
         public int TotalAnexos { get; set; }

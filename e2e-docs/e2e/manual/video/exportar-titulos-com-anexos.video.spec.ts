@@ -4,8 +4,8 @@
 // Ambiente: o app de verdade (DOC_URL_BASE), com a massa fictícia da semente, e uma conta Financeiro fictícia dedicada ao
 // vídeo (DOC_PAGUEARES_USUARIO = fin.video.semente@exemplo.invalid), sem histórico de exportações: rode antes
 // `node e2e-docs/e2e/manual/preparar-video.ts`, que garante a conta e zera a lista dela. O pedido é pequeno (Solicitações
-// de novembro de 2025, cerca de 30 títulos) para concluir em segundos. O pedido que o vídeo cria é apagado da lista pela
-// API no fim (só esta conta).
+// de novembro de 2025, cerca de 30 títulos) para concluir em segundos. O pedido que o vídeo cria é excluído pela
+// API no fim (só esta conta; a linha vira Excluída e some quando preparar-video.ts zera a conta na próxima gravação).
 //
 // Cenas do pacote (p11 e p12): o ZIP não é tela do app. As cenas usam as páginas de g2-fontes/paginas/, montadas de um
 // pacote real da mesma API (README em g2-fontes/), abertas por file:// na mesma aba. A volta ao app (p13) é pelo
@@ -177,7 +177,7 @@ test("exportar-titulos-com-anexos", async ({ page, narrador }) => {
 
   // p05 — O período
   await narrador.passo("p05", async () => {
-    const periodo = campo(page, "Período da Solicitação");
+    const periodo = campo(page, "Período da solicitação");
     const inicio = periodo.locator('input[placeholder="Início"]');
     const fim = periodo.locator('input[placeholder="Fim"]');
     // O rótulo flutuante do Material cobre o campo vazio e intercepta o clique: o foco vai direto, sem clicar.
@@ -199,9 +199,9 @@ test("exportar-titulos-com-anexos", async ({ page, narrador }) => {
   // p06 — Os anexos
   await narrador.passo("p06", async () => {
     await narrador.aposFala(0.05);
-    await narrador.apontar(campo(page, "Status Gestor"));
-    await narrador.apontar(campo(page, "Status Financeiro"));
-    await narrador.apontar(campo(page, "Status Contabilidade"));
+    await narrador.apontar(campo(page, "Status gestor"));
+    await narrador.apontar(campo(page, "Status financeiro"));
+    await narrador.apontar(campo(page, "Status contábil"));
     await narrador.aposFala(0.4);
     await narrador.apontar(page.locator("#incluirAnexos"));
     await expect(page.locator("#incluirAnexos input")).toBeChecked();

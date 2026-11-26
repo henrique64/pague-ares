@@ -1,0 +1,26 @@
+F3 — Tela de pagamentos: "Exportar planilha", ordenação e rótulos — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-front (base d68772e, a F2)
+Comando: cd front-end && CHROME_BIN=<msedge.exe> npx ng test --watch=false --karma-config=<karma.headless.js fora do repositório: reaproveita o karma.conf.js e troca o navegador por ChromeHeadless sobre o Edge>
+Arquivo de teste: front-end/src/app/payments/payments.component.spec.ts (bloco novo "tela renderizada: rótulos, ordenação e Exportar planilha (achados 6, 7 e 8)")
+Dados: só fictícios; os serviços são spies, nenhuma requisição de rede; o componente é renderizado com todos os perfis ligados, para as três abas aparecerem.
+
+Resultado: 218 testes — 5 com falha, 213 aprovados (213 da base da F2 + 5 novos; os 5 novos falharam).
+------------------------------------------------------------------------------------------
+[FALHOU] com ordenação por data de inclusão, a seta aparece no cabeçalho "Data de inclusão" e não no de vencimento, em todas as abas
+         Financeiro/Contábil: seta em Data de inclusão: Expected null not to be null.
+[FALHOU] o botão "Exportar planilha" tem a dica dizendo que os anexos ficam em Exportações
+         Expected 'Exportar' to be 'Exportar planilha'.
+         Expected null to be 'Baixa a lista desta aba em Excel (Pagamentos.xlsx), sem anexos. Os anexos ficam no menu Exportações.'.
+[FALHOU] cabeçalhos da aba Financeiro/Contábil em caixa de frase, com os três status pelo nome da convenção
+         ("Data Inclusão", "Data Vencimento", "Doc. Número", "Status Gestor", "Status Contábil", "Status Financeiro" no lugar dos nomes da convenção)
+[FALHOU] cabeçalhos das abas Minhas Solicitações e Gestor pela convenção de rótulos
+         ("Data Inclusão", "Data Vencimento", "Status Gestor", "Status Financeiro", "Status Contabilidade", "Doc. Número", "Valor Bruto", "Obs. Gestor")
+[FALHOU] rótulos dos filtros e botões em caixa de frase, sem placeholder em Title Case
+         Expected $[0] = 'Número do Documento' to equal 'Nº do documento'.
+         Expected $[5] = 'Período da Solicitação' to equal 'Período da solicitação'.
+         Expected $[6] = 'Período de Vencimento' to equal 'Período de vencimento'.
+         Expected $[7] = 'Status Gestor' to equal 'Status gestor'.
+         Expected $[8] = 'Status Financeiro' to equal 'Status financeiro'.
+         Expected $[9] = 'Status Contabilidade' to equal 'Status contábil'.
+         placeholders "Status Gestor", "Status Financeiro", "Status Contabilidade"; botões "Solicitar Pagamento" e "Limpar Filtros"

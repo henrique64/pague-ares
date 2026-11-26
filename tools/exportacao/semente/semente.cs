@@ -340,6 +340,7 @@ static async Task SemearAsync(SqlConnection conn, int titulos, double mbPorTitul
         lista.Add(id);
     }
     var idFin = idsPorAlias["FIN"][0];
+    var idCon = idsPorAlias["CON"][0];
     var idAdm = idsPorAlias["ADM"][0];
     var idGestor = idsPorAlias["GES"][0];
     var idsSolicitantes = idsPorAlias["SOL"];
@@ -359,7 +360,7 @@ static async Task SemearAsync(SqlConnection conn, int titulos, double mbPorTitul
 
     Console.WriteLine($"Semeando {normais} títulos exportáveis + {extras} rascunhos/cancelados, ~{mbPorTitulo.ToString(CultureInfo.InvariantCulture)} MB de anexos por título...");
 
-    var ctx = new Ctx(rng, rngConteudo, departamentos, tiposDocumento, tiposViagem, idsSolicitantes, idFin, idAdm, idGestor, mbPorTitulo);
+    var ctx = new Ctx(rng, rngConteudo, departamentos, tiposDocumento, tiposViagem, idsSolicitantes, idFin, idAdm, idGestor, idCon, mbPorTitulo);
     var estat = new Estatisticas();
     var relogio = System.Diagnostics.Stopwatch.StartNew();
 
@@ -430,6 +431,8 @@ static async Task<int> InserirSolicitacaoAsync(SqlConnection conn, SqlTransactio
     int tipoSol = 1 + rng.Next(3);
     var descricao = $"{Marca} {Itens[rng.Next(Itens.Length)]} ref. {dataSol:MM/yyyy} lote {rng.Next(1000, 9999)}";
     int? atribuido = statusFin != 1 || rng.Next(2) == 0 ? (rng.Next(3) == 0 ? c.IdAdm : c.IdFin) : null;
+    // A Contabilidade só vê na aba Financeiro/Contábil o que foi atribuído a ela: parte dos títulos vai para o con.semente.
+    if (atribuido != null && VaiParaContabilidade(dataSol)) atribuido = c.IdCon;
     bool rascunho = estado == 1, cancelado = estado == 2;
 
     int id;
@@ -517,6 +520,7 @@ static async Task<int> InserirRddvAsync(SqlConnection conn, SqlTransaction tx, C
     var cidade = Cidades[rng.Next(Cidades.Length)];
     var finalidade = $"{Marca} Viagem a {cidade} para {Motivos[rng.Next(Motivos.Length)]}";
     int? atribuido = statusFin != 1 || rng.Next(2) == 0 ? c.IdFin : null;
+    if (atribuido != null && VaiParaContabilidade(dataCad)) atribuido = c.IdCon;
     bool rascunho = estado == 1, cancelado = estado == 2;
 
     int id;
@@ -685,6 +689,10 @@ static byte[] GerarConteudo(Random rng, long tamanho, bool jpeg)
 }
 
 // Datas dentro dos 12 meses anteriores à data de referência fixa (determinístico, independe do relógio).
+// Um terço dos títulos atribuídos vai para o usuário da Contabilidade (decisão pela data, sem consumir o gerador, para não
+// mudar os demais dados da mesma --semente). Com 500 títulos são bem mais que uma página cheia na aba Financeiro/Contábil.
+static bool VaiParaContabilidade(DateTime data) => data.Day % 3 == 0;
+
 static DateTime DataAleatoria(Random rng) => Ref.AddDays(-rng.Next(0, 365)).AddMinutes(rng.Next(0, 24 * 60 - 1));
 
 static string Pessoa(Random rng) =>
@@ -810,9 +818,15 @@ static int AutoTesteDocumentos(int semente)
     if (!CpfPassaNoDv("529.982.247-25")) falhas.Add("validador de CPF não reconhece um CPF válido conhecido");
     if (!CnpjPassaNoDv("11.222.333/0001-81")) falhas.Add("validador de CNPJ não reconhece um CNPJ válido conhecido");
 
+    // A Contabilidade tem de receber uma fatia razoável dos títulos atribuídos (um terço, com folga), e nunca todos nem nenhum.
+    int diasParaContabilidade = Enumerable.Range(0, 365).Count(d => VaiParaContabilidade(Ref.AddDays(-d)));
+    if (diasParaContabilidade < 100 || diasParaContabilidade > 140)
+        falhas.Add($"a distribuição para a Contabilidade ficou fora do esperado: {diasParaContabilidade} de 365 dias");
+
     Console.WriteLine($"semente={semente}");
     Console.WriteLine($"CPF : gerados={cpfs.Count} passam no DV={cpfValidos} fora do formato={cpfFormato} únicos={cpfUnicos} exemplo={cpfs[0]}");
     Console.WriteLine($"CNPJ: gerados={cnpjs.Count} passam no DV={cnpjValidos} fora do formato={cnpjFormato} únicos={cnpjUnicos} exemplo={cnpjs[0]}");
+    Console.WriteLine($"Contabilidade: {diasParaContabilidade} de 365 dias de referência atribuem o título ao con.semente");
     if (falhas.Count == 0) { Console.WriteLine("AUTOTESTE OK"); return 0; }
     foreach (var f in falhas) Console.Error.WriteLine("FALHA: " + f);
     Console.Error.WriteLine("AUTOTESTE FALHOU");
@@ -907,7 +921,7 @@ static class Fixos
 }
 
 sealed record Ctx(Random Rng, Random RngConteudo, List<int> Departamentos, List<int> TiposDocumento, List<int> TiposViagem,
-    List<int> Solicitantes, int IdFin, int IdAdm, int IdGestor, double MbPorTitulo);
+    List<int> Solicitantes, int IdFin, int IdAdm, int IdGestor, int IdCon, double MbPorTitulo);
 
 sealed class Estatisticas
 {

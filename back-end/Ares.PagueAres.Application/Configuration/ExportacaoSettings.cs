@@ -13,5 +13,6 @@ namespace Ares.PagueAres.Application.Configuration
         public bool WorkerHabilitado { get; set; } = true;
         public double IntervaloReconciliacaoSegundos { get; set; } = 60; // volta que encerra jobs órfãos e reenfileira Pendente fora da fila; aceita de 1 a 3600
         public double LimiteSemSinalDeVidaSegundos { get; set; } = 300;  // Processando sem gravação do executor por este tempo = órfão; aceita de 10 a 86400
+        public string FusoHorario { get; set; } = "America/Sao_Paulo"; // fuso do nome do ZIP e da hora do LEIA-ME; IANA ou id do Windows (E. South America Standard Time)
     }
 }

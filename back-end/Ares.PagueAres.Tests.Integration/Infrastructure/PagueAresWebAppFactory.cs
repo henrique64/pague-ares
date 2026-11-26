@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -43,6 +44,10 @@ namespace Ares.PagueAres.Tests.Integration.Infrastructure
                 services.AddDbContext<PagueAresContext>(opts =>
                     opts.UseInMemoryDatabase(_dbName)
                         .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+
+                // O contexto de teste dá ao InMemory a view vListagemSolicitacoes (o InMemory não tem views).
+                services.Replace(ServiceDescriptor.Scoped<PagueAresContext>(sp =>
+                    new PagueAresContextTeste(sp.GetRequiredService<DbContextOptions<PagueAresContext>>())));
             });
 
             builder.UseSetting("Smtp:SmtpHost", "");

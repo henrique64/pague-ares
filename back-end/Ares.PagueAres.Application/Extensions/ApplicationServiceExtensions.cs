@@ -4,6 +4,7 @@ using Ares.PagueAres.Application.Exportacao;
 using Ares.PagueAres.Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Ares.PagueAres.Application.Extensions
 {
@@ -19,6 +20,8 @@ namespace Ares.PagueAres.Application.Extensions
             service.AddScoped<IFonteExportacao, FonteExportacaoEf>();
             service.AddScoped<IGeradorPacoteExportacao, GeradorPacoteExportacao>();
             service.AddSingleton<ExportacaoFila>();
+            service.TryAddSingleton(TimeProvider.System);
+            service.AddSingleton<FusoExportacao>();
             service.AddSingleton<IMedidorEspacoLivre, MedidorEspacoLivreUnidade>();
 
             // Com WorkerHabilitado = false nenhum dos dois serviços sobe e os jobs ficam Pendente.

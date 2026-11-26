@@ -59,7 +59,7 @@
     <tr><td>Quem pode usar</td><td><span class="ok">Entregue.</span> Somente os perfis <strong>Financeiro</strong> e <strong>Administrador</strong>.</td></tr>
     <tr><td>Dados completos</td><td><span class="ok">Entregue.</span> CPF, banco, agência e conta saem completos na planilha, como o pedido previa.</td></tr>
   </table>
-  <p>Além do pedido, o PagueAres passou a ler as datas digitadas no formato brasileiro em todas as telas (veja a última página).</p>
+  <p>Além do pedido, o PagueAres passou a ler as datas digitadas no formato brasileiro em todas as telas (veja a página dos testes). Os ajustes feitos depois da revisão do manual estão no adendo, na última página.</p>
 </section>
 
 <section>
@@ -217,6 +217,58 @@
 
   <h3>Datas no formato brasileiro, em todo o sistema</h3>
   <p>Durante os testes, notamos que o PagueAres lia algumas datas digitadas como mês/dia (por exemplo, <em>05/12/2025</em> virava 12 de maio). Isso já existia e valia para várias telas. Agora as datas digitadas são lidas como <strong>dia/mês/ano</strong> em todo o sistema: Exportações, Solicitações, Nova solicitação e RDDV. O botão <strong>Limpar Filtros</strong> também passou a apagar o texto dos campos de data.</p>
+</section>
+
+<section>
+  <h2>Adendo: ajustes feitos depois da revisão do manual (26/11/2026)</h2>
+  <p>Ao montar o manual de uso da tela Exportações, a revisão encontrou pontos que podiam ser melhorados. Cada ponto foi analisado e decidido com o responsável pelo produto; o que foi decidido corrigir já está no sistema. A coluna <strong>Ref.</strong> é o número do ponto na lista da revisão (de 1 a 22). As figuras deste documento foram tiradas antes dos ajustes e podem mostrar textos antigos de botões e campos.</p>
+
+  <h3>Na tela Exportações</h3>
+  <table>
+    <tr><th style="width:6%">Ref.</th><th style="width:26%">O que mudou</th><th>Como fica</th></tr>
+    <tr><td>3, 15</td><td><strong>Excluída</strong> e <strong>Remover da lista</strong></td><td>Ao clicar em <strong>Excluir</strong> numa exportação concluída, o arquivo é apagado e a linha passa a mostrar a situação <em>Excluída</em>, mantendo a data de expiração original. As linhas <em>Falhou</em>, <em>Cancelada</em>, <em>Expirada</em> e <em>Excluída</em> ganham o botão <strong>Remover da lista</strong>, que tira a linha da lista da própria pessoa (depois de uma confirmação). A limpeza automática de pacotes vencidos continua funcionando como antes.</td></tr>
+    <tr><td>4</td><td><strong>Número da exportação</strong></td><td>A lista ganhou a coluna <strong>Nº</strong>, com o mesmo número que aparece no nome do arquivo ZIP e no LEIA-ME.</td></tr>
+    <tr><td>1, 2</td><td><strong>Avisos de download</strong></td><td>Se o link de download estiver vencido ou já tiver sido usado, ou se o arquivo tiver sido excluído, a tela mostra a mensagem enviada pelo servidor, que explica o que aconteceu. Quando não for possível mostrá-la, aparece o aviso geral, agora com o texto "...gere o link de novo clicando em Baixar." (com "g" minúsculo). Para que a mensagem do servidor apareça, a tela e o sistema precisam estar no mesmo endereço, como já é o padrão; a equipe de TI cuida disso na instalação.</td></tr>
+    <tr><td>5, 14</td><td><strong>Campo Código</strong></td><td>Aceita o número (<em>123</em>) ou o código com prefixo (<em>SOL-000123</em> para solicitação, <em>RDDV-45</em> para RDDV), sem diferenciar maiúsculas e minúsculas. Zero, números com vírgula ou ponto e códigos mal escritos são recusados, com uma mensagem explicando como digitar. O campo traz uma dica com os exemplos. O prefixo define o tipo de título: se o tipo escolhido for diferente do prefixo, a tela avisa o conflito.</td></tr>
+    <tr><td>16</td><td><strong>Avisos do tipo "Ambos"</strong></td><td>Com o tipo de título <em>Ambos</em>, a tela avisa, antes de gerar, quando um campo que só existe em solicitações (Nº do documento, tipo de solicitação, tipo e forma de pagamento) deixa os RDDVs de fora, quando o tipo de relatório (que só existe em RDDVs) deixa as solicitações de fora, e quando um código com prefixo define o tipo. O aviso apenas informa; não impede a exportação. A regra de quais títulos entram não mudou.</td></tr>
+    <tr><td>6, 17</td><td><strong>Rótulos padronizados</strong></td><td>Os nomes de campos, colunas e botões seguem um padrão único (só a primeira palavra com inicial maiúscula; por exemplo, <em>Data de inclusão</em>, <em>Limpar filtros</em>, <em>Nº do documento</em>). Os três estados de aprovação de um título se chamam <em>Status gestor</em>, <em>Status financeiro</em> e <em>Status contábil</em>; a palavra <em>Situação</em> fica só para o estado de uma exportação. A coluna <strong>Filtros</strong> da lista passou a repetir os nomes do formulário, sempre no formato "Campo: valor" (por exemplo, "Período da solicitação: 01/11/2025 a 30/11/2025").</td></tr>
+    <tr><td>13</td><td><strong>Formulário legível</strong></td><td>Os campos do formulário foram alargados para que os nomes apareçam inteiros em telas de 1360 pixels de largura, sem ficar cortados nem escondidos pelo ícone do calendário.</td></tr>
+  </table>
+
+  <h3>Na tela de pagamentos e na planilha Pagamentos.xlsx</h3>
+  <table>
+    <tr><th style="width:6%">Ref.</th><th style="width:26%">O que mudou</th><th>Como fica</th></tr>
+    <tr><td>7</td><td><strong>Exportar planilha</strong></td><td>O botão <strong>Exportar</strong> da aba Financeiro/Contábil passou a se chamar <strong>Exportar planilha</strong>, com uma dica: baixa a lista da aba em Excel (<em>Pagamentos.xlsx</em>), sem anexos. Os anexos ficam no menu <strong>Exportações</strong>.</td></tr>
+    <tr><td>8</td><td><strong>Setas de ordenação</strong></td><td>Ao ordenar por <em>Data de inclusão</em>, a seta aparece nesse cabeçalho (antes aparecia por engano no de vencimento).</td></tr>
+    <tr><td>20</td><td><strong>Administrador na aba Financeiro/Contábil</strong></td><td>O Administrador passa a ver, nessa aba, o mesmo conjunto de títulos que o Financeiro (todos os aprovados pelo gestor). A Contabilidade continua vendo só os títulos atribuídos a ela.</td></tr>
+    <tr><td>21</td><td><strong>Planilha com os mesmos filtros da lista</strong></td><td>A planilha <em>Pagamentos.xlsx</em> passou a aplicar os filtros exatamente como a lista da tela. Em especial: período com só a data inicial ou só a final, "atribuído a" e código zero agora funcionam como na lista; e os filtros de número do documento, nome do parceiro e documento do parceiro deixam os RDDVs de fora, como na lista. A ordem é solicitações primeiro e RDDVs depois.</td></tr>
+    <tr><td>9</td><td><strong>Cabeçalhos da planilha</strong></td><td>Com acento e no padrão novo: Código, Tipo, Data de inclusão, Data de vencimento, Nº do documento, Solicitante, Parceiro, Valor, Status gestor, Status contábil e Status financeiro.</td></tr>
+    <tr><td>10</td><td><strong>Nº do documento do RDDV</strong></td><td>Na planilha, a coluna fica em branco para RDDV (antes aparecia o símbolo "#").</td></tr>
+  </table>
+
+  <h3>No pacote baixado</h3>
+  <table>
+    <tr><th style="width:6%">Ref.</th><th style="width:26%">O que mudou</th><th>Como fica</th></tr>
+    <tr><td>11</td><td><strong>Tipo do título nos índices</strong></td><td>Os arquivos <em>indice.csv</em> e <em>indice.json</em> passaram a escrever o tipo como <em>Solicitação</em> e <em>RDDV</em>, como na aba Anexos da planilha.</td></tr>
+    <tr><td>18</td><td><strong>Horário de Brasília</strong></td><td>O nome do arquivo ZIP e a hora de geração no LEIA-ME usam o horário de Brasília, em qualquer servidor. O LEIA-ME diz, por exemplo: "Exportação nº 42, gerada em 26/11/2026 12:30 (horário de Brasília, UTC-03:00)." O horário pode ser mudado pela equipe de TI; as demais datas do sistema continuam como antes.</td></tr>
+  </table>
+
+  <h3>Mantido como está, por decisão do responsável pelo produto</h3>
+  <ul>
+    <li><strong>Valor líquido do RDDV</strong> (ref. 12): continua sendo o saldo líquido do relatório (diárias e despesas, menos adiantamentos e saldo do cartão), e não a simples soma das despesas.</li>
+    <li><strong>Parceiro do RDDV</strong> (ref. 22): continua sendo o solicitante do relatório.</li>
+  </ul>
+
+  <h3>Dados de demonstração</h3>
+  <p>Ref. 19: os dados fictícios usados nos testes e nas figuras passaram a incluir títulos atribuídos ao usuário da Contabilidade, para que a aba Financeiro/Contábil desse perfil também tenha o que mostrar.</p>
+
+  <h3>Testes depois dos ajustes</h3>
+  <table>
+    <tr><th style="width:42%">O que foi testado</th><th>Resultado</th></tr>
+    <tr><td>Testes automáticos do sistema (servidor)</td><td><span class="ok">Aprovado.</span> 437 testes, sem nenhuma falha (eram 385).</td></tr>
+    <tr><td>Testes automáticos da tela</td><td><span class="ok">Aprovado.</span> 218 testes, sem nenhuma falha (eram 138).</td></tr>
+  </table>
+  <p class="rodape">Cada correção foi testada em duas etapas: primeiro o teste mostrou o problema, depois o teste passou com a correção.</p>
 </section>
 
 </body>

@@ -1,0 +1,70 @@
+B3 — Pagamentos: Administrador na aba Financeiro/Contábil e Pagamentos.xlsx (back-end, crítica) — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-back
+Comandos: dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~VisaoFinanceiraTests|FullyQualifiedName~ExportLegadoExcelTests|FullyQualifiedName~ExportLegadoFiltrosTests|FullyQualifiedName~ExportLegadoSecurityTests"
+          dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~PagamentosTraducaoSqlServerTests"
+          dotnet build back-end/Ares.PagueAres.sln --no-incremental
+          dotnet test back-end/Ares.PagueAres.sln
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/VisaoFinanceiraTests.cs (novo, 3 testes)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportLegadoFiltrosTests.cs (novo, 12 casos + 1 teste)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportLegadoExcelTests.cs (1 teste novo, 2 ajustados)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/PagamentosTraducaoSqlServerTests.cs (novo, 2 testes de guarda)
+                   back-end/Ares.PagueAres.Tests.Unit/Controllers/ListingControllerFilterTests.cs (parâmetro e 2 nomes renomeados)
+Banco: EF Core InMemory (integração) e SQL Server só para traduzir o SQL, sem conexão (um interceptador suprime a
+conexão e a execução). Só dados fictícios.
+
+Mudança
+------------------------------------------------------------------------------------------
+- ListingController: os filtros da tela (sem a visão e sem a ordenação) saíram de BuildQuery para o método estático
+  ApplyFilters, regra única da lista e do Excel. O nome do parceiro passa a ser comparado sem diferenciar maiúsculas
+  (ToLower + Contains), como a planilha já fazia. A visão financeira recebe
+  CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador); o parâmetro de ApplyViewModeFilter se chama
+  veTodosNaVisaoFinanceira.
+- ExportController.ExportPaymentList: parte da view vListagemSolicitacoes com o escopo de FIN/ADM (aprovado pelo gestor,
+  sem rascunho, sem cancelado) e aplica ListingController.ApplyFilters. O documento do parceiro, que só a planilha tem,
+  vem da solicitação e deixa os RDDVs de fora. Cabeçalhos pela convenção C2; "Nº do documento" vazio no RDDV; parceiro do
+  RDDV continua sendo o solicitante (decisão 22).
+- ListFilterDto ganha IsAssigned, que a tela já enviava e a planilha ignorava.
+
+Resultado
+------------------------------------------------------------------------------------------
+Filtro dos testes da etapa: 49 aprovados, 0 com falha.
+Tradução para SQL Server: 2 aprovados, 0 com falha (ApplyFilters e a consulta do Excel com todos os filtros preenchidos;
+o SQL do Excel lê [vListagemSolicitacoes], usa EXISTS no documento do parceiro e ORDER BY; nenhum aviso do EF).
+Build (--no-incremental): 0 erros, 35 avisos, todos já existentes: 7 CS8602/CS8604 em arquivos que a etapa não tocou
+(AuthenticationService, Program, RddvController, RequestController, UsersController) e os NU1902/NU1903 de pacotes.
+Nenhum aviso nos arquivos tocados.
+Unidade:    143 aprovados, 0 com falha (antes da etapa: 143; testes renomeados, nenhum removido).
+Integração: 294 aprovados, 0 com falha (antes da etapa: 275; 19 novos).
+
+Cenários que passaram a verde
+------------------------------------------------------------------------------------------
+[PASSOU] VisaoFinanceiraTests.VisaoFinanceira_Administrador_VeOsAprovadosAtribuidosAOutroUsuario
+         o ADM vê S600, S601, S602, R610 e R611, o mesmo conjunto do FIN
+[PASSOU] ExportLegadoExcelTests.ExcelLegado_TemAs11ColunasNaMesmaOrdemComOsRotulosDaPlanilhaNova
+[PASSOU] ExportLegadoExcelTests.ExcelLegado_Rddv_NumeroDoDocumentoFicaVazio
+[PASSOU] ExportLegadoFiltrosTests.PlanilhaELista_ComOMesmoFiltro_TrazemOsMesmosTitulos, nos 12 casos:
+         {} sem filtro; requestStart só; requestEnd só; requestStart e requestEnd; dueStart só; dueEnd só;
+         documentNumber; partnerName em maiúsculas; isAssigned; requesterId; documentId=0; documentId=710
+[PASSOU] ExportLegadoFiltrosTests.Planilha_FiltroDocumentoDoParceiro_DeixaOsRddvsDeFora
+
+Controles que continuam verdes
+------------------------------------------------------------------------------------------
+[PASSOU] VisaoFinanceiraTests.VisaoFinanceira_Financeiro_VeTodosOsAprovados
+[PASSOU] VisaoFinanceiraTests.VisaoFinanceira_Contabilidade_SoVeOsAtribuidosAEla
+[PASSOU] ExportLegadoExcelTests.ExcelLegado_Rddv_TemTipoRotuladoEValorNumerico (parceiro do RDDV = solicitante)
+[PASSOU] ExportLegadoExcelTests.ExcelLegado_FiltroPartnerNameEmMaiusculas_EncontraParceiroEmMinusculas
+[PASSOU] ExportLegadoExcelTests.ExcelLegado_FiltroPartnerDocumentEmMinusculas_EncontraDocumentoEmMaiusculas
+[PASSOU] ExportLegadoSecurityTests.ExportacaoExcel_ADM_IncluiSolicitacaoAprovadaNaoAtribuidaAEle (escopo da planilha)
+[PASSOU] ListingControllerFilterTests.FinancialView_FinanceiroOuAdministrador_NaoRetornaRascunhoNemCancelado (renomeado)
+[PASSOU] ListingControllerFilterTests.FinancialView_SemPerfilFinanceiroNemAdministrador_SomenteAtribuidosSemRascunho (renomeado)
+
+Testes de guarda (escritos depois da mudança; não há fase vermelha, porque ApplyFilters não existia antes)
+------------------------------------------------------------------------------------------
+[PASSOU] PagamentosTraducaoSqlServerTests.ApplyFilters_TodosOsFiltros_TraduzParaSqlServer
+[PASSOU] PagamentosTraducaoSqlServerTests.ExportPaymentList_TodosOsFiltros_TraduzParaSqlServerEDevolveAPlanilha
+
+Resumo do console
+------------------------------------------------------------------------------------------
+Aprovado!  – Com falha:     0, Aprovado:   143, Ignorado:     0, Total:   143 - Ares.PagueAres.Tests.Unit.dll (net10.0)
+Aprovado!  – Com falha:     0, Aprovado:   294, Ignorado:     0, Total:   294 - Ares.PagueAres.Tests.Integration.dll (net10.0)

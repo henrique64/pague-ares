@@ -8,7 +8,13 @@
   },
   {
     "id": "exportacoes-formulario-padrao",
-    "legenda": "Formulário de exportação como aparece ao abrir a tela: tipo Ambos, filtros em Todos e a caixa Incluir anexos marcada, com o aviso fixo no topo.",
+    "legenda": "Formulário de exportação como aparece ao abrir a tela: tipo Ambos, campo Código com a dica de formato (Ex.: 123, SOL-000123 ou RDDV-000045), filtros em Todos e a caixa Incluir anexos marcada, com o aviso fixo no topo.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-codigo-recusado",
+    "legenda": "Formulário com o Código 0 recusado: o campo fica com contorno vermelho, a mensagem de validação aparece sob ele e o mesmo texto vem no aviso com o botão OK; nenhuma exportação é pedida.",
     "grupo": "g1",
     "tela": "exportacoes"
   },
@@ -21,8 +27,14 @@
   },
   {
     "id": "exportacoes-formulario-preenchido",
-    "legenda": "Formulário preenchido para Solicitação, com período da solicitação e Status Gestor Autorizado; o campo Tipo de relatório (só RDDV) fica desabilitado.",
+    "legenda": "Formulário preenchido para Solicitação, com período da solicitação e Status gestor Autorizado; o campo Tipo de relatório (só RDDV) fica desabilitado e esmaecido, cercado por um contorno laranja colocado só na foto (não faz parte da tela).",
     "observacao": "Período 01/11/2025 a 31/12/2025.",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-aviso-ambos",
+    "legenda": "Tipo Ambos com o Nº do documento 123456 preenchido: sob os filtros, o aviso diz que Nº do documento, Tipo de solicitação, Tipo de pagamento e Forma de pagamento só existem em solicitações e que, com eles preenchidos, os RDDVs ficam de fora.",
     "grupo": "g1",
     "tela": "exportacoes"
   },
@@ -46,8 +58,14 @@
   },
   {
     "id": "exportacoes-lista-falhou-cancelada-expirada",
-    "legenda": "Linhas Falhou (com a mensagem de erro), Cancelada e Expirada: nenhuma tem botões. A barra de Falhou e a de Cancelada ficam onde a geração parou, e a de Expirada está completa, com tamanho e data de Expira em.",
-    "observacao": "Falhou com a mensagem de interrupção por reinício; Expirada mostra tamanho e Expira em.",
+    "legenda": "Linhas Falhou (com a mensagem de erro), Cancelada e Expirada, cada uma só com o botão Remover da lista. A barra de Falhou e a de Cancelada ficam onde a geração parou, e a de Expirada está completa, com tamanho e data de Expira em. Na foto, o prazo da linha Expirada foi recuado só para a captura e por isso coincide com a hora do pedido; na lista real, o prazo é o do arquivo (48 horas depois da conclusão, no valor padrão).",
+    "observacao": "Falhou com a mensagem de interrupção por reinício; Expirada mostra tamanho e Expira em (prazo que venceu).",
+    "grupo": "g1",
+    "tela": "exportacoes"
+  },
+  {
+    "id": "exportacoes-lista-excluida",
+    "legenda": "Lista Minhas exportações com uma linha Cancelada e uma Excluída (criada ao excluir uma Concluída): as duas só com Remover da lista; a Excluída não tem Baixar nem Excluir, mostra \"—\" no Tamanho e mantém o Expira em original.",
     "grupo": "g1",
     "tela": "exportacoes"
   },
@@ -65,28 +83,34 @@
   },
   {
     "id": "exportacoes-seletor-de-periodo",
-    "legenda": "Calendário aberto pelo ícone do campo Período de Vencimento, com o mês de novembro de 2026 e o dia atual circulado.",
+    "legenda": "Calendário aberto pelo ícone do campo Período de vencimento, com o mês de novembro de 2026 e o dia atual circulado.",
     "grupo": "g1",
     "tela": "exportacoes"
   },
   {
     "id": "exportacoes-lista-vazia",
-    "legenda": "Lista Minhas exportações sem nenhuma exportação: no lugar da tabela, a tela mostra a frase sobre os últimos 30 dias.",
+    "legenda": "Lista Minhas exportações sem nenhuma exportação: no lugar da tabela, a tela mostra a frase Nenhuma exportação para mostrar nos últimos 30 dias.",
     "observacao": "Tela rolada; usuário Administrador (o menu tem Configurações).",
     "grupo": "g1",
     "tela": "exportacoes"
   },
   {
     "id": "pagamentos-botao-exportar",
-    "legenda": "Aba Financeiro/Contábil de Solicitações, com o botão Exportar, cercado por um contorno laranja colocado só na foto (não faz parte da tela), antes de Limpar Filtros e Filtrar.",
+    "legenda": "Aba Financeiro/Contábil de Solicitações, com o botão Exportar planilha, cercado por um contorno laranja colocado só na foto (não faz parte da tela), antes de Limpar filtros e Filtrar. Nas linhas de RDDV da tabela, o Nº do documento fica vazio e o Parceiro mostra o nome do solicitante.",
     "observacao": "Realce no botão.",
     "grupo": "g1",
     "tela": "pagamentos"
   },
   {
+    "id": "pagamentos-dica-exportar-planilha",
+    "legenda": "Aba Financeiro/Contábil com o ponteiro sobre Exportar planilha: a dica diz que baixa a lista desta aba em Excel (Pagamentos.xlsx), sem anexos, e que os anexos ficam no menu Exportações.",
+    "grupo": "g1",
+    "tela": "pagamentos"
+  },
+  {
     "id": "pagamentos-sem-botao-exportar",
-    "legenda": "A mesma aba para a Contabilidade, sem o botão Exportar entre os botões do painel e sem o item Exportações no menu. A tabela está vazia porque, para a Contabilidade, a aba só mostra títulos atribuídos ao próprio usuário, e nenhum foi atribuído a esse usuário.",
-    "observacao": "Tabela vazia para a Contabilidade com a semente.",
+    "legenda": "A mesma aba para a Contabilidade, sem o botão Exportar planilha entre os botões do painel e sem o item Exportações no menu. A tabela traz registros: para a Contabilidade a aba mostra os títulos aprovados pelo Gestor que estão atribuídos ao próprio usuário.",
+    "observacao": "Contabilidade com 135 títulos na semente.",
     "grupo": "g1",
     "tela": "pagamentos"
   },
@@ -128,13 +152,13 @@
   },
   {
     "id": "pacote-leia-me",
-    "legenda": "Prévia do texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados.",
+    "legenda": "Prévia do texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados, com a hora de geração em horário de Brasília (UTC-03:00).",
     "grupo": "g2",
     "tela": "pacote-leia-me"
   },
   {
     "id": "pagamentos-excel-previa",
-    "legenda": "Prévia da planilha Pagamentos.xlsx gerada pelo botão Exportar: uma linha por solicitação (Tipo igual a Pagamento) e uma por RDDV (Tipo igual a RDDV - Adiantamento), com datas e valor formatados.",
+    "legenda": "Prévia da planilha Pagamentos.xlsx gerada pelo botão Exportar planilha: uma linha por solicitação (Tipo igual a Pagamento) e uma por RDDV (Tipo igual a RDDV - Adiantamento, com Nº do documento vazio), com cabeçalhos em caixa de frase e acentuados, até a coluna Status financeiro.",
     "grupo": "g2",
     "tela": "pagamentos-excel"
   }

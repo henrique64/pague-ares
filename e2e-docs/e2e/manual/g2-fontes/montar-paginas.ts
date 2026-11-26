@@ -171,7 +171,7 @@ tr.primeira td{border-bottom:2px solid #217346}
   nomes.forEach((nome, i) => writeFileSync(join(pastaSaida, `${nome}.html`), paginaDePlanilha("titulos.xlsx", titulos.abas, i, 16, nome === "planilha-anexos" ? 0.77 : 1)));
 
   const pagamentos = JSON.parse(readFileSync(join(pastaDados, "pagamentos.json"), "utf8")) as { abas: Aba[] };
-  writeFileSync(join(pastaSaida, "pagamentos.html"), paginaDePlanilha("Pagamentos.xlsx", pagamentos.abas, 0, 12));
+  writeFileSync(join(pastaSaida, "pagamentos.html"), paginaDePlanilha("Pagamentos.xlsx", pagamentos.abas, 0, 12, 0.92));
 }
 
 // ---------- Arquivos de texto (indice.csv, indice.json, LEIA-ME.txt) ----------

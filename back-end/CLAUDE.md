@@ -163,7 +163,7 @@ dotnet test Ares.PagueAres.sln --filter "FullyQualifiedName~SecurityTests"
 | Projeto | Conteúdo |
 |---------|----------|
 | `Ares.PagueAres.Tests.Unit` | `Authentication/AuthenticationServiceTests` (BCrypt, SHA256 legado, migração), `Authentication/AuthControllerUnitTests` (lockout), `Controllers/ListingControllerFilterTests` (filtros de visão), `Preview/PreviewTokenValidationTests` |
-| `Ares.PagueAres.Tests.Integration` | `ApprovalWorkflowTests`, `AuthControllerTests`, `DataSegregationTests`, `DepartmentControllerTests`, `EndpointExposureTests`, `SecurityTests` — sobem a API inteira via `PagueAresWebAppFactory` (`WebApplicationFactory<Program>`) com EF Core **InMemory**, ambiente `Test`, `RunMigrations=false`, e geram JWTs de teste |
+| `Ares.PagueAres.Tests.Integration` | `ApprovalWorkflowTests`, `AuthControllerTests`, `DataSegregationTests`, `DepartmentControllerTests`, `EndpointExposureTests`, `SecurityTests` — sobem a API inteira via `PagueAresWebAppFactory` (`WebApplicationFactory<Program>`) com EF Core **InMemory**, ambiente `Test`, `RunMigrations=false`, e geram JWTs de teste. O contexto de teste `PagueAresContextTeste` dá ao InMemory a view `vListagemSolicitacoes` (o InMemory não tem views) |
 
 Os testes de integração **não precisam de SQL Server nem de Docker**. `Program` é exposto com `public partial class Program { }` para essa finalidade. Resultados e contagens atuais: ver `../RELATORIO_TESTES.md`.
 
@@ -210,9 +210,9 @@ Todos os controllers usam `[Route("api/[controller]")]` e `[Authorize]` (JWT Bea
 | Controller | Rota Base | Endpoints |
 |-----------|-----------|-----------|
 | `AuthController` | `/api/auth` | `POST /` — login e geração de JWT |
-| `RequestController` | `/api/request` | `GET /{id}`, `POST /` (cria/atualiza, rascunho, aprovação), `GET /dashboard` (consolidado: Solicitações + RDDVs), `GET /{id}/user?userId=` (atribuição) |
-| `RddvController` | `/api/rddv` | `GET /{id}`, `POST /`, `GET /dashboard` (só RDDVs), `GET /{id}/user?userId=` |
-| `ListingController` | `/api/listing` | `GET /` — listagem unificada com filtros, ordenação, paginação e `ViewMode` |
+| `RequestController` | `/api/request` | `GET /{id}`, `POST /` (cria/atualiza, rascunho, aprovação), `GET /dashboard` (consolidado: Solicitações + RDDVs), `GET /{id}/user?userId=` (atribuição; só FIN ou ADM, ver Segurança) |
+| `RddvController` | `/api/rddv` | `GET /{id}`, `POST /`, `GET /dashboard` (só RDDVs), `GET /{id}/user?userId=` (atribuição; só FIN ou ADM, ver Segurança) |
+| `ListingController` | `/api/listing` | `GET /` — listagem unificada com filtros, ordenação, paginação e `ViewMode` (sem `ViewMode`, vale `MyView`; ver ViewModes) |
 | `UsersController` | `/api/users` | `GET /` (ADM), `GET /{id}` (próprio perfil ou ADM), `POST /` (ADM), `GET /directory?userName=` (busca no AD), `GET /list?roles=` |
 | `ExportController` | `/api/export` | `GET /payments` (Excel), `GET /rddv/attachment/{id}` e `GET /request/attachment/{id}` (ZIP) — todos com `?key=` |
 | `ConfigController` | `/api/config` | `GET /`, `POST /` (somente ADM) |
@@ -220,7 +220,7 @@ Todos os controllers usam `[Route("api/[controller]")]` e `[Authorize]` (JWT Bea
 | `TravelTypeController` | `/api/traveltype` | `GET /`, `GET /{id}`, `POST /` |
 | `DepartmentController` | `/api/department` | `GET /` — lista de departamentos (substitui listas fixas no frontend) |
 | `PreviewController` | `/api/preview` | `POST /generate-preview-key?entityId=&requestType=`, `GET /payment/{id}/{attachmentId}?key=`, `GET /rddv/{id}/{attachmentId}?key=` |
-| `ExportacaoController` | `/api/exportacao` | `POST /` — cria um job de exportação de títulos (202 com o job; 400 para filtro inválido ou sem títulos, 429 ao passar de `MaxJobsAtivosPorUsuario`); `GET /` — jobs do próprio usuário dos últimos 30 dias; `GET /{id}` — um job do próprio usuário; `POST /{id}/link-download` — gera o link de download de uso único (só para job Concluido); `GET /download?token=` — baixa o ZIP pelo token, anônimo na autenticação, consumido na primeira vez; `DELETE /{id}` — cancela (Pendente vira Cancelado, Processando pede cancelamento, Concluido vira Expirado e apaga o arquivo) |
+| `ExportacaoController` | `/api/exportacao` | `POST /` — cria um job de exportação de títulos (202 com o job; 400 para filtro inválido ou sem títulos, 429 ao passar de `MaxJobsAtivosPorUsuario`); `GET /` — jobs do próprio usuário dos últimos 30 dias, menos os removidos da lista; `GET /{id}` — um job do próprio usuário (inclusive um removido da lista); `POST /{id}/link-download` — gera o link de download de uso único (só para job Concluido); `GET /download?token=` — baixa o ZIP pelo token, anônimo na autenticação, consumido na primeira vez; `DELETE /{id}` — cancela (Pendente vira Cancelado, Processando pede cancelamento, Concluido vira Excluido e apaga o arquivo, mantendo a `DataExpiracao` original; job já encerrado responde 409); `DELETE /{id}/lista` — tira da lista um job Falhou, Cancelado, Expirado ou Excluido (204, também na repetição; 409 para Pendente, Processando e Concluido) |
 
 **Exportações (`ExportacaoController`)**: exigem papel **FIN** ou **ADM** do JWT (outros perfis recebem 403), e cada usuário só enxerga e altera os próprios jobs (job de outro usuário responde 404). A identidade vem sempre do token, nunca do corpo ou da query. O download é por navegação direta do navegador, que não envia o cabeçalho `Authorization`, por isso o link de uso único (`TokensDownloadExportacao`, em `API/Services`).
 
@@ -229,11 +229,11 @@ O processamento é em segundo plano, em `Application/Exportacao/`:
 - `ExportacaoWorker`: `BackgroundService` que gera o ZIP (planilha Excel com ClosedXML e anexos) job a job, com progresso gravado em `ExportacaoJob`.
 - `ExportacaoLimpeza`: `BackgroundService` que, ao subir e a cada `IntervaloLimpezaMinutos`, expira os pacotes vencidos e apaga arquivos órfãos mais velhos que `RetencaoHoras`.
 
-Os jobs ficam na tabela `ExportacaoJob` (mapeada com `ToTable("ExportacaoJob")` em `PagueAresContext`), com o token de concorrência `Versao`. A seção `Exportacao` do `appsettings.json` traz as chaves `Pasta` (vazia = pasta temporária do sistema, `PagueAres/Exportacao`), `RetencaoHoras`, `IntervaloLimpezaMinutos`, `MaxTitulosPorExportacao`, `MaxJobsAtivosPorUsuario`, `MaxBytesPorExportacao`, `EspacoLivreMinimoMb`, `ValidadeLinkDownloadSegundos` e `WorkerHabilitado`, todas ligadas à classe `ExportacaoSettings` (`Application/Configuration`).
+Os jobs ficam na tabela `ExportacaoJob` (mapeada com `ToTable("ExportacaoJob")` em `PagueAresContext`), com o token de concorrência `Versao`. A seção `Exportacao` do `appsettings.json` traz as chaves `Pasta` (vazia = pasta temporária do sistema, `PagueAres/Exportacao`), `RetencaoHoras`, `IntervaloLimpezaMinutos`, `MaxTitulosPorExportacao`, `MaxJobsAtivosPorUsuario`, `MaxBytesPorExportacao`, `EspacoLivreMinimoMb`, `ValidadeLinkDownloadSegundos`, `WorkerHabilitado` e `FusoHorario` (fuso do nome do ZIP e da hora do LEIA-ME; padrão `America/Sao_Paulo`, aceita também o id do Windows `E. South America Standard Time`; resolvido por `FusoExportacao`, que cai em Brasília e depois em UTC, com aviso no log, se o id não existir), todas ligadas à classe `ExportacaoSettings` (`Application/Configuration`).
 
 Observações:
 - **Não existem** mais `GET /api/request` nem `GET /api/rddv` (listagem crua sem escopo de usuário foi removida; use `/api/listing`).
-- Quase todas as respostas de negócio (inclusive falhas) voltam com HTTP 200 e `success=false`; HTTP 401 vem do JWT ausente/inválido/expirado e das preview keys inválidas. `GET /{id}/user` usa `BadRequest` para erros.
+- Quase todas as respostas de negócio (inclusive falhas) voltam com HTTP 200 e `success=false`; HTTP 401 vem do JWT ausente/inválido/expirado e das preview keys inválidas. `GET /{id}/user` (atribuição) responde 403 para perfil sem permissão, 404 para título inexistente e 400 para destino inválido ou erro inesperado, sempre com `success=false` e mensagem.
 - `Listing`: `PageSize` padrão 100, `Page` padrão 1; filtros: `DocumentNumber`, `DocumentId`, `RequestStart/End`, `DueStart/End`, `PartnerName`, `RequesterId`, `AssigneeId`, `IsAssigned`, `ManagerStatus`, `FinanceStatus`, `AccountingStatus`, `ViewMode`, `SortField`, `SortOrder`.
 
 ---
@@ -282,7 +282,12 @@ Regras aplicadas em `RequestController` (Solicitação):
 - mudar `AprovadoGestor` exige ADM ou GES; mudar `AprovadoSetor` exige ADM ou FIN; mudar `StatusContabilidade` exige ADM, FIN ou CON;
 - registro cancelado não pode ser editado.
 
-> Atenção: `RddvController.POST` **não** aplica as checagens de papel/propriedade para edição nem para as transições de aprovação (só `GET /{id}` verifica propriedade). `SetUser` (`GET /{id}/user`) em Solicitação e RDDV também não verifica papel. `TravelTypeController.POST`, `ProviderController`, `Users/list` e `Users/directory` não têm checagem de papel além de estar autenticado. Ver pendências abaixo.
+Atribuição (`SetUser`, `GET /{id}/user?userId=`, em `RequestController` e `RddvController`, regras em `API/Helpers/AtribuicaoHelper`):
+- só FIN ou ADM, pelo papel do JWT; os demais perfis recebem 403, conferido antes da busca do título, para que um id inexistente não se distinga de um existente. A tela libera a lista "Atribuir" só para o FIN (`home.component.ts`); o ADM entra porque tem acesso total;
+- título inexistente → 404;
+- o destino (`userId`) tem de ser usuário ativo com perfil FIN ou CON, o mesmo conjunto que a tela oferece (`GET /api/users/list?roles=FIN,CON`); outro destino (inexistente, zero, inativo, SOL, GES, ADM sem FIN nem CON) → 400 com mensagem, sem gravar nem mandar e-mail.
+
+> Atenção: `RddvController.POST` **não** aplica as checagens de papel/propriedade para edição nem para as transições de aprovação (só `GET /{id}` verifica propriedade). `TravelTypeController.POST`, `ProviderController`, `Users/list` e `Users/directory` não têm checagem de papel além de estar autenticado. Ver pendências abaixo.
 
 ### Preview key (links temporários)
 `POST /api/preview/generate-preview-key` (autenticado; exige ser dono do registro ou ADM/GES/FIN/CON) devolve uma chave GUID guardada em `IMemoryCache` com validade de **1 minuto**, associada a `(entityId, requestType)`. `RequestType` ∈ `Solicitacao`, `Rddv`, `Exportacao`. As rotas anônimas de download (`/api/preview/...`, `/api/export/...`) só respondem com `?key=` válida; caso contrário 401. Nos previews a chave precisa ser do mesmo tipo **e** do mesmo `entityId`; nos ZIPs de `/api/export/*/attachment/{id}` a comparação usa `&&` (só recusa quando ambos divergem), portanto é mais fraca — ver pendências.
@@ -290,8 +295,15 @@ Regras aplicadas em `RequestController` (Solicitação):
 ### ViewModes (ListingController)
 - `MyView` — próprias solicitações (inclui rascunhos)
 - `ManagerView` — onde o usuário é gestor (sem rascunhos/cancelados)
-- `FinancialView` — aprovadas pelo gestor (todas se FIN, somente atribuídas ao usuário caso contrário; sem rascunhos/cancelados)
-- `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados)
+- `FinancialView` — aprovadas pelo gestor, sem rascunhos/cancelados: todas para FIN ou ADM; só as atribuídas ao usuário para CON; nenhuma para os demais perfis (SOL, GES), mesmo que algum título esteja atribuído a eles (defesa em profundidade: a atribuição sozinha não dá acesso à visão). O escopo vai para `ApplyViewModeFilter` como `EscopoVisaoFinanceira` (`Todos`, `Atribuidos`, `Nenhum`).
+- `Dashboard` — aprovadas pelo gestor, sem atribuição e não negadas (sem rascunhos/cancelados); só para FIN, CON e ADM, os perfis que veem a tela inicial. Nos demais perfis a fila vem vazia, porque traz títulos de todos os usuários.
+
+A visão é sempre aplicada: `GET /api/listing` sem `viewMode`, ou com `viewMode=0` (`Undefined`), vale como `MyView`, em qualquer perfil, e nunca devolve os títulos de todos os usuários. Um `viewMode` fora do enum (por exemplo `5`, `99`, `-1` ou texto) é recusado pelo model binding com 400; em `ApplyViewModeFilter`, qualquer valor que não seja uma das quatro visões também cai em `MyView`. O rascunho só aparece para o próprio dono, em `MyView`.
+
+Os filtros da tela (sem a visão e sem a ordenação) ficam num lugar só, `ListingController.ApplyFilters`, usado também pelo Excel `Pagamentos.xlsx` (`GET /api/export/payments`), que parte da mesma view: com o mesmo filtro, a planilha traz os títulos que a aba Financeiro/Contábil mostra ao FIN. O documento do parceiro é filtro só da planilha. Na planilha, solicitação e RDDV se distinguem pelo texto `Tipo` da view (o do RDDV começa com `RDDV`), e não pelo `IdTipo`, que no RDDV é o tipo de relatório.
+
+### Tipo de relatório do RDDV (RddvController.POST)
+`TipoRelatorio` aceita 1 (Adiantamento), 2 (Prestação de Contas) e 3 (Reembolso); fora disso, `POST /api/rddv` responde 400 com `success=false` e a mensagem `RddvController.MensagemTipoRelatorioInvalido`, sem gravar. Duas exceções, para não quebrar a tela nem travar dados antigos: o rascunho pode ficar com 0 (tipo ainda não escolhido, porque a tela salva o rascunho sem validar), mas não sai do rascunho sem um tipo de 1 a 3; e o RDDV já enviado e gravado com outro valor antes da regra segue o fluxo enquanto o tipo gravado não muda.
 
 ---
 
@@ -330,7 +342,7 @@ Os serviços são registrados em `Application/Extensions/ApplicationServiceExten
 2. **CORS**: definir `AllowedOrigins` com as origens do frontend (vazio = qualquer origem). Atrás do Nginx do compose não é necessário.
 3. **Ambiente**: `docker compose up` carrega automaticamente `docker-compose.override.yml`, que força `ASPNETCORE_ENVIRONMENT=Development` (expõe OpenAPI/Scalar e publica o SQL na porta 14330). Em produção rode apenas com `docker-compose.yml` (`docker compose -f docker-compose.yml up`).
 4. **HTTPS**: `UseHttpsRedirection()` está ativo, exceto no ambiente `Docker`.
-5. **RBAC do RDDV e atribuição**: replicar em `RddvController.POST`, `SetUser` e `TravelTypeController.POST` as checagens de papel/propriedade já existentes em `RequestController`.
+5. **RBAC do RDDV**: replicar em `RddvController.POST` e `TravelTypeController.POST` as checagens de papel/propriedade já existentes em `RequestController`. A atribuição (`SetUser`, Solicitação e RDDV) já confere papel e destino (ver Segurança). Ainda não confere o estado do título: a tela só atribui título aprovado pelo gestor e autorizado pelo financeiro, mas a API aceita qualquer título existente.
    **Preview key nos ZIPs**: trocar `&&` por `||` na validação de `ExportController` (`rddv/attachment/{id}` e `request/attachment/{id}`), como já é feito em `PreviewController`.
 6. **Arquivos em base64** armazenados direto no banco — avaliar armazenamento externo (blob storage) para escala.
 7. **Cache em memória**: lockout de login e preview keys vivem em `IMemoryCache` do processo; com mais de uma instância da API os contadores/chaves não são compartilhados.

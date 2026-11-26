@@ -1,0 +1,77 @@
+R3 — Achados da reconferência do revisor (back-end, crítica: autorização) — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela (base 160c966)
+Comandos: dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~ListagemEscopoTests|FullyQualifiedName~AtribuicaoTests"
+          dotnet test back-end/Ares.PagueAres.Tests.Unit --filter "FullyQualifiedName~ListingControllerFilterTests"
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/AtribuicaoTests.cs (novo, 42 casos)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ListagemEscopoTests.cs (18 casos novos; cenário
+                   com S907 atribuída ao SOL 3, S908 atribuída ao GES 2, S909 cancelada e R913 com outro gestor)
+                   back-end/Ares.PagueAres.Tests.Unit/Controllers/ListingControllerFilterTests.cs (escopo novo da visão
+                   financeira nas chamadas; 1 caso novo)
+Banco: EF Core InMemory (PagueAresWebAppFactory). Só dados fictícios.
+Linha de base antes da etapa: Unidade 148 aprovados, Integração 365 aprovados, 0 com falha.
+
+Achados
+------------------------------------------------------------------------------------------
+1. [alto] RequestController.SetUser e RddvController.SetUser (GET /api/{request|rddv}/{id}/user?userId=) não conferiam
+   papel nem destino. Um SOL (3) chamava GET /api/request/902/user?userId=3, sendo 902 título do usuário 6 aprovado pelo
+   gestor, recebia 200 "Usuário atribuído com sucesso" e passava a ver o 902 em GET /api/listing?viewMode=3, porque a
+   visão financeira dava a qualquer perfil os títulos atribuídos a ele. O título saía da fila do Dashboard e disparava o
+   e-mail de atribuição. Os ids são sequenciais, então dava para varrer.
+2. [médio] ListagemEscopoTests não provava o escopo de SOL e GES na visão financeira: a mutação que troca, em
+   ListingController.BuildQuery, CurrentUserIsInRole(Financeiro, Administrador) por CurrentUserIsInRole(Financeiro,
+   Administrador, Gestor, Solicitante) passava a suíte inteira.
+
+Passo 1 — testes escritos, sem nenhuma mudança no código de produção
+------------------------------------------------------------------------------------------
+Integração: 115 testes — 40 com falha, 75 aprovados.
+Unidade:    não compila (esperado): os testes usam o escopo novo da visão financeira, que ainda não existe.
+            ListingControllerFilterTests.cs(31,118) ... (119,113): error CS0103: O nome "EscopoVisaoFinanceira" não
+            existe no contexto atual (8 ocorrências, uma por chamada de ApplyViewModeFilter).
+
+Cenários novos que falharam (esperado antes da correção)
+------------------------------------------------------------------------------------------
+Achado 1 — atribuição sem papel nem destino conferidos
+[FALHOU] AtribuicaoTests.Atribuir_PerfilSemPermissao_Responde403ENaoGrava, 12 casos (solicitação 720 e RDDV 730; SOL 3
+         se atribuindo, SOL 6 dono se atribuindo, SOL 3 atribuindo à CON 5, GES 2 se atribuindo, GES 2 atribuindo à CON
+         5, CON 5 se atribuindo):
+         "Expected status to be HttpStatusCode.Forbidden {value: 403} because só Financeiro e Administrador atribuem
+         títulos; a API respondeu: Usuário atribuído com sucesso, but found HttpStatusCode.OK {value: 200}."
+[FALHOU] AtribuicaoTests.Atribuir_PerfilSemPermissao_TituloInexistente_Responde403, 6 casos (request e rddv; SOL, GES,
+         CON; id 99999): "Expected status to be HttpStatusCode.Forbidden {value: 403} because o papel é conferido antes
+         da busca, para que quem não pode atribuir não descubra quais ids existem, but found HttpStatusCode.BadRequest
+         {value: 400}." (a resposta "não encontrado" revelava a quem não pode atribuir quais ids existem)
+[FALHOU] AtribuicaoTests.Atribuir_TituloInexistente_Responde404, 4 casos (request e rddv; FIN e ADM):
+         "Expected status to be HttpStatusCode.NotFound {value: 404} because o título não existe; a API respondeu:
+         Solicitação não encontrada., but found HttpStatusCode.BadRequest {value: 400}."
+[FALHOU] AtribuicaoTests.Atribuir_DestinoInvalido_Responde400ComMensagemENaoGrava, 16 casos (solicitação 723 e RDDV 733;
+         FIN atribuindo a SOL 3, SOL 6, GES 2, ADM 1 sem FIN nem CON, inativo 7, CON inativa 8, id 99999 e 0):
+         "Expected status to be HttpStatusCode.BadRequest {value: 400} because o destino precisa ser um usuário ativo com
+         perfil Financeiro ou Contabilidade; a API respondeu: Usuário atribuído com sucesso, but found HttpStatusCode.OK
+         {value: 200}."
+
+Achado 2 — escopo de SOL e GES na visão financeira (e a defesa em profundidade da listagem)
+[FALHOU] ListagemEscopoTests.Listagem_PorVisaoEPerfil_DevolveExatamenteOsTitulosDoEscopo, 2 casos:
+         viewMode=3, SOL 3: "Expected titulos to be a collection with 0 item(s) ... but {"S907"}"
+         viewMode=3, GES 2: "Expected titulos to be a collection with 0 item(s) ... but {"S908"}"
+         (S907 e S908 são títulos do usuário 6 atribuídos ao SOL e ao GES, como ficavam depois do furo do achado 1: a
+         visão financeira os mostrava a eles)
+
+Controles (passam antes e depois; fixam um comportamento que já estava certo ou que não pode quebrar)
+------------------------------------------------------------------------------------------
+[PASSOU] AtribuicaoTests.Atribuir_FinanceiroOuAdministradorParaDestinoValido_GravaETiraDaFila, 4 casos (request e rddv;
+         FIN atribuindo à CON 5, ADM atribuindo ao FIN 4): 200, grava o atribuído e a data, o título aparece na visão
+         financeira de quem o recebeu e sai da fila do Dashboard
+[PASSOU] ListagemEscopoTests.Listagem_PorVisaoEPerfil_DevolveExatamenteOsTitulosDoEscopo, 16 casos:
+         viewMode=1 nos seis usuários (os próprios títulos); viewMode=2: SOL 3, SOL 6, CON, FIN vazios, GES 2 com os 9
+         de que é gestor (sem rascunho nem cancelado), ADM com R913; viewMode=3: SOL 6 vazio, CON só S905, FIN e ADM com
+         S900, S902, S905, S907, S908 e R910 (aprovados, sem rascunho nem cancelado)
+[PASSOU] ListagemEscopoTests: os 55 casos que já existiam (sem visão, rascunho alheio, Dashboard, viewMode fora do enum)
+
+Observação: na fase vermelha as tentativas recusadas depois da correção eram gravadas, e por isso as asserções de banco
+e de listagem dos mesmos casos também falhariam; o primeiro erro de cada caso é o do status HTTP, citado acima.
+
+Resumo do console
+------------------------------------------------------------------------------------------
+Integração: Total de testes: 115 — Aprovados: 75 — Com falha: 40
+Unidade:    compilação com 8 erros CS0103 (EscopoVisaoFinanceira), nenhum teste executado

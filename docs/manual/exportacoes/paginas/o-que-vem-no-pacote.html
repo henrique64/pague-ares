@@ -22,7 +22,7 @@
 
   <h2>As pastas dos títulos</h2>
   <p>Cada pasta tem o código do título como nome: <code>SOL-</code> e o número para solicitações, <code>RDDV-</code> e o número para RDDVs, com seis dígitos no mínimo. Título sem anexo não ganha pasta. Com <span class="tela">Incluir anexos</span> desmarcada, o pacote não tem nenhuma pasta de título.</p>
-  <p>O nome de cada anexo dentro da pasta é o tipo de documento, um hífen e o nome original do arquivo, como <code>Nota Fiscal - boleto-marco.pdf</code>. As regras de nome:</p>
+  <p>O nome de cada anexo dentro da pasta é o tipo de documento, um hífen e o nome original do arquivo, como <code>Nota de Débito - relatorio de viagem.pdf</code>. As regras de nome:</p>
   <ul>
     <li>Anexo sem tipo de documento começa por <code>Documento</code>.</li>
     <li>Anexo sem nome original recebe o nome <code>anexo-</code> seguido do número do anexo.</li>
@@ -37,7 +37,7 @@
     <dt>Solicitações</dt>
     <dd>Uma linha por solicitação exportada, com os dados do pedido, do parceiro e das aprovações do Gestor, do Financeiro e da Contabilidade.</dd>
     <dt>RDDVs</dt>
-    <dd>Uma linha por RDDV exportado, com os dados da viagem, dos valores e das aprovações.</dd>
+    <dd>Uma linha por RDDV exportado, com os dados da viagem, dos valores e das aprovações. A coluna <span class="tela">Valor líquido do RDDV</span> traz o saldo líquido do RDDV: diárias mais despesas, menos adiantamento e cartão.</dd>
     <dt>Despesas dos RDDVs</dt>
     <dd>Uma linha por despesa dos RDDVs exportados.</dd>
     <dt>Anexos</dt>
@@ -69,30 +69,30 @@
   <p>O <code>indice.csv</code> e o <code>indice.json</code> listam os anexos do pacote, um por entrada, com o tipo de documento, o nome original, o caminho dentro do pacote, o tamanho em bytes e o SHA-256. O SHA-256 é um código calculado a partir do conteúdo do arquivo: se o arquivo mudar um único byte, o código muda.</p>
   <ul>
     <li><strong>indice.csv:</strong> texto UTF-8 com campos separados por ponto e vírgula, para abrir no Excel. Sem anexos (<span class="tela">Incluir anexos</span> desmarcada ou títulos sem anexo), traz só a linha de cabeçalho.</li>
-    <li><strong>indice.json:</strong> o mesmo índice em formato JSON, para sistemas de análise. Traz também a versão do formato, o número e a data da exportação, os filtros do pedido, os totais e a lista de todos os títulos exportados, inclusive os sem anexo.</li>
+    <li><strong>indice.json:</strong> o mesmo índice em formato JSON, para sistemas de análise. Traz também a versão do formato, o número e a data da exportação (no fuso configurado no servidor, que por padrão é o horário de Brasília, com o deslocamento -03:00), os filtros do pedido, os totais e a lista de todos os títulos exportados, inclusive os sem anexo.</li>
   </ul>
 
   <figure class="captura"><img src="img/pacote-indice-csv.webp" alt="Conteúdo do indice.csv, com o cabeçalho na primeira linha e uma linha por anexo" loading="lazy">
     <figcaption>Prévia do arquivo indice.csv: primeira linha com o cabeçalho titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256 e uma linha por anexo.</figcaption></figure>
 
   <div class="nota">
-    <p><strong>Tipo do título nos índices.</strong> No <code>indice.csv</code> e no <code>indice.json</code>, o tipo do título sai como <code>Solicitacao</code> ou <code>Rddv</code>, sem acento. A aba <span class="tela">Anexos</span> da planilha usa <span class="tela">Solicitação</span> e <span class="tela">RDDV</span>.</p>
+    <p><strong>Tipo do título nos índices.</strong> No <code>indice.csv</code> e no <code>indice.json</code>, o tipo do título sai como <span class="tela">Solicitação</span> ou <span class="tela">RDDV</span>, o mesmo texto da coluna <span class="tela">Tipo do título</span> da aba <span class="tela">Anexos</span> da planilha.</p>
   </div>
 
   <h2>O arquivo LEIA-ME.txt</h2>
   <p>O <code>LEIA-ME.txt</code> é um texto simples, que abre em qualquer editor de texto. Traz, nesta ordem:</p>
   <ul>
-    <li>o título do pacote e a linha com o número da exportação, a data e a hora da geração e o fuso do servidor;</li>
+    <li>o título do pacote e a linha com o número da exportação, a data e a hora da geração e, entre parênteses, o fuso: no padrão, <span class="tela">horário de Brasília,</span> seguido de UTC-03:00;</li>
     <li>o aviso para extrair o ZIP inteiro antes de abrir o Excel;</li>
     <li>a lista do que há no pacote;</li>
     <li>como conferir a integridade de um anexo: comparar o SHA-256 do índice com o do arquivo, no Windows com o comando <code>certutil -hashfile</code> seguido do arquivo e de <code>SHA256</code>;</li>
     <li>os totais de solicitações, RDDVs, despesas de RDDV e anexos, com o tamanho dos anexos;</li>
     <li>os filtros usados: uma linha por filtro preenchido, e sempre a linha final de anexos incluídos, com sim ou não.</li>
   </ul>
-  <p>No <code>LEIA-ME.txt</code>, os filtros de usuário e de departamento aparecem pelo número de identificação, e não pelo nome. Os filtros de lista de opções, como status e tipo, aparecem por extenso. Um período com os dois lados aparece como de uma data a outra; só com o início, como a partir de uma data; só com o fim, como até uma data.</p>
+  <p>No <code>LEIA-ME.txt</code>, os filtros de usuário e de departamento aparecem pelo número de identificação, e não pelo nome. Os filtros de lista de opções, como status e tipo, aparecem por extenso. Com outro fuso configurado no servidor, a linha traz o nome do fuso e o deslocamento, e, se nenhum fuso existir no servidor, a hora sai em UTC. Um período com os dois lados aparece como de uma data a outra; só com o início, como a partir de uma data; só com o fim, como até uma data.</p>
 
   <figure class="captura"><img src="img/pacote-leia-me.webp" alt="Texto do arquivo LEIA-ME.txt, do título até os filtros usados" loading="lazy">
-    <figcaption>Prévia do texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados.</figcaption></figure>
+    <figcaption>Prévia do texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados, com a hora de geração em horário de Brasília (UTC-03:00).</figcaption></figure>
 
   <h2>Conferir a integridade dos anexos</h2>
   <ol class="passos">

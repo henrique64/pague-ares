@@ -1,0 +1,74 @@
+B1 — Situação "Excluída" e "Remover da lista" (back-end) — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-back (base cf2353f)
+Comando: dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~ExportacaoControllerTests|FullyQualifiedName~JobExcluidoNaFila|FullyQualifiedName~Limpeza_JobExcluido"
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportacaoControllerTests.cs
+                   back-end/Ares.PagueAres.Tests.Integration/Exportacao/ExportacaoWorkerTests.cs
+                   back-end/Ares.PagueAres.Tests.Unit/Exportacao/StatusExportacaoTests.cs
+Banco: EF Core InMemory (PagueAresWebAppFactory e o banco próprio dos testes do worker), só dados fictícios.
+
+Passo 1 — testes escritos sem nenhuma mudança no código de produção
+------------------------------------------------------------------------------------------
+Resultado: o projeto de testes não compila.
+  ExportacaoControllerTests.cs(612,38): error CS0117: "StatusExportacao" não contém uma definição para "Excluido"
+  ExportacaoControllerTests.cs(631,38): error CS0117: "StatusExportacao" não contém uma definição para "Excluido"
+
+Passo 2 — só o andaime estrutural, sem nenhuma mudança de comportamento
+------------------------------------------------------------------------------------------
+Andaime: valor Excluido = 6 no enum StatusExportacao, propriedade DataRemocaoDaLista no ExportacaoJob, a coluna no
+PagueAresContext e a migration AdicionaRemocaoDaListaExportacao. O ExportacaoController continua como estava.
+
+Resultado: 84 testes — 19 com falha, 65 aprovados (62 testes que já existiam e 3 controles novos, listados abaixo).
+
+Cenários novos (todos devem falhar antes da correção)
+------------------------------------------------------------------------------------------
+[FALHOU] Delete_DeConcluido_Responde204GravaExcluidaPreservaOPrazoEApagaOArquivo
+         esperado StatusExportacao.Excluido (6); recebido StatusExportacao.Expirado (4)
+[FALHOU] GetPorId_DeJobExcluido_DescricaoExcluidaPercentual100EPrazoOriginal
+         esperado StatusDescricao "Excluída"; recebido "Desconhecido"
+[FALHOU] LinkDownload_DeJobExcluido_Responde410ComMensagemDeExcluido
+         esperado 410; recebido 409 com "Esta exportação não está concluída, então não há arquivo para baixar."
+[FALHOU] Download_JobExcluidoDepoisDoLink_Responde410ComMensagemDeExcluido
+         410, mas com "O arquivo desta exportação expirou ou não está mais disponível. Gere a exportação de novo."
+         em vez de "O arquivo desta exportação foi excluído. Gere a exportação de novo."
+[FALHOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Falhou)
+[FALHOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Cancelado)
+[FALHOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Expirado)
+[FALHOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Excluido)
+         nos quatro: esperado 204; recebido 404 (a rota DELETE api/exportacao/{id}/lista não existia)
+[FALHOU] RemoverDaLista_Repetido_Responde204SemGravarDeNovo
+         esperado 204 no primeiro pedido; recebido 404
+[FALHOU] RemoverDaLista_DeJobNaoEncerrado_Responde409ComMensagemENaoRemove(status: Pendente)
+[FALHOU] RemoverDaLista_DeJobNaoEncerrado_Responde409ComMensagemENaoRemove(status: Processando)
+[FALHOU] RemoverDaLista_DeJobNaoEncerrado_Responde409ComMensagemENaoRemove(status: Concluido)
+         nos três: esperado 409; recebido 404
+[FALHOU] RemoverDaLista_JobEncerradoDeOutroUsuario_Responde404ENaoRemove
+[FALHOU] RemoverDaLista_JobInexistente_Responde404
+         nos dois: 404 sem corpo (rota inexistente), e não o envelope com "Exportação não encontrada."
+[FALHOU] GetPorId_DeJobRemovidoDaLista_Responde200ComOJob
+         esperado 204 na remoção que prepara o cenário; recebido 404
+[FALHOU] SemToken_RotaAutenticada_Responde401(metodo: "DELETE", rota: "/api/exportacao/1/lista")
+         esperado 401; recebido 404
+[FALHOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "SOL", rota: "DELETE lista")
+[FALHOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "GES", rota: "DELETE lista")
+[FALHOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "CON", rota: "DELETE lista")
+         nos três: esperado 403; recebido 404
+
+Controles novos (passam antes e depois; fixam um comportamento que já estava certo)
+------------------------------------------------------------------------------------------
+[PASSOU] Delete_DeJobJaEncerrado_Responde409(status: Excluido)
+         o ramo "já encerrada" do Cancelar já respondia 409 para qualquer situação fora de Pendente, Processando e Concluido
+[PASSOU] Limpeza_JobExcluidoComPrazoVencido_NaoEAlterado_EArquivoQueSobrouSaiComoOrfao
+         a ExportacaoLimpeza já só expira job Concluido e já tratava como órfão o arquivo sem job Concluido: não precisou de mudança
+[PASSOU] JobExcluidoNaFila_NaoEReivindicadoNemGravadoPeloWorker
+         o ExportacaoWorker já só reivindica job Pendente: não precisou de mudança
+
+Teste de unidade — valores do enum guardados na coluna Status (contrato C1)
+------------------------------------------------------------------------------------------
+Rodado sobre o back-end do commit base cf2353f (exportado com git archive para uma pasta temporária), só com o
+arquivo de teste novo acrescentado, porque nesta branch o enum já tinha o andaime do passo 2.
+Comando: dotnet test Ares.PagueAres.Tests.Unit --filter "FullyQualifiedName~StatusExportacaoTests"
+Resultado: 1 teste — 1 com falha.
+[FALHOU] ValoresGuardadosNaColunaStatus_SaoOsDoContrato
+         esperado {Pendente 0, Processando 1, Concluido 2, Falhou 3, Expirado 4, Cancelado 5, Excluido 6};
+         "could not find keys {"Excluido"}"

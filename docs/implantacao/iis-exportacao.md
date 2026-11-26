@@ -17,7 +17,7 @@ O recurso tem três peças que moram **dentro do processo da API**: a fila de ex
   ```
 
 - Um **único servidor** para a API. A fila e os tokens de download vivem na memória do processo e os pacotes ficam em disco local: balanceador com várias instâncias da API não é suportado por esta versão.
-- A migration `AdicionaExportacaoJob` aplicada no banco do ambiente (a API a aplica na subida quando `RunMigrations` está ligado; em produção, aplique o script gerado pela equipe de banco antes de liberar a versão).
+- As migrations `AdicionaExportacaoJob` e `AdicionaRemocaoDaListaExportacao` (esta acrescenta a coluna `DataRemocaoDaLista` à tabela `ExportacaoJob`, usada por "Remover da lista") aplicadas no banco do ambiente (a API as aplica na subida quando `RunMigrations` está ligado; em produção, aplique o script gerado pela equipe de banco antes de liberar a versão).
 
 ## 2. Application pool
 
@@ -129,8 +129,24 @@ A seção `Exportacao` do `appsettings.json` traz os valores padrão. Em produç
 | `Exportacao__WorkerHabilitado` | `true` | Com `false`, nem o worker nem a limpeza são registrados: os pedidos ficam Pendente. |
 | `Exportacao__IntervaloReconciliacaoSegundos` | `60` | Intervalo da reconciliação que encerra jobs `Processando` sem executor e devolve à fila os `Pendente` que ficaram fora dela (seção 2.1). Aceita de 1 a 3600; um valor fora da faixa é trocado pelo extremo mais próximo (um valor que não é número, pelo padrão) e o log registra um aviso. |
 | `Exportacao__LimiteSemSinalDeVidaSegundos` | `300` | Tempo sem nenhuma gravação do executor depois do qual um job `Processando` que não roda neste processo é dado como interrompido. Aceita de 10 a 86400 (1 dia), com o mesmo ajuste e aviso no log. |
+| `Exportacao__FusoHorario` | `America/Sao_Paulo` | Fuso do nome do ZIP baixado e da hora do `LEIA-ME.txt` (e do `geradoEm` do `indice.json`). Ver a seção 6.1. |
 
 O mesmo vale para o Docker: o `docker-compose.yml` já define `Exportacao__Pasta=/var/pagueares/exportacao` e o volume nomeado `pagueares-exportacao`.
+
+### 6.1 Fuso horário do nome do ZIP e do LEIA-ME (`Exportacao:FusoHorario`)
+
+Sem esta chave, a hora do pacote dependeria de onde a API roda (UTC no contêiner, a hora do Windows no IIS) e a mesma exportação teria nomes e horas diferentes conforme o servidor. Com ela, o nome do arquivo baixado (`exportacao-titulos-<id>-<aaaaMMdd-HHmm>.zip`) e a linha de geração do `LEIA-ME.txt` (por exemplo, "Exportação nº 42, gerada em 26/11/2026 12:30 (horário de Brasília, UTC-03:00).") usam o fuso configurado; o `geradoEm` do `indice.json` sai com o mesmo deslocamento (`-03:00`).
+
+- **Valor padrão:** `America/Sao_Paulo` (horário de Brasília). Em geral não é preciso configurar nada.
+- **Formatos aceitos:** o identificador IANA (`America/Sao_Paulo`) ou o do Windows (`E. South America Standard Time`); a API converte de um para o outro conforme o sistema. Para outro fuso, informe o identificador dele (por exemplo `America/Manaus`); o LEIA-ME passa a dizer "(fuso America/Manaus, UTC-04:00)" em vez de "horário de Brasília".
+- **Windows (IIS):** o fuso padrão é resolvido pelo identificador do Windows `E. South America Standard Time` quando o IANA não estiver disponível; basta o Windows ter a atualização de fusos em dia. Não é preciso instalar nada.
+- **Linux e Docker:** a imagem `mcr.microsoft.com/dotnet/aspnet:10.0` já traz a base de fusos (`/usr/share/zoneinfo`); em outra imagem enxuta (por exemplo Alpine), instale o pacote `tzdata`.
+- **Fuso que não existe:** a API **não falha**. Se o valor configurado não for encontrado, ela tenta o padrão de Brasília (nos dois formatos) e registra um aviso no log; se nenhum existir no sistema, usa **UTC** e registra o aviso "... o nome do ZIP e o LEIA-ME usarão UTC". Procure esse aviso no log da subida se o horário do pacote parecer 3 horas adiantado.
+- **Só isso muda de fuso:** as datas gravadas no banco, as da planilha e as da lista da tela ficam como antes (a tela mostra no fuso do navegador).
+
+```xml
+<environmentVariable name="Exportacao__FusoHorario" value="America/Sao_Paulo" />
+```
 
 ## 7. Timeouts de download e compressão
 
@@ -213,4 +229,39 @@ Trecho de exemplo para o **diretório publicado** (o repositório não traz `web
 7. **Expiração.** Com `Exportacao__RetencaoHoras` reduzido temporariamente em um ambiente de teste (por exemplo `0.05`, três minutos), confirme que, passado o prazo e o intervalo de limpeza, o `.zip` some da pasta e o job aparece como "Expirada".
 8. **Espaço em disco.** Confirme que o monitoramento do servidor alerta antes de a unidade chegar perto de `EspacoLivreMinimoMb`.
 
+9. **Fuso do pacote.** Gere uma exportação, baixe o ZIP e confira que o nome do arquivo (`...-aaaaMMdd-HHmm.zip`) e a linha de geração do `LEIA-ME.txt` estão no horário de Brasília (`(horário de Brasília, UTC-03:00)`). Se aparecer UTC, procure o aviso sobre o fuso no log da subida (seção 6.1).
+
 Em caso de falha, verifique nesta ordem: o log da aplicação (a exceção completa é registrada; o usuário só vê uma mensagem amigável), o Visualizador de Eventos do Windows (ANCM) e as permissões da pasta.
+
+## 9. Front e API na mesma origem (mensagem de erro do download)
+
+A tela Exportações baixa o pacote por um iframe oculto: o arquivo vai direto para o navegador, em streaming, sem passar pela memória do aplicativo. Quando o servidor recusa o download (link já usado, link vencido, exportação excluída, arquivo que sumiu), a resposta de erro cai nesse iframe e a tela **lê a mensagem do servidor** do conteúdo dele para mostrá-la ao usuário ("O arquivo desta exportação foi excluído. Gere a exportação de novo.", por exemplo).
+
+O navegador só deixa a tela ler o conteúdo do iframe se o **front-end e a API estiverem na mesma origem** (mesmo protocolo, host e porta). Por isso:
+
+- Configure o front para chamar a API pelo **mesmo host**: `BaseUrl` vazio (o padrão do front, chamadas em `/api/...`) com o IIS (ou o proxy reverso) publicando o front e encaminhando `/api/` para a API sob o mesmo endereço, como o Nginx do `docker-compose.yml` faz.
+- Se a API ficar em **outro host ou porta** (origem diferente), o download continua funcionando, mas a leitura da mensagem é bloqueada pelo navegador e o usuário vê só o aviso genérico: "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: gere o link de novo clicando em Baixar." Para mensagens específicas, publique front e API sob a mesma origem.
+- A resposta da API não pode proibir o uso em iframe da própria origem: não configure `X-Frame-Options: DENY` nem `Content-Security-Policy: frame-ancestors 'none'` para o caminho `/api/exportacao/download` (o Nginx do repositório envia `X-Frame-Options: SAMEORIGIN`, que serve). Se houver proxy reverso ou firewall de aplicação na frente do IIS, aplique a mesma regra a eles.
+
+## 10. Correções dos achados do manual: o que muda na implantação
+
+Resumo das 22 decisões do dono sobre os achados do manual de exportações (detalhe e testes em `docs/evidencias/exportacao-tecnica.md`, seção 12). Só as três primeiras linhas pedem ação de quem implanta; as demais mudam o comportamento da tela e do pacote sem nova configuração.
+
+| Decisões | O que muda | Ação na implantação |
+|---|---|---|
+| 3 | Nova situação "Excluída" (valor 6 em `ExportacaoJob.Status`) e nova coluna `DataRemocaoDaLista` | Aplicar a migration `AdicionaRemocaoDaListaExportacao` (seção 1). A coluna é aditiva e anulável. |
+| 18 | Nome do ZIP e hora do LEIA-ME no fuso configurável, padrão Brasília | Conferir a chave `Exportacao__FusoHorario` e, no Linux, a base de fusos (seção 6.1). |
+| 1 e 2 | Aviso de download com "gere" em minúsculo; a mensagem do servidor aparece quando o download falha | Front e API na mesma origem (seção 9); sem isso, aparece o aviso genérico. |
+| 3 e 15 | "Excluir" numa Concluída vira "Excluída" (o "Expira em" original é preservado); "Remover da lista" nas linhas Falhou, Cancelada, Expirada e Excluída | Nenhuma. A limpeza (`ExportacaoLimpeza`) continua como antes e apaga o arquivo que sobrar de uma exportação excluída. |
+| 4 | A lista mostra o número da exportação (o mesmo do nome do ZIP) | Nenhuma. |
+| 5 e 14 | O filtro Código aceita 123, SOL-000123 e RDDV-45 e recusa zero e decimal | Nenhuma. |
+| 6, 17 | Rótulos em caixa de frase e coluna "Filtros" com os rótulos do formulário | Nenhuma. |
+| 7 e 8 | Botão "Exportar planilha" com dica; setas de ordenação de "Data de inclusão" no campo certo | Nenhuma. |
+| 9, 10 e 21 | Pagamentos.xlsx com cabeçalhos novos, "Nº do documento" vazio no RDDV e os mesmos filtros da lista | Nenhuma. Quem usa a planilha percebe: período com um lado só e "atribuído" passam a filtrar; número do documento, nome e documento do parceiro excluem os RDDVs. |
+| 11 | `indice.csv` e `indice.json` com o tipo "Solicitação" e "RDDV" | Nenhuma. Sistemas que leem o índice devem aceitar os nomes novos (antes "Solicitacao" e "Rddv"). |
+| 12 | Mantido: "Valor líquido do RDDV" é o saldo líquido | Nenhuma. |
+| 13 | Rótulos do formulário legíveis a 1360 px | Nenhuma. |
+| 16 | A tela avisa, com o tipo "Ambos", quando um campo exclusivo de um tipo tira os títulos do outro | Nenhuma. |
+| 19 | A semente de dados fictícios atribui títulos ao usuário `con.semente` | Só ambientes de teste. |
+| 20 | O Administrador vê na aba Financeiro/Contábil o mesmo conjunto que o Financeiro | Nenhuma de configuração; avisar a quem administra os perfis, porque o Administrador passa a ver todos os títulos aprovados pelo gestor nessa aba. |
+| 22 | Mantido: o Parceiro do RDDV é o solicitante | Nenhuma. |

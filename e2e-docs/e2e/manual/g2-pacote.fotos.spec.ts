@@ -43,6 +43,7 @@ test("árvore do pacote extraído", async ({ page }) => {
   await expect(page.locator(".l.pasta .n", { hasText: /SOL-\d{6,}/ }).first()).toBeVisible();
   await expect(page.locator(".l.pasta .n", { hasText: /RDDV-\d{6,}/ }).first()).toBeVisible();
   await expect(page.locator(".l .n", { hasText: "(2).PDF" })).toHaveCount(1);
+  await expect(page.locator(".titulo b")).toHaveText(/^exportacao-titulos-\d+-\d{8}-\d{4}$/);
   await semTermoProibido(page);
   await fotoDoElemento(janela(page), "pacote-arvore-extraida", { fixosParaEstaticos: [] });
 });
@@ -71,7 +72,9 @@ test("planilha: aba Anexos", async ({ page }) => {
 test("índice em CSV", async ({ page }) => {
   await abrir(page, "indice-csv");
   await expect(page.locator(".linha").first()).toHaveText("titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256");
-  await expect(page.locator(".linha").nth(1)).toContainText(/^(SOL|RDDV)-\d{6,};(Solicitacao|Rddv);/);
+  await expect(page.locator(".linha").nth(1)).toContainText(/^(SOL|RDDV)-\d{6,};(Solicitação|RDDV);/);
+  await expect(page.locator(".linha", { hasText: /^SOL-\d{6,};Solicitação;/ }).first()).toBeVisible();
+  await expect(page.locator(".linha", { hasText: /^RDDV-\d{6,};RDDV;/ }).first()).toBeVisible();
   await semTermoProibido(page);
   await fotoDoElemento(janela(page), "pacote-indice-csv", { fixosParaEstaticos: [] });
 });
@@ -80,6 +83,7 @@ test("LEIA-ME.txt", async ({ page }) => {
   await abrir(page, "leia-me");
   await expect(page.locator(".linha").first()).toHaveText("PagueAres - Exportação de títulos com anexos");
   await expect(page.getByText("IMPORTANTE: extraia o arquivo ZIP inteiro para uma pasta antes de abrir o Excel.")).toBeVisible();
+  await expect(page.locator(".linha").nth(1)).toHaveText(/^Exportação nº \d+, gerada em \d{2}\/\d{2}\/\d{4} \d{2}:\d{2} \(horário de Brasília, UTC-03:00\)\.$/);
   await expect(page.getByText("Filtros usados:")).toBeVisible();
   await expect(page.getByText("- Anexos incluídos: sim")).toBeVisible();
   await semTermoProibido(page);
@@ -90,10 +94,13 @@ test("prévia do Pagamentos.xlsx", async ({ page }) => {
   await abrir(page, "pagamentos");
   await expect(page.locator(".guia.ativa")).toHaveText("Pagamentos");
   await expect(page.locator("tr.primeira td")).toHaveText([
-    "Codigo▾", "Tipo▾", "Data de Inclusao▾", "Data de Vencimento▾", "Doc. Número▾", "Solicitante▾", "Parceiro▾", "Valor▾", "Status Gestor▾", "Status Contábil▾", "Status Financeiro▾",
+    "Código▾", "Tipo▾", "Data de inclusão▾", "Data de vencimento▾", "Nº do documento▾", "Solicitante▾", "Parceiro▾", "Valor▾", "Status gestor▾", "Status contábil▾", "Status financeiro▾",
   ].map((s) => s.replace("▾", "")));
   await expect(page.locator("td", { hasText: /^RDDV - / }).first()).toBeVisible();
   await expect(page.locator("td", { hasText: /^Pagamento$/ }).first()).toBeVisible();
+  // Nas linhas de RDDV o "Nº do documento" sai vazio (antes saía "#").
+  const linhaRddv = page.locator("tr", { has: page.locator("td", { hasText: /^RDDV - / }) }).first();
+  await expect(linhaRddv.locator("td").nth(4)).toHaveText("");
   await semTermoProibido(page);
   await fotoDoElemento(janela(page), "pagamentos-excel-previa", { fixosParaEstaticos: [] });
 });

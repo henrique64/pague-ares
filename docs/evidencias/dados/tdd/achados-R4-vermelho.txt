@@ -1,0 +1,26 @@
+R4 — Três defeitos de tela achados na recaptura do manual (front-end) — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela (base 8714eca)
+Comando: cd front-end; npx ng test --watch=false --karma-config=<scratchpad>/f1/karma.headless.js  (Edge headless)
+Arquivos de teste: front-end/src/app/exportacoes/exportacoes.component.spec.ts (1 caso novo, 1 ajustado)
+                   front-end/src/app/payments/payments.component.spec.ts (1 caso novo)
+Base antes da etapa: 223 testes aprovados.
+
+Achados
+------------------------------------------------------------------------------------------
+1. Exportações: a linha Excluída ainda mostrava o Tamanho do arquivo já apagado.
+2. Exportações: a dica do Código quebrava em duas linhas a 1360 px.
+3. Lista de pagamentos: linhas de RDDV mostravam "#" em Nº do documento e em Parceiro.
+
+Resultado: Executed 225 of 225 — TOTAL: 3 FAILED, 222 SUCCESS (EXIT=1)
+
+1. ExportacoesComponent Remover da lista e situação Excluída na tela
+   Tamanho: Excluída mostra "—" (arquivo apagado); as demais situações mostram o tamanho FAILED
+   Error: Expected '1,5 KB' to be '—'.
+2. ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45)
+   na tela: campo de texto, com dica; o erro aparece depois de tentar gerar FAILED
+   Error: Expected 'Número (123) ou código com prefixo (SOL-000123, RDDV-000045)' to be 'Ex.: 123, SOL-000123 ou RDDV-000045'.
+3. PaymentsComponent tela renderizada: rótulos, ordenação e Exportar planilha (achados 6, 7 e 8)
+   linhas de RDDV: Nº do documento vazio e Parceiro = solicitante, sem o "#" da view, nas três abas;
+   Solicitação não muda FAILED
+   Error: Minhas Solicitações: RDDV, Parceiro: Expected '#' to be 'João Viajante'.

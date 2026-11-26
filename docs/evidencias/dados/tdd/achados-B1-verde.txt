@@ -1,0 +1,78 @@
+B1 — Situação "Excluída" e "Remover da lista" (back-end) — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-back
+Comando: dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~ExportacaoControllerTests|FullyQualifiedName~JobExcluidoNaFila|FullyQualifiedName~Limpeza_JobExcluido"
+         dotnet test back-end/Ares.PagueAres.Tests.Unit --filter "FullyQualifiedName~StatusExportacaoTests"
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/ExportacaoControllerTests.cs
+                   back-end/Ares.PagueAres.Tests.Integration/Exportacao/ExportacaoWorkerTests.cs
+                   back-end/Ares.PagueAres.Tests.Unit/Exportacao/StatusExportacaoTests.cs
+Banco: EF Core InMemory (PagueAresWebAppFactory e o banco próprio dos testes do worker), só dados fictícios.
+
+Resultado: integração 84 testes — 84 aprovados, 0 com falha; unidade 1 teste — 1 aprovado.
+
+Correção
+------------------------------------------------------------------------------------------
+ - StatusExportacao ganhou Excluido = 6, guardado como inteiro na coluna Status que já existia.
+ - ExportacaoJob ganhou DataRemocaoDaLista (datetime2, nula = está na lista), com a migration
+   20261126194532_AdicionaRemocaoDaListaExportacao (Up: AddColumn; Down: DropColumn; nada além da coluna).
+ - ExportacaoController:
+   . DELETE api/exportacao/{id} numa Concluída grava Excluido, apaga o arquivo e não mexe em DataExpiracao.
+   . DELETE api/exportacao/{id}/lista (novo, método RemoverDaLista): mesmo acesso FIN/ADM, mesmo laço de releitura do
+     Cancelar (5 tentativas pelo token Versao); grava só DataRemocaoDaLista.
+   . GET api/exportacao filtra DataRemocaoDaLista == null; GET api/exportacao/{id} não mudou.
+   . Excluida: StatusDescricao "Excluída", percentual 100, link e download 410 com a mensagem própria.
+ - ExportacaoLimpeza e ExportacaoWorker: sem mudança de código (os testes de controle provam que já eram coerentes).
+
+Cenários (vermelho na fase anterior, verde agora)
+------------------------------------------------------------------------------------------
+[PASSOU] Delete_DeConcluido_Responde204GravaExcluidaPreservaOPrazoEApagaOArquivo
+         204; Status 6; DataExpiracao igual à de antes da exclusão; DataRemocaoDaLista nula; arquivo apagado
+[PASSOU] GetPorId_DeJobExcluido_DescricaoExcluidaPercentual100EPrazoOriginal
+         Status 6, "Excluída", percentual 100 (mesmo com 3 de 4 títulos contados) e o prazo gravado
+[PASSOU] LinkDownload_DeJobExcluido_Responde410ComMensagemDeExcluido
+[PASSOU] Download_JobExcluidoDepoisDoLink_Responde410ComMensagemDeExcluido
+         nos dois: 410 com "O arquivo desta exportação foi excluído. Gere a exportação de novo."
+[PASSOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Falhou)
+[PASSOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Cancelado)
+[PASSOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Expirado)
+[PASSOU] RemoverDaLista_DeJobEncerrado_Responde204ESomeDaListaSemMudarASituacao(status: Excluido)
+         nos quatro: 204 sem corpo; DataRemocaoDaLista gravada; situação inalterada; o job some do GET api/exportacao
+         e o outro job do usuário continua lá
+[PASSOU] RemoverDaLista_Repetido_Responde204SemGravarDeNovo
+         segundo pedido 204, com DataRemocaoDaLista e Versao iguais às do primeiro (perfil ADM)
+[PASSOU] RemoverDaLista_DeJobNaoEncerrado_Responde409ComMensagemENaoRemove(status: Pendente)
+[PASSOU] RemoverDaLista_DeJobNaoEncerrado_Responde409ComMensagemENaoRemove(status: Processando)
+[PASSOU] RemoverDaLista_DeJobNaoEncerrado_Responde409ComMensagemENaoRemove(status: Concluido)
+         nos três: 409 com "Só exportações encerradas (Falhou, Cancelada, Expirada ou Excluída) podem ser removidas da
+         lista."; o job continua na lista
+[PASSOU] RemoverDaLista_JobEncerradoDeOutroUsuario_Responde404ENaoRemove
+         404 com "Exportação não encontrada." mesmo para outro ADM; o job do dono continua na lista
+[PASSOU] RemoverDaLista_JobInexistente_Responde404
+[PASSOU] GetPorId_DeJobRemovidoDaLista_Responde200ComOJob
+[PASSOU] SemToken_RotaAutenticada_Responde401(metodo: "DELETE", rota: "/api/exportacao/1/lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "SOL", rota: "DELETE lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "GES", rota: "DELETE lista")
+[PASSOU] PapelSemFinOuAdm_Responde403ENaoAlteraNada(papel: "CON", rota: "DELETE lista")
+[PASSOU] ValoresGuardadosNaColunaStatus_SaoOsDoContrato (unidade)
+
+Controles (passavam antes e passam agora)
+------------------------------------------------------------------------------------------
+[PASSOU] Delete_DeJobJaEncerrado_Responde409(status: Excluido)
+[PASSOU] Limpeza_JobExcluidoComPrazoVencido_NaoEAlterado_EArquivoQueSobrouSaiComoOrfao
+         a limpeza não grava o job Excluido (Status, DataExpiracao e Versao iguais) e apaga o arquivo que sobrou
+[PASSOU] JobExcluidoNaFila_NaoEReivindicadoNemGravadoPeloWorker
+         o gerador não é chamado e o job Excluido não é gravado
+
+Regressão
+------------------------------------------------------------------------------------------
+Comando: dotnet test back-end/Ares.PagueAres.sln
+Antes da etapa: Tests.Unit 131/131 e Tests.Integration 254/254 aprovados.
+Depois da etapa: Tests.Unit 132/132 (131 anteriores + 1 novo) e Tests.Integration 275/275 (254 anteriores + 21 novos)
+aprovados. O teste Delete_DeConcluido_Responde204ApagaOArquivoEExpira foi reescrito como
+Delete_DeConcluido_Responde204GravaExcluidaPreservaOPrazoEApagaOArquivo (a regra mudou por decisão do dono).
+
+Build
+------------------------------------------------------------------------------------------
+Comando: dotnet build back-end/Ares.PagueAres.sln --no-incremental
+0 erros; os mesmos 7 avisos CS8602/CS8604 de antes (AuthenticationService, RequestController, RddvController,
+UsersController, Program) e os avisos NU1902/NU1903 de pacotes; nenhum aviso novo.

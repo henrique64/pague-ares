@@ -2,8 +2,9 @@ import { Component, OnDestroy, OnInit, QueryList, ViewChildren } from "@angular/
 import { NgModel } from "@angular/forms";
 import { HttpErrorResponse } from "@angular/common/http";
 import { MatSnackBar } from "@angular/material/snack-bar";
+import { ErrorStateMatcher } from "@angular/material/core";
 import { MatEndDate, MatStartDate } from "@angular/material/datepicker";
-import { Subject, Subscription, interval, of } from "rxjs";
+import { Observable, Subject, Subscription, interval, of } from "rxjs";
 import { catchError, exhaustMap, takeUntil } from "rxjs/operators";
 import { ExportacaoService } from "app/services/exportacao.service";
 import { UsersService } from "app/services/users.service";
@@ -15,11 +16,13 @@ import { ExportacaoJobModel } from "app/models/exportacao/exportacao-job.model";
 import { FiltroExportacaoModel } from "app/models/exportacao/filtro-exportacao.model";
 import { EnumStatusExportacao } from "app/models/exportacao/enum-status-exportacao";
 import { EnumTipoTituloExportacao } from "app/models/exportacao/enum-tipo-titulo-exportacao";
+import { formatarCodigoExportacao, interpretarCodigoExportacao } from "./codigo-exportacao";
 
 // Valores do formulário. Datas são Date (seletor do Material); 0 ou vazio significa "sem filtro".
+// O código é o texto digitado (123, SOL-000123, RDDV-45); quem o interpreta é interpretarCodigoExportacao.
 export interface FormularioExportacao {
   tipoTitulo: EnumTipoTituloExportacao;
-  codigo: number | null;
+  codigo: string;
   numeroDocumento: string;
   dataSolicitacaoInicio: Date | null;
   dataSolicitacaoFim: Date | null;
@@ -50,12 +53,26 @@ export interface FormularioExportacao {
 })
 export class ExportacoesComponent implements OnInit, OnDestroy {
   static readonly INTERVALO_POLLING_MS = 5000;
+  static readonly MENSAGEM_CODIGO_INVALIDO =
+    "Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).";
+  static readonly AVISO_CAMPOS_SOLICITACAO =
+    "Nº do documento, Tipo de solicitação, Tipo de pagamento e Forma de pagamento só existem em solicitações: com eles preenchidos, os RDDVs ficam de fora.";
+  static readonly AVISO_CAMPO_RDDV =
+    "Tipo de relatório só existe em RDDVs: com ele preenchido, as solicitações ficam de fora.";
+  static readonly AVISO_DOWNLOAD_RECUSADO =
+    "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: gere o link de novo clicando em Baixar.";
 
   readonly EnumStatus = EnumStatusExportacao;
   readonly EnumTipoTitulo = EnumTipoTituloExportacao;
 
   isBusy = false;
   isLoadingLista = false;
+  // O erro do código só aparece no campo depois que ele é tocado ou que se tenta gerar a exportação.
+  private tentouGerar = false;
+  // Liga o estado de erro do campo Código à validação do componente (o campo não usa validador de formulário).
+  readonly codigoErrorMatcher: ErrorStateMatcher = {
+    isErrorState: (control) => this.erroCodigo !== null && (this.tentouGerar || !!control?.touched),
+  };
   form: FormularioExportacao = ExportacoesComponent.formularioVazio();
   jobs: ExportacaoJobModel[] = [];
   userList: UserListModel[] = [];
@@ -121,7 +138,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   static formularioVazio(): FormularioExportacao {
     return {
       tipoTitulo: EnumTipoTituloExportacao.Ambos,
-      codigo: null,
+      codigo: "",
       numeroDocumento: "",
       dataSolicitacaoInicio: null,
       dataSolicitacaoFim: null,
@@ -160,20 +177,79 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   // ---------- Formulário ----------
 
-  // Campos que só existem em Solicitação ficam desabilitados quando o tipo escolhido é RDDV.
+  // Campos que só existem em Solicitação ficam desabilitados quando o tipo que vale é RDDV: o escolhido ou, com "Ambos",
+  // o do prefixo do código (RDDV-). Os valores já digitados não são apagados, como também não são na troca explícita do
+  // tipo: o campo fica desabilitado, o valor fica visível e o filtro enviado o ignora.
   get camposSolicitacaoDesabilitados(): boolean {
-    return this.form.tipoTitulo === EnumTipoTituloExportacao.Rddv;
+    return this.tipoEfetivo === EnumTipoTituloExportacao.Rddv;
   }
 
-  // Campos que só existem em RDDV ficam desabilitados quando o tipo escolhido é Solicitação.
+  // Campos que só existem em RDDV ficam desabilitados quando o tipo que vale é Solicitação (escolhido ou do prefixo SOL-).
   get camposRddvDesabilitados(): boolean {
-    return this.form.tipoTitulo === EnumTipoTituloExportacao.Solicitacao;
+    return this.tipoEfetivo === EnumTipoTituloExportacao.Solicitacao;
+  }
+
+  // Tipo que vale para a exportação: o do prefixo do código (SOL-, RDDV-) quando o tipo escolhido é "Ambos".
+  // Com tipo escolhido diferente do prefixo o código é recusado (erroCodigo), então o tipo escolhido prevalece aqui.
+  private get tipoEfetivo(): EnumTipoTituloExportacao {
+    const codigo = interpretarCodigoExportacao(this.form.codigo);
+    if (this.form.tipoTitulo === EnumTipoTituloExportacao.Ambos && codigo.situacao === "ok" && codigo.tipo !== null) {
+      return codigo.tipo;
+    }
+
+    return this.form.tipoTitulo;
+  }
+
+  // Mensagem de validação do código digitado; nulo quando está vazio ou correto.
+  get erroCodigo(): string | null {
+    const codigo = interpretarCodigoExportacao(this.form.codigo);
+    if (codigo.situacao === "vazio") return null;
+    if (codigo.situacao === "invalido") return ExportacoesComponent.MENSAGEM_CODIGO_INVALIDO;
+
+    const escolhido = this.form.tipoTitulo;
+    if (codigo.tipo !== null && escolhido !== EnumTipoTituloExportacao.Ambos && codigo.tipo !== escolhido) {
+      const nome = formatarCodigoExportacao(codigo.tipo, codigo.numero);
+      const doPrefixo = codigo.tipo === EnumTipoTituloExportacao.Solicitacao ? "solicitação" : "RDDV";
+      const doEscolhido = escolhido === EnumTipoTituloExportacao.Solicitacao ? "Solicitação" : "RDDV";
+      return `O código ${nome} é de ${doPrefixo}, mas o tipo de título escolhido é ${doEscolhido}.`;
+    }
+
+    return null;
+  }
+
+  // Avisos do tipo "Ambos": o que o back-end deixa de fora quando um campo (ou o prefixo do código) é de um tipo só.
+  // Só informam; não impedem a exportação.
+  get avisosAmbos(): string[] {
+    if (this.form.tipoTitulo !== EnumTipoTituloExportacao.Ambos) return [];
+
+    const f = this.form;
+    const codigo = interpretarCodigoExportacao(f.codigo);
+    if (codigo.situacao === "ok" && codigo.tipo !== null) {
+      const nome = formatarCodigoExportacao(codigo.tipo, codigo.numero);
+      return [
+        codigo.tipo === EnumTipoTituloExportacao.Solicitacao
+          ? `O código ${nome} é de uma solicitação: os RDDVs ficam de fora.`
+          : `O código ${nome} é de um RDDV: as solicitações ficam de fora.`,
+      ];
+    }
+
+    const avisos: string[] = [];
+    const preenchido = (v: number) => Number.isInteger(Number(v)) && Number(v) > 0;
+    if ((f.numeroDocumento ?? "").trim().length > 0 || [f.tipoSolicitacao, f.tipoPagamento, f.formaPagamento].some(preenchido)) {
+      avisos.push(ExportacoesComponent.AVISO_CAMPOS_SOLICITACAO);
+    }
+    if (preenchido(f.tipoRelatorio)) avisos.push(ExportacoesComponent.AVISO_CAMPO_RDDV);
+
+    return avisos;
   }
 
   montarFiltro(): FiltroExportacaoModel {
     const f = this.form;
+    const tipo = this.tipoEfetivo;
+    const solicitacaoDesabilitada = this.camposSolicitacaoDesabilitados;
+    const rddvDesabilitado = this.camposRddvDesabilitados;
     const filtro: FiltroExportacaoModel = {
-      tipoTitulo: f.tipoTitulo,
+      tipoTitulo: tipo,
       incluirAnexos: f.incluirAnexos,
     };
 
@@ -186,8 +262,8 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       return t.length > 0 ? t : null;
     };
 
-    const codigo = comoInteiro(f.codigo);
-    if (codigo !== null) filtro.codigo = codigo;
+    const codigo = interpretarCodigoExportacao(f.codigo);
+    if (codigo.situacao === "ok") filtro.codigo = codigo.numero;
 
     const inteiros: [keyof FiltroExportacaoModel, any][] = [
       ["idSolicitante", f.idSolicitante],
@@ -198,7 +274,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       ["statusContabil", f.statusContabil],
     ];
 
-    if (!this.camposSolicitacaoDesabilitados) {
+    if (!solicitacaoDesabilitada) {
       inteiros.push(
         ["tipoSolicitacao", f.tipoSolicitacao],
         ["tipoPagamento", f.tipoPagamento],
@@ -209,7 +285,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       if (numeroDocumento !== null) filtro.numeroDocumento = numeroDocumento;
     }
 
-    if (!this.camposRddvDesabilitados) {
+    if (!rddvDesabilitado) {
       inteiros.push(["tipoRelatorio", f.tipoRelatorio]);
     }
 
@@ -255,6 +331,7 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   limparFormulario() {
     this.form = ExportacoesComponent.formularioVazio();
+    this.tentouGerar = false;
     this.limparTextoDosCamposDeData();
   }
 
@@ -273,6 +350,13 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
 
   gerarExportacao() {
     if (this.isBusy) return;
+
+    const erro = this.erroCodigo;
+    if (erro !== null) {
+      this.tentouGerar = true;
+      this.snackbar.open(erro, "OK", { duration: 6000 });
+      return;
+    }
 
     this.isBusy = true;
 
@@ -379,6 +463,16 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     return job.status === EnumStatusExportacao.Concluido;
   }
 
+  // Exportação encerrada: não há mais o que fazer com ela, só tirá-la da lista.
+  podeRemoverDaLista(job: ExportacaoJobModel): boolean {
+    return (
+      job.status === EnumStatusExportacao.Falhou ||
+      job.status === EnumStatusExportacao.Cancelado ||
+      job.status === EnumStatusExportacao.Expirado ||
+      job.status === EnumStatusExportacao.Excluido
+    );
+  }
+
   baixar(job: ExportacaoJobModel) {
     if (this.isBusy) return;
 
@@ -410,7 +504,8 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       job,
       "Cancelar esta exportação?",
       "Cancelamento solicitado.",
-      "Não foi possível cancelar a exportação."
+      "Não foi possível cancelar a exportação.",
+      (id) => this.exportacao.cancelar(id)
     );
   }
 
@@ -419,16 +514,33 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       job,
       "Excluir o arquivo desta exportação? Depois disso não será possível baixá-lo.",
       "Arquivo excluído.",
-      "Não foi possível excluir a exportação."
+      "Não foi possível excluir a exportação.",
+      (id) => this.exportacao.cancelar(id)
     );
   }
 
-  private removerJob(job: ExportacaoJobModel, pergunta: string, sucesso: string, falha: string) {
+  removerDaLista(job: ExportacaoJobModel) {
+    this.removerJob(
+      job,
+      "Remover esta exportação da lista?",
+      "Exportação removida da lista.",
+      "Não foi possível remover a exportação da lista.",
+      (id) => this.exportacao.removerDaLista(id)
+    );
+  }
+
+  private removerJob(
+    job: ExportacaoJobModel,
+    pergunta: string,
+    sucesso: string,
+    falha: string,
+    acao: (id: number) => Observable<void>
+  ) {
     if (this.isBusy || !this.confirmar(pergunta)) return;
 
     this.isBusy = true;
 
-    this.exportacao.cancelar(job.id).pipe(takeUntil(this.destroy$)).subscribe({
+    acao(job.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.isBusy = false;
         this.snackbar.open(sucesso, "OK", { duration: 3000 });
@@ -447,6 +559,10 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   // Um arquivo aceito (Content-Disposition: attachment) vira download e não dispara "load"; já um
   // documento devolvido pelo servidor dispara, e é assim que a falha é detectada. Nada passa pela
   // memória do app: o navegador baixa em streaming.
+  //
+  // Quando o servidor recusa o download, o documento do iframe é o envelope JSON de erro da API e a
+  // mensagem dele é a que serve ao usuário. Isso só é legível com o front e a API na mesma origem
+  // (BaseUrl vazio, o padrão); em origem diferente o navegador bloqueia a leitura e vale o aviso fixo.
   protected baixarArquivo(url: string) {
     this.removerIframeDownload();
 
@@ -459,16 +575,33 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     frame.addEventListener("load", () => {
       if (this.iframeDownload !== frame || ExportacoesComponent.ehPaginaEmBranco(frame)) return;
 
+      // A leitura vem antes da remoção: sem o iframe no documento, o corpo some.
+      const mensagem = ExportacoesComponent.mensagemDoIframe(frame);
+
       this.removerIframeDownload();
-      this.snackbar.open(
-        "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.",
-        "OK",
-        { duration: 8000 }
-      );
+      this.snackbar.open(mensagem ?? ExportacoesComponent.AVISO_DOWNLOAD_RECUSADO, "OK", { duration: 8000 });
     });
 
     this.iframeDownload = frame;
     document.body.appendChild(frame);
+  }
+
+  // Lê o corpo do documento do iframe e, se for o envelope de erro da API, devolve a mensagem dele.
+  // Origem diferente lança exceção; corpo que não é o envelope (HTML de proxy, por exemplo) dá null.
+  private static mensagemDoIframe(frame: HTMLIFrameElement): string | null {
+    try {
+      const texto = frame.contentDocument?.body?.textContent;
+      if (!texto) return null;
+
+      return ExportacoesComponent.mensagemDoEnvelope(JSON.parse(texto));
+    } catch {
+      return null;
+    }
+  }
+
+  private static mensagemDoEnvelope(corpo: any): string | null {
+    const msg = corpo?.message;
+    return typeof msg === "string" && msg.trim().length > 0 ? msg : null;
   }
 
   // Alguns navegadores disparam um "load" inicial do about:blank; ele não é resposta do servidor.
@@ -500,6 +633,9 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       case EnumStatusExportacao.Pendente:
       case EnumStatusExportacao.Processando:
         return "status-andamento";
+      case EnumStatusExportacao.Expirado:
+      case EnumStatusExportacao.Cancelado:
+      case EnumStatusExportacao.Excluido:
       default:
         return "status-inativa";
     }
@@ -530,25 +666,29 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     return `${texto} ${unidades[i]}`;
   }
 
+  // Cada parte é "<rótulo do campo no formulário>: <valor como aparece no formulário>".
   resumoFiltros(job: ExportacaoJobModel): string {
     const f = job.filtros;
     if (!f) return "";
 
     const partes: string[] = [];
-    const tipo = f.tipoTitulo === EnumTipoTituloExportacao.Solicitacao ? "Solicitações"
-      : f.tipoTitulo === EnumTipoTituloExportacao.Rddv ? "RDDVs" : "Solicitações e RDDVs";
-    partes.push(tipo);
+    const tipo = f.tipoTitulo === EnumTipoTituloExportacao.Solicitacao ? "Solicitação"
+      : f.tipoTitulo === EnumTipoTituloExportacao.Rddv ? "RDDV" : "Ambos (Solicitações e RDDVs)";
+    partes.push(`Tipo de título: ${tipo}`);
 
-    if (f.codigo) partes.push(`Código ${f.codigo}`);
-    if (f.numeroDocumento) partes.push(`Documento ${f.numeroDocumento}`);
+    if (f.codigo) {
+      const ehTipoUnico = f.tipoTitulo === EnumTipoTituloExportacao.Solicitacao || f.tipoTitulo === EnumTipoTituloExportacao.Rddv;
+      partes.push(`Código: ${ehTipoUnico ? formatarCodigoExportacao(f.tipoTitulo, f.codigo) : f.codigo}`);
+    }
+    if (f.numeroDocumento) partes.push(`Nº do documento: ${f.numeroDocumento}`);
 
     const periodo = (rotulo: string, ini?: string | null, fim?: string | null) => {
       if (!ini && !fim) return;
       partes.push(`${rotulo}: ${this.dataCurta(ini) || "…"} a ${this.dataCurta(fim) || "…"}`);
     };
-    periodo("Solicitação", f.dataSolicitacaoInicio, f.dataSolicitacaoFim);
-    periodo("Vencimento", f.dataVencimentoInicio, f.dataVencimentoFim);
-    periodo("Aprovação financeiro", f.dataAprovacaoFinanceiroInicio, f.dataAprovacaoFinanceiroFim);
+    periodo("Período da solicitação", f.dataSolicitacaoInicio, f.dataSolicitacaoFim);
+    periodo("Período de vencimento", f.dataVencimentoInicio, f.dataVencimentoFim);
+    periodo("Período de aprovação do financeiro", f.dataAprovacaoFinanceiroInicio, f.dataAprovacaoFinanceiroFim);
 
     if (f.idSolicitante) partes.push(`Solicitante: ${this.nomeUsuario(f.idSolicitante)}`);
     if (f.idAtribuido) partes.push(`Atribuído a: ${this.nomeUsuario(f.idAtribuido)}`);
@@ -556,16 +696,16 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       const dep = this.departamentos.find((d) => d.idDepartamento === f.idDepartamento);
       partes.push(`Departamento: ${dep?.nome ?? f.idDepartamento}`);
     }
-    if (f.statusGestor) partes.push(`Gestor: ${this.rotulo(this.listStatusGestor, f.statusGestor)}`);
-    if (f.statusFinanceiro) partes.push(`Financeiro: ${this.rotulo(this.listStatusFinanceiro, f.statusFinanceiro)}`);
-    if (f.statusContabil) partes.push(`Contabilidade: ${this.rotulo(this.listStatusContabil, f.statusContabil)}`);
-    if (f.nomeParceiro) partes.push(`Nome: ${f.nomeParceiro}`);
-    if (f.documentoParceiro) partes.push(`CPF/CNPJ: ${f.documentoParceiro}`);
-    if (f.tipoSolicitacao) partes.push(`Tipo: ${this.rotulo(this.listTipoSolicitacao, f.tipoSolicitacao)}`);
-    if (f.tipoPagamento) partes.push(`Pagamento: ${this.rotulo(this.listTipoPagamento, f.tipoPagamento)}`);
-    if (f.formaPagamento) partes.push(`Forma: ${this.rotulo(this.listFormaPagamento, f.formaPagamento)}`);
-    if (f.tipoRelatorio) partes.push(`Relatório: ${this.rotulo(this.listTipoRelatorio, f.tipoRelatorio)}`);
-    partes.push(f.incluirAnexos ? "Com anexos" : "Sem anexos");
+    if (f.statusGestor) partes.push(`Status gestor: ${this.rotulo(this.listStatusGestor, f.statusGestor)}`);
+    if (f.statusFinanceiro) partes.push(`Status financeiro: ${this.rotulo(this.listStatusFinanceiro, f.statusFinanceiro)}`);
+    if (f.statusContabil) partes.push(`Status contábil: ${this.rotulo(this.listStatusContabil, f.statusContabil)}`);
+    if (f.nomeParceiro) partes.push(`Nome do parceiro: ${f.nomeParceiro}`);
+    if (f.documentoParceiro) partes.push(`CPF/CNPJ do parceiro: ${f.documentoParceiro}`);
+    if (f.tipoSolicitacao) partes.push(`Tipo de solicitação: ${this.rotulo(this.listTipoSolicitacao, f.tipoSolicitacao)}`);
+    if (f.tipoPagamento) partes.push(`Tipo de pagamento: ${this.rotulo(this.listTipoPagamento, f.tipoPagamento)}`);
+    if (f.formaPagamento) partes.push(`Forma de pagamento: ${this.rotulo(this.listFormaPagamento, f.formaPagamento)}`);
+    if (f.tipoRelatorio) partes.push(`Tipo de relatório: ${this.rotulo(this.listTipoRelatorio, f.tipoRelatorio)}`);
+    partes.push(`Incluir anexos: ${f.incluirAnexos ? "Sim" : "Não"}`);
 
     return partes.join(" · ");
   }
@@ -588,8 +728,8 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   // Usa a mensagem amigável do servidor (envelope GenericResponse) quando existir.
   private mensagemDeErro(err: any, padrao: string): string {
     if (err instanceof HttpErrorResponse) {
-      const msg = err.error?.message;
-      if (typeof msg === "string" && msg.trim().length > 0) return msg;
+      const msg = ExportacoesComponent.mensagemDoEnvelope(err.error);
+      if (msg) return msg;
     }
 
     return padrao;

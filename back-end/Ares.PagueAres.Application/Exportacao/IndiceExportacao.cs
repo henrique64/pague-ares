@@ -22,6 +22,14 @@ namespace Ares.PagueAres.Application.Exportacao
     {
         public const string CabecalhoCsv = "titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256";
 
+        /// <summary>
+        /// Versão do formato do <c>indice.json</c> (campo <c>versao</c>). A versão 2 grava o tipo do título como
+        /// <c>Solicitação</c> ou <c>RDDV</c>, o nome da aba Anexos da planilha (na versão 1, <c>Solicitacao</c> e
+        /// <c>Rddv</c>), e o <c>geradoEm</c> com o deslocamento do fuso da exportação, <c>Exportacao:FusoHorario</c>
+        /// (na versão 1, o do servidor).
+        /// </summary>
+        public const int VersaoIndiceJson = 2;
+
         private static readonly byte[] BomUtf8 = [0xEF, 0xBB, 0xBF];
 
         private static readonly JsonSerializerOptions OpcoesJson = new()
@@ -33,11 +41,11 @@ namespace Ares.PagueAres.Application.Exportacao
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        /// <summary>Nome do tipo de título nos índices: <c>Solicitacao</c> ou <c>Rddv</c>.</summary>
+        /// <summary>Nome do tipo de título nos índices, o mesmo da aba Anexos da planilha: <c>Solicitação</c> ou <c>RDDV</c>.</summary>
         public static string NomeTipoTitulo(TipoTituloExportacao tipo) => tipo switch
         {
-            TipoTituloExportacao.Solicitacao => "Solicitacao",
-            TipoTituloExportacao.Rddv => "Rddv",
+            TipoTituloExportacao.Solicitacao => "Solicitação",
+            TipoTituloExportacao.Rddv => "RDDV",
             _ => throw new ArgumentOutOfRangeException(nameof(tipo), tipo, "O tipo de título deve ser Solicitacao ou Rddv.")
         };
 
@@ -120,7 +128,7 @@ namespace Ares.PagueAres.Application.Exportacao
             ArgumentNullException.ThrowIfNull(arquivos);
 
             var documento = new DocumentoIndiceJson(
-                Versao: 1,
+                Versao: VersaoIndiceJson,
                 ExportacaoId: idExportacao,
                 GeradoEm: geradoEm,
                 Filtros: filtros,

@@ -1,45 +1,56 @@
 <article class="pagina" data-id="exportar-lista-de-pagamentos" data-secao="Lista de pagamentos" data-titulo="Exportar a lista de pagamentos" data-publico="financeiro administrador">
-  <p class="resumo">Como baixar a planilha <code>Pagamentos.xlsx</code> pelo botão <span class="tela">Exportar</span> da tela <span class="tela">Solicitações</span>, e em que ela difere da exportação de títulos com anexos. Serve ao Financeiro e ao Administrador.</p>
+  <p class="resumo">Como baixar a planilha <code>Pagamentos.xlsx</code> pelo botão <span class="tela">Exportar planilha</span> da tela <span class="tela">Solicitações</span>, e em que ela difere da exportação de títulos com anexos. Serve ao Financeiro e ao Administrador.</p>
 
   <h2>Onde fica o botão</h2>
-  <p>No menu lateral, clicar em <span class="tela">Solicitações</span>. O botão <span class="tela">Exportar</span> aparece na aba <span class="tela">Financeiro/Contábil</span>, antes de <span class="tela">Limpar Filtros</span> e <span class="tela">Filtrar</span>, e só para quem tem o perfil Financeiro ou Administrador.</p>
+  <p>No menu lateral, clicar em <span class="tela">Solicitações</span>. O botão <span class="tela">Exportar planilha</span> aparece na aba <span class="tela">Financeiro/Contábil</span>, antes de <span class="tela">Limpar filtros</span> e <span class="tela">Filtrar</span>, e só para quem tem o perfil Financeiro ou Administrador. Ao pousar o ponteiro sobre o botão, uma dica diz <span class="tela">Baixa a lista desta aba em Excel (Pagamentos.xlsx), sem anexos. Os anexos ficam no menu Exportações.</span></p>
   <ul>
     <li>Nas abas <span class="tela">Minhas Solicitações</span> e <span class="tela">Gestor</span>, o botão não aparece.</li>
-    <li>Na aba <span class="tela">Financeiro/Contábil</span>, o usuário da Contabilidade vê a aba, com a lista restrita aos títulos atribuídos a ele, mas não vê o botão <span class="tela">Exportar</span>.</li>
+    <li>Na aba <span class="tela">Financeiro/Contábil</span>, o Financeiro e o Administrador veem o mesmo conjunto de títulos: todos os aprovados pelo Gestor, sem rascunho e sem cancelados.</li>
+    <li>Na mesma aba, o usuário da Contabilidade vê a aba, com a lista restrita aos títulos aprovados pelo Gestor que estão atribuídos a ele, mas não vê o botão <span class="tela">Exportar planilha</span>.</li>
   </ul>
 
+  <p>Na tabela da aba, as linhas de RDDV trazem a <span class="tela">Descrição</span> e o <span class="tela">Nº do documento</span> vazios, nas abas em que essas colunas existem, e a coluna <span class="tela">Parceiro</span> mostra o nome do solicitante. É a mesma regra da planilha <code>Pagamentos.xlsx</code>, descrita em <a href="#exportar-lista-de-pagamentos--o-que-a-planilha-traz">O que a planilha traz</a>.</p>
+
   <div class="galeria">
-    <figure class="captura"><img src="img/pagamentos-botao-exportar.webp" alt="Tela Solicitações na aba Financeiro/Contábil, com o botão Exportar destacado ao lado de Limpar Filtros e Filtrar" loading="lazy">
-    <figcaption>Aba Financeiro/Contábil de Solicitações, com o botão Exportar, cercado por um contorno laranja colocado só na foto (não faz parte da tela), antes de Limpar Filtros e Filtrar.</figcaption></figure>
-    <figure class="captura"><img src="img/pagamentos-sem-botao-exportar.webp" alt="Tela Solicitações na aba Financeiro/Contábil para a Contabilidade, sem o botão Exportar e com a tabela vazia" loading="lazy">
-    <figcaption>A mesma aba para a Contabilidade, sem o botão Exportar entre os botões do painel e sem o item Exportações no menu. A tabela está vazia porque, para a Contabilidade, a aba só mostra títulos atribuídos ao próprio usuário, e nenhum foi atribuído a esse usuário.</figcaption></figure>
+    <figure class="captura"><img src="img/pagamentos-botao-exportar.webp" alt="Tela Solicitações na aba Financeiro/Contábil, com o botão Exportar planilha destacado ao lado de Limpar filtros e Filtrar" loading="lazy">
+    <figcaption>Aba Financeiro/Contábil de Solicitações, com o botão Exportar planilha, cercado por um contorno laranja colocado só na foto (não faz parte da tela), antes de Limpar filtros e Filtrar. Nas linhas de RDDV da tabela, o Nº do documento fica vazio e o Parceiro mostra o nome do solicitante.</figcaption></figure>
+    <figure class="captura"><img src="img/pagamentos-sem-botao-exportar.webp" alt="Tela Solicitações na aba Financeiro/Contábil para a Contabilidade, sem o botão Exportar planilha e com títulos na tabela" loading="lazy">
+    <figcaption>A mesma aba para a Contabilidade, sem o botão Exportar planilha entre os botões do painel e sem o item Exportações no menu. A tabela traz registros: para a Contabilidade a aba mostra os títulos aprovados pelo Gestor que estão atribuídos ao próprio usuário.</figcaption></figure>
   </div>
+
+  <figure class="captura"><img src="img/pagamentos-dica-exportar-planilha.webp" alt="Aba Financeiro/Contábil com o ponteiro sobre o botão Exportar planilha e a dica do botão visível" loading="lazy">
+    <figcaption>Aba Financeiro/Contábil com o ponteiro sobre Exportar planilha: a dica diz que baixa a lista desta aba em Excel (Pagamentos.xlsx), sem anexos, e que os anexos ficam no menu Exportações.</figcaption></figure>
 
   <h2>Baixar a planilha</h2>
   <ol class="passos">
     <li>Na aba <span class="tela">Financeiro/Contábil</span>, preencher os filtros do painel, se for o caso, e clicar em <span class="tela">Filtrar</span> para conferir a lista.</li>
-    <li>Clicar em <span class="tela">Exportar</span>.</li>
+    <li>Clicar em <span class="tela">Exportar planilha</span>.</li>
     <li>O navegador abre uma nova janela e baixa o arquivo <code>Pagamentos.xlsx</code>.</li>
   </ol>
-  <p>A planilha usa os filtros que estão no painel. A lista da tela e a planilha nem sempre trazem os mesmos títulos: a lista aceita um período com só um dos lados preenchido, e a planilha não. Os filtros ficam guardados no navegador, por usuário, inclusive o que foi digitado. A janela nova usa um link de uso único. Se a chave do link for recusada, a janela mostra a mensagem do servidor, <span class="tela">Chave de visualização inválida ou expirada.</span>, em vez de baixar. Basta clicar em <span class="tela">Exportar</span> de novo. Se a chave não puder ser gerada, um aviso de poucos segundos diz <span class="tela">Não foi possível gerar o token de visualização.</span></p>
+  <p>A planilha usa os filtros que estão no painel, com as mesmas regras de filtro da lista da tela. Os filtros ficam guardados no navegador, por usuário, inclusive o que foi digitado. A janela nova usa um link de uso único. Se a chave do link for recusada, a janela mostra a mensagem do servidor, <span class="tela">Chave de visualização inválida ou expirada.</span>, em vez de baixar. Basta clicar em <span class="tela">Exportar planilha</span> de novo. Se a chave não puder ser gerada, um aviso de poucos segundos diz <span class="tela">Não foi possível gerar o token de visualização.</span></p>
 
   <h2>O que a planilha traz</h2>
-  <p>O arquivo tem uma aba, chamada <span class="tela">Pagamentos</span>, com o cabeçalho em negrito na primeira linha e bordas finas na tabela. As colunas, nesta ordem: <span class="tela">Codigo</span>, <span class="tela">Tipo</span>, <span class="tela">Data de Inclusao</span>, <span class="tela">Data de Vencimento</span>, <span class="tela">Doc. Número</span>, <span class="tela">Solicitante</span>, <span class="tela">Parceiro</span>, <span class="tela">Valor</span>, <span class="tela">Status Gestor</span>, <span class="tela">Status Contábil</span> e <span class="tela">Status Financeiro</span>. As datas saem em dd/mm/aaaa e o valor, com duas casas decimais.</p>
+  <p>O arquivo tem uma aba, chamada <span class="tela">Pagamentos</span>, com o cabeçalho em negrito na primeira linha e bordas finas na tabela. As colunas, nesta ordem: <span class="tela">Código</span>, <span class="tela">Tipo</span>, <span class="tela">Data de inclusão</span>, <span class="tela">Data de vencimento</span>, <span class="tela">Nº do documento</span>, <span class="tela">Solicitante</span>, <span class="tela">Parceiro</span>, <span class="tela">Valor</span>, <span class="tela">Status gestor</span>, <span class="tela">Status contábil</span> e <span class="tela">Status financeiro</span>. As datas saem em dd/mm/aaaa e o valor, com duas casas decimais. Primeiro vêm as solicitações e depois os RDDVs, cada grupo em ordem de código.</p>
   <ul>
     <li>Cada solicitação vira uma linha, com <span class="tela">Tipo</span> igual a <span class="tela">Pagamento</span>.</li>
-    <li>Cada RDDV vira uma linha, com <span class="tela">Tipo</span> igual a <span class="tela">RDDV - </span> seguido do tipo do relatório. Em <span class="tela">Doc. Número</span> sai o símbolo <code>#</code>, e o nome do usuário vale tanto para <span class="tela">Solicitante</span> quanto para <span class="tela">Parceiro</span>.</li>
+    <li>Cada RDDV vira uma linha, com <span class="tela">Tipo</span> igual a <span class="tela">RDDV - </span> seguido do tipo do relatório. A coluna <span class="tela">Nº do documento</span> fica vazia, e o nome do usuário vale tanto para <span class="tela">Solicitante</span> quanto para <span class="tela">Parceiro</span>.</li>
   </ul>
 
   <figure class="captura"><img src="img/pagamentos-excel-previa.webp" alt="Planilha Pagamentos.xlsx com a aba Pagamentos, o cabeçalho em negrito e seis linhas de dados" loading="lazy">
-    <figcaption>Prévia da planilha Pagamentos.xlsx gerada pelo botão Exportar: uma linha por solicitação (Tipo igual a Pagamento) e uma por RDDV (Tipo igual a RDDV - Adiantamento), com datas e valor formatados.</figcaption></figure>
+    <figcaption>Prévia da planilha Pagamentos.xlsx gerada pelo botão Exportar planilha: uma linha por solicitação (Tipo igual a Pagamento) e uma por RDDV (Tipo igual a RDDV - Adiantamento, com Nº do documento vazio), com cabeçalhos em caixa de frase e acentuados, até a coluna Status financeiro.</figcaption></figure>
 
   <h3>Quais títulos entram</h3>
-  <p>Só entram títulos que não são rascunho, não estão cancelados e foram aprovados pelo Gestor. Os filtros do painel restringem esse conjunto: código, períodos de solicitação e de vencimento, solicitante, atribuído a e os três status, em solicitações e RDDVs; número do documento e parceiro (nome e documento) só restringem as solicitações, e os RDDVs entram sem passar por eles. Um período só vale quando o início e o fim estão preenchidos.</p>
+  <p>Só entram títulos que não são rascunho, não estão cancelados e foram aprovados pelo Gestor. Os filtros do painel restringem esse conjunto pelas mesmas regras da lista da tela:</p>
+  <ul>
+    <li>código, períodos de solicitação e de vencimento, solicitante, atribuído a e os três status valem para solicitações e RDDVs;</li>
+    <li>um período vale mesmo com só um dos lados preenchido; sem a data final do período da solicitação, a busca vai até hoje mais 7 dias;</li>
+    <li>número do documento e parceiro (nome e documento) existem só nas solicitações: com algum deles preenchido, os RDDVs ficam fora da planilha.</li>
+  </ul>
 
   <h2>Diferenças para a exportação de títulos</h2>
   <p>As duas funções usam a palavra exportar e geram arquivos diferentes.</p>
   <div class="tabela"><table>
-    <thead><tr><th></th><th>Botão <span class="tela">Exportar</span> (tela <span class="tela">Solicitações</span>)</th><th>Item <span class="tela">Exportações</span> do menu</th></tr></thead>
+    <thead><tr><th></th><th>Botão <span class="tela">Exportar planilha</span> (tela <span class="tela">Solicitações</span>)</th><th>Item <span class="tela">Exportações</span> do menu</th></tr></thead>
     <tbody>
       <tr><td>Resultado</td><td>Uma planilha, <code>Pagamentos.xlsx</code></td><td>Um ZIP com planilha, anexos, índices e LEIA-ME</td></tr>
       <tr><td>Anexos</td><td>Não leva</td><td>Leva, se <span class="tela">Incluir anexos</span> estiver marcada</td></tr>

@@ -986,7 +986,7 @@ RDDV-000045/Comprovante - recibo.jpg
   - **Despesas dos RDDVs**: código do RDDV, id e data da despesa, tipo, moeda, quantidade e valor.
   - **Anexos**: código e tipo do título, tipo de documento, nome original, arquivo no pacote, tamanho em bytes, SHA-256 e data de envio.
 - **`indice.csv`**: UTF-8 com BOM, separador `;` (aspas duplas quando o campo contém `;`, `"` ou quebra de linha). Cabeçalho: `titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256` (`tipo_titulo` = `Solicitacao` ou `Rddv`; SHA-256 em hexadecimal minúsculo). Uma linha por anexo, ordenada por título e depois por arquivo.
-- **`indice.json`**: UTF-8 sem BOM, camelCase, indentado: `versao` (1), `exportacaoId`, `geradoEm`, `filtros`, `totais` (`solicitacoes`, `rddvs`, `despesas`, `anexos`, `bytesAnexos`), `titulos` (todos os exportados, inclusive sem anexo, com `pasta: null`) e `arquivos` (plano, um item por anexo, na mesma ordem do CSV).
+- **`indice.json`**: UTF-8 sem BOM, camelCase, indentado: `versao` (2; o tipo do título sai "Solicitação" ou "RDDV" e `geradoEm` sai no fuso configurado, com o deslocamento), `exportacaoId`, `geradoEm`, `filtros`, `totais` (`solicitacoes`, `rddvs`, `despesas`, `anexos`, `bytesAnexos`), `titulos` (todos os exportados, inclusive sem anexo, com `pasta: null`) e `arquivos` (plano, um item por anexo, na mesma ordem do CSV).
 
 ### 11.2 Excel — Lista de Pagamentos (legado)
 - Endpoint: `GET /api/export/payments?sFilter=<json>&userId=<id>&key=<previewKey>`

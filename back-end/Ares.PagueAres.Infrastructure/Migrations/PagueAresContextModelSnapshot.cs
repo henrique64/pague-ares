@@ -257,6 +257,9 @@ namespace Ares.PagueAres.Infrastructure.Migrations
                     b.Property<DateTime?>("DataInicio")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataRemocaoDaLista")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("FiltrosJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

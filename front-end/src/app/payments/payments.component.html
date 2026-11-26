@@ -3,7 +3,7 @@
     <div class="row">
       <div class="col-md-3">
         <mat-form-field appearance="outline">
-          <mat-label>Número do Documento</mat-label>
+          <mat-label>Nº do documento</mat-label>
           <input
             matInput
             placeholder=""
@@ -76,7 +76,7 @@
       <div class="col-md-3">
         <!--[rangePicker]="myDateRangeFilter"-->
         <mat-form-field class="filter-datepicker-range" appearance="outline">
-          <mat-label>Período da Solicitação</mat-label>
+          <mat-label>Período da solicitação</mat-label>
           <mat-date-range-input [rangePicker]="picker">
             <input
               matStartDate
@@ -100,7 +100,7 @@
       </div>
       <div class="col-md-3">
         <mat-form-field class="filter-datepicker-range" appearance="outline">
-          <mat-label>Período de Vencimento</mat-label>
+          <mat-label>Período de vencimento</mat-label>
           <mat-date-range-input [rangePicker]="picker2">
             <input
               matStartDate
@@ -126,9 +126,9 @@
     <div class="row">
       <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
-          <mat-label>Status Gestor</mat-label>
+          <mat-label>Status gestor</mat-label>
           <mat-select
-            placeholder="Status Gestor"
+            placeholder="Status gestor"
             [(ngModel)]="myFilter.managerStatus"
             (ngModelChange)="saveFilter()"
           >
@@ -144,9 +144,9 @@
 
       <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
-          <mat-label>Status Financeiro</mat-label>
+          <mat-label>Status financeiro</mat-label>
           <mat-select
-            placeholder="Status Financeiro"
+            placeholder="Status financeiro"
             [(ngModel)]="myFilter.financeStatus"
             (ngModelChange)="saveFilter()"
           >
@@ -162,9 +162,9 @@
 
       <div class="col-md-4">
         <mat-form-field class="example-full-width" appearance="outline">
-          <mat-label>Status Contabilidade</mat-label>
+          <mat-label>Status contábil</mat-label>
           <mat-select
-            placeholder="Status Contabilidade"
+            placeholder="Status contábil"
             [(ngModel)]="myFilter.accountingStatus"
             (ngModelChange)="saveFilter()"
           >
@@ -188,7 +188,7 @@
           (click)="newRequest()"
           [disabled]="isBusy"
         >
-          Solicitar Pagamento
+          Solicitar pagamento
         </button>
 
         <button
@@ -209,17 +209,18 @@
             class="btn btn-danger"
             (click)="exportFinancialView()"
             *ngIf="allowExport"
+            matTooltip="Baixa a lista desta aba em Excel (Pagamentos.xlsx), sem anexos. Os anexos ficam no menu Exportações."
           >
-            Exportar
+            Exportar planilha
           </button>
-          
+
           <button
             mat-raised-button
             type="button"
             class="btn btn-danger"
             (click)="clearFilters()"
           >
-            Limpar Filtros
+            Limpar filtros
           </button>
 
           <button
@@ -245,7 +246,7 @@
           <div class="col-md-12">
             <div class="card">
               <div class="card-header card-header-danger">
-                <h4 class="card-title">Minhas Solicitações de Pagamento</h4>
+                <h4 class="card-title">Minhas solicitações de pagamento</h4>
               </div>
 
               <div class="loader" *ngIf="isLoadingRequests">
@@ -261,18 +262,18 @@
                       <th>Código</th>
                       <th>Tipo</th>
                       <th>
-                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data Inclusão</a>
+                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data de inclusão</a>
                         <span *ngIf="isSortAsc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-asc"></i></span>
                         <span *ngIf="isSortDesc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-desc"></i></span>
                       </th>
                       <th>
-                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data Vencimento</a>
+                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data de vencimento</a>
                         <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
                         <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
                       </th>
-                      <th>Status Gestor</th>
-                      <th>Status Financeiro</th>
-                      <th>Status Contabilidade</th>
+                      <th>Status gestor</th>
+                      <th>Status financeiro</th>
+                      <th>Status contábil</th>
                       <th>Solicitante</th>
                       <th>Parceiro</th>
                       <th>Valor</th>
@@ -323,9 +324,9 @@
                           <span *ngIf="!req.rascunho && !req.cancelado">{{ req.statusContabilidade }}</span>
                         </td>
                         <td>{{ req.nomeSolicitante }}</td>
-                        <td>{{ req.nomeParceiro }}</td>
+                        <td>{{ parceiroExibido(req) }}</td>
                         <td>{{ req.valor | currency: "BRL":true }}</td>
-                        <td>{{ req.descricao }}</td>
+                        <td>{{ descricaoExibida(req) }}</td>
                       </tr>
                       <tr></tr>
                     </tbody>
@@ -346,7 +347,7 @@
           <div class="col-md-12">
             <div class="card">
               <div class="card-header card-header-danger">
-                <h4 class="card-title">Solicitações de Pagamento</h4>
+                <h4 class="card-title">Solicitações de pagamento</h4>
               </div>
 
               <div class="loader" *ngIf="isLoadingRequests">
@@ -362,22 +363,22 @@
                       <th>Código</th>
                       <th>Tipo</th>
                       <th>
-                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data Inclusão</a>
+                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data de inclusão</a>
                         <span *ngIf="isSortAsc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-asc"></i></span>
                         <span *ngIf="isSortDesc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-desc"></i></span>
                       </th>
                       <th>
-                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data Vencimento</a>
+                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data de vencimento</a>
                         <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
                         <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
                       </th>
-                      <th>Doc. Número</th>
+                      <th>Nº do documento</th>
                       <th>Solicitante</th>
                       <th>Descrição</th>
-                      <th>Valor Bruto</th>
-                      <th>Status Gestor</th>
-                      <th>Status Financeiro</th>
-                      <th>Obs. Gestor</th>
+                      <th>Valor bruto</th>
+                      <th>Status gestor</th>
+                      <th>Status financeiro</th>
+                      <th>Obs. gestor</th>
                     </thead>
                     <tbody>
                       <tr *ngFor="let req of requests">
@@ -398,9 +399,9 @@
                         </td>
                         <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
                         <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
-                        <td>{{ req.numeroDocumento }}</td>
+                        <td>{{ numeroDocumentoExibido(req) }}</td>
                         <td>{{ req.nomeSolicitante }}</td>
-                        <td>{{ req.descricao }}</td>
+                        <td>{{ descricaoExibida(req) }}</td>
                         <td>{{ req.valor | currency: "BRL":true }}</td>
                         <td>{{ req.statusGestor }}</td>
                         <td>{{ req.statusFinanceiro }}</td>
@@ -426,7 +427,7 @@
           <div class="col-md-12">
             <div class="card">
               <div class="card-header card-header-danger">
-                <h4 class="card-title">Solicitações de Pagamento</h4>
+                <h4 class="card-title">Solicitações de pagamento</h4>
               </div>
 
               <div class="loader" *ngIf="isLoadingRequests">
@@ -442,22 +443,22 @@
                       <th>Código</th>
                       <th>Tipo</th>
                       <th>
-                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data Inclusão</a>
-                        <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
-                        <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
+                        <a href="javascript:void(0)" (click)="sortField('dataSolicitacao')">Data de inclusão</a>
+                        <span *ngIf="isSortAsc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-asc"></i></span>
+                        <span *ngIf="isSortDesc('dataSolicitacao')">&nbsp;<i class="fa fa-sort-desc"></i></span>
                       </th>
                       <th>
-                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data Vencimento</a>
+                        <a href="javascript:void(0)" (click)="sortField('dataVencimento')">Data de vencimento</a>
                         <span *ngIf="isSortAsc('dataVencimento')">&nbsp;<i class="fa fa-sort-asc"></i></span>
                         <span *ngIf="isSortDesc('dataVencimento')">&nbsp;<i class="fa fa-sort-desc"></i></span>
                       </th>
-                      <th>Doc. Número</th>
+                      <th>Nº do documento</th>
                       <th>Solicitante</th>
                       <th>Parceiro</th>
                       <th>Valor</th>
-                      <th>Status Gestor</th>
-                      <th>Status Contábil</th>
-                      <th>Status Financeiro</th>
+                      <th>Status gestor</th>
+                      <th>Status contábil</th>
+                      <th>Status financeiro</th>
                     </thead>
                     <tbody>
                       <tr *ngFor="let req of requests">
@@ -478,9 +479,9 @@
                         </td>
                         <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
                         <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
-                        <td>{{ req.numeroDocumento }}</td>
+                        <td>{{ numeroDocumentoExibido(req) }}</td>
                         <td>{{ req.nomeSolicitante }}</td>
-                        <td>{{ req.nomeParceiro }}</td>
+                        <td>{{ parceiroExibido(req) }}</td>
                         <td>{{ req.valor | currency: "BRL":true }}</td>
                         <td>{{ req.statusGestor }}</td>
                         <td>{{ req.statusContabilidade }}</td>

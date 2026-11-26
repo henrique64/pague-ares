@@ -72,6 +72,14 @@ describe('ExportacaoService', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('removerDaLista faz DELETE em api/exportacao/{id}/lista', () => {
+    service.removerDaLista(42).subscribe();
+
+    const req = http.expectOne(base + '/42/lista');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   it('urlDownload monta a URL de download com o token codificado', () => {
     const url = service.urlDownload('ab-_c=');
 

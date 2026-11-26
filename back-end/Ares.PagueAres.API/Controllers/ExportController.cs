@@ -1,6 +1,7 @@
 ﻿using Ares.PagueAres.API.Dtos;
 using Ares.PagueAres.Application.Exportacao;
 using Ares.PagueAres.Domain.Dtos.Authentication;
+using Ares.PagueAres.Domain.Dtos.Listing;
 using Ares.PagueAres.Infrastructure;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
-using System.Collections.Concurrent;
 
 namespace Ares.PagueAres.API.Controllers
 {
@@ -21,6 +21,13 @@ namespace Ares.PagueAres.API.Controllers
     {
         private const string MensagemErroGenerica = "Não foi possível concluir a operação. Tente de novo.";
         private const string MensagemFiltroInvalido = "Filtro de exportação inválido.";
+
+        /// <summary>
+        /// Começo do texto <c>Tipo</c> do RDDV na view <c>vListagemSolicitacoes</c> (<c>CONCAT('RDDV - ', ...)</c>); a
+        /// solicitação tem o texto fixo <c>Pagamento</c>. É este texto que distingue solicitação de RDDV na planilha: o
+        /// <c>IdTipo</c> da view não serve, porque no RDDV ele é o tipo de relatório, que pode estar gravado como 0.
+        /// </summary>
+        private const string PrefixoTipoRddv = "RDDV";
 
         // Garante que a leitura e a remoção da chave de exportação aconteçam juntas (uso único).
         private static readonly Lock TravaChaveExportacao = new();
@@ -88,168 +95,95 @@ namespace Ares.PagueAres.API.Controllers
 
             try
             {
-                var requests = dbContext.Solicitacaos.AsQueryable();
+                // A planilha parte da mesma view da lista (solicitações e RDDVs juntos) e usa a mesma regra de filtro
+                // (ListingController.ApplyFilters), para trazer os mesmos títulos que a aba Financeiro/Contábil mostra
+                // ao Financeiro com o mesmo filtro.
+                var titulos = dbContext.ViewListagemSolicitacoes.AsQueryable();
 
                 // Escopo de FIN e ADM, os únicos papéis que recebem a chave de exportação:
                 // rascunhos e cancelados nunca entram, e só títulos aprovados pelo gestor.
-                requests = requests.Where(d => !d.Rascunho && !d.Cancelado);
-                requests = requests.Where(r => (r.AprovadoGestor ?? false));
+                titulos = titulos.Where(r => r.AprovadoGestor == true && r.Rascunho != true && r.Cancelado != true);
 
-                if (!string.IsNullOrEmpty(filter.DocumentNumber))
-                {
-                    requests = requests.Where(d => filter.DocumentNumber == d.NumeroDocumento);
-                }
+                titulos = ListingController.ApplyFilters(titulos, new ListingFilterDto(
+                    DocumentNumber: filter.DocumentNumber,
+                    RequestStart: filter.RequestStart,
+                    RequestEnd: filter.RequestEnd,
+                    DueStart: filter.DueStart,
+                    DueEnd: filter.DueEnd,
+                    Type: null,
+                    PartnerName: filter.PartnerName,
+                    RequesterId: filter.RequesterId,
+                    AssigneeId: filter.AssigneeId,
+                    IsAssigned: filter.IsAssigned,
+                    ManagerStatus: filter.ManagerStatus,
+                    FinanceStatus: filter.FinanceStatus,
+                    AccountingStatus: filter.AccountingStatus,
+                    DocumentId: filter.DocumentId,
+                    ViewMode: null,
+                    SortField: null));
 
-                if (filter.RequestStart.HasValue && filter.RequestEnd.HasValue)
-                {
-                    requests = requests.Where(d => d.DataSolicitacao >= filter.RequestStart && d.DataSolicitacao <= filter.RequestEnd);
-                }
-
-                if ((filter.AssigneeId ?? 0) > 0)
-                {
-                    requests = requests.Where(d => d.IdUsuarioAtribuido == filter.AssigneeId);
-                }
-
-                if (filter.DueStart.HasValue && filter.DueEnd.HasValue)
-                {
-                    requests = requests.Where(d => d.DataVencimento >= filter.DueStart && d.DataVencimento <= filter.DueEnd);
-                }
-
-                if ((filter.RequesterId ?? 0) > 0)
-                {
-                    requests = requests.Where(d => d.IdUsuario == filter.RequesterId);
-                }
-
-                if ((filter.ManagerStatus ?? 0) > 0)
-                {
-                    requests = requests.Where(d => (d.StatusGestor ?? 1) == filter.ManagerStatus);
-                }
-
-                if ((filter.FinanceStatus ?? 0) > 0)
-                {
-                    requests = requests.Where(d => (d.StatusFinanceiro ?? 1) == filter.FinanceStatus);
-                }
-
-                if ((filter.AccountingStatus ?? 0) > 0)
-                {
-                    requests = requests.Where(d => (d.StatusContabilidade ?? 1) == filter.AccountingStatus);
-                }
-
-                if (!string.IsNullOrEmpty(filter.PartnerName))
-                {
-                    requests = requests.Where(d => d.NomeParceiro.ToLower().Contains(filter.PartnerName.ToLower()));
-                }
-
+                // O documento do parceiro não existe na lista nem na view: vem da solicitação. O RDDV não tem documento
+                // do parceiro e sai, como sai nos filtros de nome do parceiro e de número do documento.
                 if (!string.IsNullOrEmpty(filter.PartnerDocument))
                 {
-                    requests = requests.Where(d => d.NumDocParceiro.ToLower().Contains(filter.PartnerDocument.ToLower()));
+                    var documentoParceiro = filter.PartnerDocument.ToLower();
+
+                    titulos = titulos.Where(r => !r.Tipo.StartsWith(PrefixoTipoRddv) && dbContext.Solicitacaos.Any(s =>
+                        s.IdSolicitacao == r.Codigo && s.NumDocParceiro.ToLower().Contains(documentoParceiro)));
                 }
 
-                if (filter.DocumentId.HasValue)
+                // Solicitações primeiro e RDDVs depois, cada grupo pelo código, como no relatório antigo.
+                var linhas = await titulos
+                    .OrderBy(r => r.Tipo.StartsWith(PrefixoTipoRddv) ? 1 : 0)
+                    .ThenBy(r => r.Codigo)
+                    .Select(r => new
+                    {
+                        r.Codigo,
+                        EhRddv = r.Tipo.StartsWith(PrefixoTipoRddv),
+                        r.IdTipo,
+                        r.DataSolicitacao,
+                        r.DataVencimento,
+                        r.NumeroDocumento,
+                        r.NomeSolicitante,
+                        r.NomeParceiro,
+                        r.Valor,
+                        r.IdStatusGestor,
+                        r.IdStatusContabilidade,
+                        r.IdStatusFinanceiro
+                    })
+                    .ToListAsync();
+
+                var dataset = linhas.Select(r =>
                 {
-                    requests = requests.Where(d => d.IdSolicitacao == filter.DocumentId.Value);
-                }
+                    var ehSolicitacao = !r.EhRddv;
 
-                var requestsQuery = (from r in requests
-                                     from u in dbContext.Usuarios.Where(x => x.IdUsuario == r.IdUsuario)
-                                     from g in dbContext.Usuarios.Where(k => k.IdUsuario == r.IdGestor).DefaultIfEmpty()
-                                     select new PaymentListItem()
-                                     {
-                                         Codigo = r.IdSolicitacao.ToString(),
-                                         Tipo = "Pagamento",
-                                         DataInclusao = r.DataSolicitacao,
-                                         DataVencimento = r.DataVencimento,
-                                         DocNumero = r.NumeroDocumento ?? "",
-                                         Solicitante = u.Nome,
-                                         Parceiro = r.NomeParceiro,
-                                         Valor = r.Valor,
-                                         StatusGestor = RotulosExportacao.StatusGestor(r.StatusGestor),
-                                         StatusContabil = RotulosExportacao.StatusContabil(r.StatusContabilidade),
-                                         StatusFinanceiro = RotulosExportacao.StatusFinanceiro(r.StatusFinanceiro)
-                                     });
-
-                var rddv = dbContext.Rddv.AsQueryable();
-
-                // Mesmo escopo de FIN e ADM das solicitações.
-                rddv = rddv.Where(d => !d.Rascunho && !d.Cancelado);
-                rddv = rddv.Where(r => (r.AprovadoGestor ?? false));
-
-                if (filter.RequestStart.HasValue && filter.RequestEnd.HasValue)
-                {
-                    rddv = rddv.Where(d => d.DataCadastro >= filter.RequestStart && d.DataCadastro <= filter.RequestEnd);
-                }
-
-                if ((filter.AssigneeId ?? 0) > 0)
-                {
-                    rddv = rddv.Where(d => d.IdUsuarioAtribuido == filter.AssigneeId);
-                }
-
-                if (filter.DueStart.HasValue && filter.DueEnd.HasValue)
-                {
-                    rddv = rddv.Where(d => d.DataVencimento >= filter.DueStart && d.DataVencimento <= filter.DueEnd);
-                }
-
-                if ((filter.RequesterId ?? 0) > 0)
-                {
-                    rddv = rddv.Where(d => d.IdUsuario == filter.RequesterId);
-                }
-
-                if ((filter.ManagerStatus ?? 0) > 0)
-                {
-                    rddv = rddv.Where(d => (d.StatusGestor ?? 1) == filter.ManagerStatus);
-                }
-
-                if ((filter.FinanceStatus ?? 0) > 0)
-                {
-                    rddv = rddv.Where(d => (d.StatusFinanceiro ?? 1) == filter.FinanceStatus);
-                }
-
-                if ((filter.AccountingStatus ?? 0) > 0)
-                {
-                    rddv = rddv.Where(d => (d.StatusContabilidade ?? 1) == filter.AccountingStatus);
-                }
-
-                if (filter.DocumentId.HasValue)
-                {
-                    rddv = rddv.Where(d => d.IdRelatorio == filter.DocumentId.Value);
-                }
-
-                var rddvQuery = (from r in rddv
-                                 from u in dbContext.Usuarios.Where(x => x.IdUsuario == r.IdUsuario)
-                                 from g in dbContext.Usuarios.Where(k => k.IdUsuario == r.IdGestor).DefaultIfEmpty()
-                                 from d in dbContext.vDespesasRddv.Where(k => k.IdRelatorio == r.IdRelatorio).DefaultIfEmpty()
-                                 select new PaymentListItem()
-                                 {
-                                     Codigo = r.IdRelatorio.ToString(),
-                                     Tipo = "RDDV - " + RotulosExportacao.TipoRelatorio(r.TipoRelatorio),
-                                     DataInclusao = r.DataCadastro,
-                                     DataVencimento = r.DataVencimento,
-                                     DocNumero = "#",
-                                     Solicitante = u.Nome ?? "",
-                                     Parceiro = u.Nome ?? "",
-                                     Valor = (decimal?)d.Valor ?? 0m,
-                                     StatusGestor = RotulosExportacao.StatusGestor(r.StatusGestor),
-                                     StatusContabil = RotulosExportacao.StatusContabil(r.StatusContabilidade),
-                                     StatusFinanceiro = RotulosExportacao.StatusFinanceiro(r.StatusFinanceiro)
-                                 });
-
-                ConcurrentBag<IEnumerable<PaymentListItem>> items = new();
-                List<Task> tasks = new();
-
-                items.Add(await requestsQuery.ToListAsync());
-                items.Add(await rddvQuery.ToListAsync());
-
-                await Task.WhenAll(tasks);
-
-                var dataset = items.SelectMany(x => x.ToList());
+                    return new PaymentListItem()
+                    {
+                        Codigo = r.Codigo.ToString(),
+                        // No RDDV, o IdTipo da view é o tipo de relatório (1 a 3; 0 sai como "Código 0").
+                        Tipo = ehSolicitacao ? "Pagamento" : "RDDV - " + RotulosExportacao.TipoRelatorio(r.IdTipo),
+                        DataInclusao = r.DataSolicitacao,
+                        DataVencimento = r.DataVencimento,
+                        // O RDDV não tem número de documento: a view grava "#", e a planilha deixa a célula vazia.
+                        DocNumero = ehSolicitacao ? r.NumeroDocumento ?? "" : "",
+                        Solicitante = r.NomeSolicitante ?? "",
+                        // No RDDV, o parceiro é o próprio solicitante (a view grava "#").
+                        Parceiro = ehSolicitacao ? r.NomeParceiro ?? "" : r.NomeSolicitante ?? "",
+                        Valor = r.Valor ?? 0m,
+                        StatusGestor = RotulosExportacao.StatusGestor(r.IdStatusGestor),
+                        StatusContabil = RotulosExportacao.StatusContabil(r.IdStatusContabilidade),
+                        StatusFinanceiro = RotulosExportacao.StatusFinanceiro(r.IdStatusFinanceiro)
+                    };
+                });
 
                 using var book = new XLWorkbook();
                 var sheet = book.Worksheets.Add("Pagamentos");
 
+                // Rótulos na caixa da planilha nova (PlanilhaExportacao) e da aba Financeiro/Contábil.
                 string[] cabecalho =
                 [
-                    "Codigo", "Tipo", "Data de Inclusao", "Data de Vencimento", "Doc. Número", "Solicitante",
-                    "Parceiro", "Valor", "Status Gestor", "Status Contábil", "Status Financeiro"
+                    "Código", "Tipo", "Data de inclusão", "Data de vencimento", "Nº do documento", "Solicitante",
+                    "Parceiro", "Valor", "Status gestor", "Status contábil", "Status financeiro"
                 ];
 
                 for (var coluna = 0; coluna < cabecalho.Length; coluna++)

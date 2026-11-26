@@ -1,4 +1,5 @@
 ﻿using Ares.PagueAres.API.Extensions;
+using Ares.PagueAres.API.Helpers;
 using Ares.PagueAres.Application.Services;
 using Ares.PagueAres.Domain;
 using Ares.PagueAres.Domain.Dtos;
@@ -499,18 +500,46 @@ namespace Ares.PagueAres.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Atribui a solicitação a um usuário (lista "Atribuir" da tela inicial). Só Financeiro e Administrador atribuem
+        /// (403 para os demais, conferido antes da busca, para que um id inexistente não se distinga de um existente); a
+        /// solicitação inexistente responde 404; o destino precisa ser um usuário ativo com perfil Financeiro ou
+        /// Contabilidade (400 com mensagem, sem gravar). Regras em <see cref="AtribuicaoHelper"/>.
+        /// </summary>
         [HttpGet("{id}/user")]
         public async Task<ActionResult<GenericResponse<object>>> SetUser([FromRoute] int id, [FromQuery] int userId)
         {
             try
             {
+                if (!AtribuicaoHelper.PodeAtribuir(HttpContext))
+                    return StatusCode(StatusCodes.Status403Forbidden, new GenericResponse<object>()
+                    {
+                        Success = false,
+                        Message = AtribuicaoHelper.MensagemSemPermissao,
+                        Data = null,
+                        Page = 1,
+                        Pages = 1,
+                        Records = 0
+                    });
+
                 var request = await _dbContext.Solicitacaos.FirstOrDefaultAsync(s => s.IdSolicitacao == id);
 
                 if (request == null)
-                    return BadRequest(new GenericResponse<object>()
+                    return NotFound(new GenericResponse<object>()
                     {
                         Success = false,
                         Message = "Solicitação não encontrada.",
+                        Data = null,
+                        Page = 1,
+                        Pages = 1,
+                        Records = 0
+                    });
+
+                if (!await AtribuicaoHelper.PodeReceberAtribuicaoAsync(_dbContext, userId))
+                    return BadRequest(new GenericResponse<object>()
+                    {
+                        Success = false,
+                        Message = AtribuicaoHelper.MensagemDestinoInvalido,
                         Data = null,
                         Page = 1,
                         Pages = 1,

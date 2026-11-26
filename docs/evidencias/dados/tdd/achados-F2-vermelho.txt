@@ -1,0 +1,135 @@
+F2 — Formulário de exportação: Código, avisos de "Ambos", rótulos, layout e coluna Filtros — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-front (base 239b2b4, a F1)
+Comando: cd front-end && CHROME_BIN=<msedge.exe> npx ng test --watch=false --karma-config=<karma.headless.js fora do repositório: reaproveita o karma.conf.js e troca o navegador por ChromeHeadless sobre o Edge>
+Arquivos de teste: front-end/src/app/exportacoes/codigo-exportacao.spec.ts (novo), front-end/src/app/exportacoes/exportacoes.component.spec.ts
+Dados: só fictícios; o serviço de exportação é um spy, nenhuma requisição de rede.
+
+Estado do código na fase vermelha: FormularioExportacao.codigo já tinha o tipo texto e ExportacoesComponent.erroCodigo existia só como esqueleto
+(sempre nulo); codigo-exportacao.ts existia só como esqueleto (interpretar devolvia "vazio", formatar devolvia ""), para os testes compilarem.
+Nenhum comportamento novo estava implementado; template, resumoFiltros e montarFiltro eram os de antes.
+
+Resultado: 213 testes — 59 com falha, 154 aprovados (151 da base da F1 + 62 novos). Das 59 falhas, 54 são de testes novos e 5 são de testes
+antigos de período e de Limpar filtros, que passaram a procurar os rótulos novos. Os outros 8 testes novos já passam na fase vermelha por serem guardas de regressão:
+"vazio" do interpretador, "aceita 123 / 000123 / 123 com Solicitação" (comportamento que já existia), "código vazio ou só com espaços não filtra nem recusa",
+"formulário vazio não mostra aviso", "com Solicitação ou RDDV escolhido não há aviso" e "o aviso não bloqueia a exportação".
+
+------------------------------------------------------------------------------------------
+[FALHOU] ExportacoesComponent avisos do tipo "Ambos" cada campo só de Solicitação preenchido mostra o aviso e ele some quando o campo é esvaziado
+         numeroDocumento preenchido:
+[FALHOU] ExportacoesComponent avisos do tipo "Ambos" código com prefixo mostra o aviso do prefixo e some quando o código vira número puro
+         Expected $.length = 0 to equal 1.
+[FALHOU] ExportacoesComponent avisos do tipo "Ambos" os dois casos juntos mostram os dois avisos
+         Expected $.length = 0 to equal 2.
+[FALHOU] ExportacoesComponent avisos do tipo "Ambos" Tipo de relatório preenchido mostra o aviso das solicitações e ele some com o campo
+         Expected $.length = 0 to equal 1.
+[FALHOU] ExportacoesComponent coluna Filtros da lista (resumoFiltros) código com prefixo e seis dígitos quando o tipo é Solicitação ou RDDV; número puro com "Ambos"
+         Expected 'Solicitações · Código 123 · Com anexos' to contain 'Código: SOL-000123'.
+[FALHOU] ExportacoesComponent coluna Filtros da lista (resumoFiltros) só o essencial: tipo de título e anexos, com dois-pontos
+         Expected 'Solicitações e RDDVs · Com anexos' to be 'Tipo de título: Ambos (Solicitações e RDDVs) · Incluir anexos: Sim'.
+[FALHOU] ExportacoesComponent coluna Filtros da lista (resumoFiltros) todos os campos, com o rótulo do formulário e dois-pontos
+         Expected $[0] = 'Solicitações' to equal 'Tipo de título: Solicitação'.
+[FALHOU] ExportacoesComponent datas digitadas nos campos de período data impossível (31/02/2025) não entra no filtro
+         TypeError: Cannot read properties of undefined (reading 'querySelector')
+[FALHOU] ExportacoesComponent datas digitadas nos campos de período digitar 01/11/2025 no início do período da solicitação vale 1º de novembro, não 11 de janeiro
+         TypeError: Cannot read properties of undefined (reading 'querySelector')
+[FALHOU] ExportacoesComponent datas digitadas nos campos de período Limpar filtros esvazia os campos de data na tela e o filtro montado não traz datas
+         TypeError: Cannot read properties of undefined (reading 'querySelector')
+[FALHOU] ExportacoesComponent datas digitadas nos campos de período Limpar filtros esvazia os demais campos de texto da tela
+         TypeError: Cannot read properties of undefined (reading 'click')
+[FALHOU] ExportacoesComponent datas digitadas nos campos de período Limpar filtros também esvazia texto de data ainda inválido (que não chegou ao modelo)
+         TypeError: Cannot read properties of undefined (reading 'querySelector')
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) aceita "  Sol-000123  " com Solicitacao: envia código 123 e tipo Solicitacao
+         Expected undefined to be 123.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) aceita "RDDV-45" com Ambos: envia código 45 e tipo Rddv
+         Expected undefined to be 45.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) aceita "rddv45" com Rddv: envia código 45 e tipo Rddv
+         Expected undefined to be 45.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) aceita "sol-000123" com Ambos: envia código 123 e tipo Solicitacao
+         Expected undefined to be 123.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) aceita "SOL123" com Ambos: envia código 123 e tipo Solicitacao
+         Expected undefined to be 123.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) com "Ambos" e prefixo, o filtro enviado leva o tipo do prefixo
+         Expected spy ExportacaoService.criar to have been called only once, and with given args:
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) com o tipo do prefixo, os campos só do outro tipo não vão no filtro (como se o tipo tivesse sido escolhido)
+         Expected 2 to be undefined.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) Limpar filtros tira o erro do código
+         TypeError: Cannot read properties of undefined (reading 'pipe')
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) na tela: campo de texto, com dica; o erro aparece depois de tentar gerar
+         Expected 'number' to be 'text'.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) prefixo em conflito com o tipo escolhido é recusado e não gera a exportação
+         Expected null to be 'O código SOL-000123 é de solicitação, mas o tipo de título escolhido é RDDV.'.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) recusa "-3" com a mensagem de validação e não gera a exportação
+         Expected null to be 'Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).'.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) recusa "0" com a mensagem de validação e não gera a exportação
+         Expected null to be 'Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).'.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) recusa "1,5" com a mensagem de validação e não gera a exportação
+         Expected null to be 'Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).'.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) recusa "1.5" com a mensagem de validação e não gera a exportação
+         Expected null to be 'Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).'.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) recusa "ABC-1" com a mensagem de validação e não gera a exportação
+         Expected null to be 'Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).'.
+[FALHOU] ExportacoesComponent filtro Código (123, SOL-000123, RDDV-45) recusa "SOL-" com a mensagem de validação e não gera a exportação
+         Expected null to be 'Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).'.
+[FALHOU] ExportacoesComponent rótulos e layout do formulário botões "Limpar filtros" e "Gerar exportação"
+         Expected $.length = 5 to equal 2.
+[FALHOU] ExportacoesComponent rótulos e layout do formulário nenhum rótulo longo fica numa coluna estreita (menos de 4 de 12), onde o texto seria cortado a 1360 px
+         Expected $.length = 5 to equal 0.
+[FALHOU] ExportacoesComponent rótulos e layout do formulário os campos de período com rótulo longo têm pelo menos 6 de 12 colunas (rótulo mais o ícone do calendário)
+         TypeError: Cannot read properties of undefined (reading 'closest')
+[FALHOU] ExportacoesComponent rótulos e layout do formulário rótulos em caixa de frase, pela convenção
+         Expected $[2] = 'Número do Documento (só Solicitação)' to equal 'Departamento'.
+[FALHOU] interpretarCodigoExportacao aceita "  45  " como número 45 e tipo sem prefixo
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "000123" como número 123 e tipo sem prefixo
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "123" como número 123 e tipo sem prefixo
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "2147483647" como número 2147483647 e tipo sem prefixo
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "RDDV-000045" como número 45 e tipo Rddv
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "RDDV-45" como número 45 e tipo Rddv
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "rddv45" como número 45 e tipo Rddv
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "sol-000123" como número 123 e tipo Solicitacao
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "SOL-000123" como número 123 e tipo Solicitacao
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "Sol-7" como número 7 e tipo Solicitacao
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita "SOL123" como número 123 e tipo Solicitacao
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao aceita número puro (o modelo antigo do formulário era numérico)
+         Expected object to have properties
+[FALHOU] interpretarCodigoExportacao formata como nas telas: seis dígitos com o prefixo do tipo
+         Expected '' to be 'SOL-000123'.
+[FALHOU] interpretarCodigoExportacao recusa "-3"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "0"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "000"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "1,5"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "1.5"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "12a"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "2147483648"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "99999999999999999999"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "ABC-1"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "RDDV"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "SOL 1"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "SOL--1"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "SOL-"
+         Expected $.situacao = 'vazio' to equal 'invalido'.
+[FALHOU] interpretarCodigoExportacao recusa "SOL-0"
+         Expected $.situacao = 'vazio' to equal 'invalido'.

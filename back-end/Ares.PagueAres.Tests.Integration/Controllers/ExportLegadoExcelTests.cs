@@ -10,8 +10,9 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 {
     /// <summary>
     /// Excel legado <c>Pagamentos.xlsx</c> (ExportController.ExportPaymentList), gerado com ClosedXML:
-    /// as mesmas 11 colunas na mesma ordem do relatório antigo, com Valor numérico e datas como data de
-    /// verdade, e o filtro de parceiro sem diferenciar maiúsculas de minúsculas.
+    /// as mesmas 11 colunas na mesma ordem do relatório antigo, com os cabeçalhos na caixa da planilha nova
+    /// (<c>PlanilhaExportacao</c>), Valor numérico e datas como data de verdade, "Nº do documento" vazio no RDDV
+    /// e o filtro de parceiro sem diferenciar maiúsculas de minúsculas.
     /// </summary>
     public class ExportLegadoExcelTests : IClassFixture<PagueAresWebAppFactory>
     {
@@ -22,8 +23,8 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 
         private static readonly string[] ColunasEsperadas =
         [
-            "Codigo", "Tipo", "Data de Inclusao", "Data de Vencimento", "Doc. Número", "Solicitante",
-            "Parceiro", "Valor", "Status Gestor", "Status Contábil", "Status Financeiro"
+            "Código", "Tipo", "Data de inclusão", "Data de vencimento", "Nº do documento", "Solicitante",
+            "Parceiro", "Valor", "Status gestor", "Status contábil", "Status financeiro"
         ];
 
         private readonly PagueAresWebAppFactory _factory;
@@ -146,7 +147,7 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
                 r.Cell(1).GetString() == codigo && r.Cell(2).GetString().StartsWith(tipoComecaCom, StringComparison.Ordinal));
 
         [Fact]
-        public async Task ExcelLegado_TemAsMesmas11ColunasNaMesmaOrdem()
+        public async Task ExcelLegado_TemAs11ColunasNaMesmaOrdemComOsRotulosDaPlanilhaNova()
         {
             var conteudo = await ExportarAsync(ClienteADM(), "{}");
 
@@ -213,11 +214,25 @@ namespace Ares.PagueAres.Tests.Integration.Controllers
 
             linha!.Cell(2).GetString().Should().Be("RDDV - Prestação de Contas");
             linha.Cell(3).DataType.Should().Be(XLDataType.DateTime);
-            linha.Cell(5).GetString().Should().Be("#");
+            linha.Cell(6).GetString().Should().Be("Solicitante");
+            linha.Cell(7).GetString().Should().Be("Solicitante", "no RDDV o parceiro é o próprio solicitante");
             linha.Cell(8).DataType.Should().Be(XLDataType.Number);
             linha.Cell(9).GetString().Should().Be("Autorizado");
             linha.Cell(10).GetString().Should().Be("Lançado");
             linha.Cell(11).GetString().Should().Be("Autorizado");
+        }
+
+        [Fact]
+        public async Task ExcelLegado_Rddv_NumeroDoDocumentoFicaVazio()
+        {
+            var conteudo = await ExportarAsync(ClienteADM(), "{}");
+
+            using var workbook = new XLWorkbook(new MemoryStream(conteudo));
+            var planilha = workbook.Worksheet("Pagamentos");
+
+            var linha = LinhaDoCodigo(planilha, IdRddv.ToString(), "RDDV");
+            linha.Should().NotBeNull();
+            linha!.Cell(5).GetString().Should().BeEmpty("o RDDV não tem número de documento, e a célula não leva \"#\"");
         }
 
         [Fact]

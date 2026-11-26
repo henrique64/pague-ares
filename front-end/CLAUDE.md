@@ -188,7 +188,7 @@ Relatório de Despesas com Viagem: funcionário, CPF, tipo de viagem, datas, des
 Listagem em abas conforme o papel: "Minhas Solicitações" (MyView), "Gestor" (GES/ADM) e "Financeiro/Contábil" (FIN/CON/ADM). Mostra Solicitações e RDDVs juntos (`/api/Listing`).
 - Filtros por período, parceiro, nº do documento, status etc.; o filtro é persistido por usuário no `localStorage` e o `viewMode` é validado pelo papel.
 - Badge "Rascunho", spinner de carregamento, resposta "último vence" ao alternar abas/contas.
-- Botões "Solicitar Pagamento", "Solicitar RDDV", "Exportar" (Excel, só na visão financeira e só para FIN e ADM; CON não vê o botão, `allowExport`) e "Filtrar/Limpar".
+- Botões "Solicitar pagamento", "Solicitar RDDV", "Exportar planilha" (Excel `Pagamentos.xlsx`, com dica apontando o menu Exportações para os anexos; só na visão financeira e só para FIN e ADM; CON não vê o botão, `allowExport`) e "Filtrar"/"Limpar filtros". Nas linhas de RDDV, "#" que a view grava em Nº do documento, Parceiro e Descrição não aparece: Nº do documento e Descrição ficam vazios e Parceiro mostra o solicitante.
 
 ### HomeComponent (`/home`)
 Cards Pendentes/Aprovados/Reprovados (soma de Solicitações e RDDVs), atualização a cada 30 s, lista de itens para atribuição de responsável (ADM/FIN).

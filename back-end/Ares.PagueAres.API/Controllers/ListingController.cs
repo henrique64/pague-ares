@@ -85,13 +85,72 @@ namespace Ares.PagueAres.API.Controllers
 
         private IQueryable<ViewListagemSolicitacoes> BuildQuery(ListingFilterDto filter)
         {
+            var query = ApplyFilters(dbContext.ViewListagemSolicitacoes, filter);
+
+            var currentUser = this.GetUserFromToken()
+                ?? throw new Exception("Usuário não autenticado.");
+
+            // A visão é sempre aplicada: sem viewMode, ou com Undefined (0), a lista vale como Minhas Solicitações, para
+            // que nenhum pedido receba os títulos de todos os usuários. Um valor fora do enum nem chega aqui: o model
+            // binding o recusa com 400.
+            var viewMode = filter.ViewMode is null or PaymentListView.Undefined
+                ? PaymentListView.MyView
+                : filter.ViewMode.Value;
+
+            // Visão financeira: Financeiro e Administrador veem todos os aprovados; Contabilidade, só os atribuídos a ela;
+            // os demais perfis, nada, mesmo que algum título tenha sido atribuído a eles.
+            var escopoVisaoFinanceira =
+                this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador) ? EscopoVisaoFinanceira.Todos
+                : this.CurrentUserIsInRole(Funcoes.Contabilidade) ? EscopoVisaoFinanceira.Atribuidos
+                : EscopoVisaoFinanceira.Nenhum;
+
+            query = ApplyViewModeFilter(
+                query,
+                viewMode,
+                currentUser.IdUsuario,
+                escopoVisaoFinanceira,
+                veFilaDoDashboard: this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Contabilidade, Funcoes.Administrador));
+
+            var sortField = string.IsNullOrEmpty(filter.SortField) ?
+                "DataSolicitacao" : filter.SortField;
+
+            sortField = char.ToUpper(sortField[0]) + sortField.Substring(1);
+
+            if (string.Equals(filter.SortOrder, "asc", StringComparison.CurrentCultureIgnoreCase))
+            {
+                query = query.OrderBy(e => EF.Property<object>(e, sortField));
+            }
+            else
+            {
+                query = query.OrderByDescending(e => EF.Property<object>(e, sortField));
+            }
+
+            return query;
+        }
+
+        /// <summary>
+        /// Aplica os filtros da tela de pagamentos (sem a visão e sem a ordenação). É a regra única de filtro da lista
+        /// (<see cref="GetAllAsync"/>) e do Excel <c>Pagamentos.xlsx</c> (<c>ExportController.ExportPaymentList</c>), para
+        /// que os dois tragam os mesmos títulos com o mesmo filtro.
+        /// <list type="bullet">
+        /// <item>Período da solicitação com um lado só: sem início vale desde 01/01/1753; sem fim vale até hoje + 7 dias.
+        /// A comparação é por data, sem a hora.</item>
+        /// <item>Vencimento com um lado só: cada lado informado limita o vencimento.</item>
+        /// <item>Número do documento (igual) e nome do parceiro (contém, sem diferenciar maiúsculas de minúsculas) valem
+        /// para os dois tipos de título. Na view, o RDDV tem <c>#</c> nos dois campos, então sai com esses filtros.</item>
+        /// <item>Código, solicitante, atribuído, os três status e "atribuído ou não" valem para os dois tipos. Código zero
+        /// e id zero valem como filtro vazio.</item>
+        /// </list>
+        /// </summary>
+        public static IQueryable<ViewListagemSolicitacoes> ApplyFilters(
+            IQueryable<ViewListagemSolicitacoes> query,
+            ListingFilterDto filter)
+        {
             DateTime startDate = filter.RequestStart?.Date ?? new DateTime(1753, 1, 1);
             DateTime endDate = filter.RequestEnd?.Date ?? DateTime.Now.Date.AddDays(7);
 
-            var query = (from r in dbContext.ViewListagemSolicitacoes
-                         where r.DataSolicitacao.Date >= startDate &&
-                                 r.DataSolicitacao.Date <= endDate
-                         select r);
+            query = query.Where(r => r.DataSolicitacao.Date >= startDate &&
+                r.DataSolicitacao.Date <= endDate);
 
             if(!string.IsNullOrEmpty(filter.DocumentNumber))
             {
@@ -106,8 +165,10 @@ namespace Ares.PagueAres.API.Controllers
 
             if (!string.IsNullOrEmpty(filter.PartnerName))
             {
+                var nomeParceiro = filter.PartnerName.ToLower();
+
                 query = query.Where(r => r.NomeParceiro != null &&
-                    r.NomeParceiro.IndexOf(filter.PartnerName) >= 0);
+                    r.NomeParceiro.ToLower().Contains(nomeParceiro));
             }
 
             if ((filter.AssigneeId ?? 0) > 0)
@@ -151,32 +212,6 @@ namespace Ares.PagueAres.API.Controllers
                     (r.IdUsuarioAtribuido != null && filter.IsAssigned == true));
             }
 
-            if (filter.ViewMode is not null && filter.ViewMode != PaymentListView.Undefined)
-            {
-                var currentUser = this.GetUserFromToken()
-                    ?? throw new Exception("Usuário não autenticado.");
-
-                query = ApplyViewModeFilter(
-                    query,
-                    filter.ViewMode.Value,
-                    currentUser.IdUsuario,
-                    this.CurrentUserIsInRole(Funcoes.Financeiro));
-            }
-
-            var sortField = string.IsNullOrEmpty(filter.SortField) ?
-                "DataSolicitacao" : filter.SortField;
-
-            sortField = char.ToUpper(sortField[0]) + sortField.Substring(1);
-
-            if (string.Equals(filter.SortOrder, "asc", StringComparison.CurrentCultureIgnoreCase))
-            {
-                query = query.OrderBy(e => EF.Property<object>(e, sortField));
-            }
-            else
-            {
-                query = query.OrderByDescending(e => EF.Property<object>(e, sortField));
-            }
-
             return query;
         }
 
@@ -184,30 +219,55 @@ namespace Ares.PagueAres.API.Controllers
         /// Aplica o filtro de visão (aba) à listagem. Rascunhos e cancelados NUNCA aparecem
         /// no fluxo de aprovação (Gestor / Financeiro / Dashboard); apenas a visão
         /// "Minhas Solicitações" exibe os próprios registros do usuário, inclusive rascunhos.
+        /// Toda visão tem escopo: Undefined (0) e qualquer valor fora do enum valem como Minhas Solicitações, e nunca
+        /// devolvem a lista inteira.
         /// </summary>
+        /// <param name="escopoVisaoFinanceira">
+        /// O que a visão financeira (aba Financeiro/Contábil) mostra: <see cref="EscopoVisaoFinanceira.Todos"/> os títulos
+        /// aprovados pelo gestor (Financeiro e Administrador), <see cref="EscopoVisaoFinanceira.Atribuidos"/> só os
+        /// aprovados e atribuídos ao usuário (Contabilidade) ou <see cref="EscopoVisaoFinanceira.Nenhum"/> (os demais
+        /// perfis, mesmo com título atribuído a eles: a atribuição sozinha não dá acesso à visão). As outras visões não
+        /// usam este parâmetro.
+        /// </param>
+        /// <param name="veFilaDoDashboard">
+        /// Verdadeiro quando o usuário tem o perfil Financeiro, Contabilidade ou Administrador, os perfis que veem a tela
+        /// inicial. A fila do Dashboard traz títulos de todos os usuários; sem um desses perfis, ela vem vazia. As
+        /// outras visões não usam este parâmetro.
+        /// </param>
         public static IQueryable<ViewListagemSolicitacoes> ApplyViewModeFilter(
             IQueryable<ViewListagemSolicitacoes> query,
             PaymentListView viewMode,
             int currentUserId,
-            bool isFinanceRole)
+            EscopoVisaoFinanceira escopoVisaoFinanceira,
+            bool veFilaDoDashboard)
         {
             switch (viewMode)
             {
-                case PaymentListView.MyView:
-                    return query.Where(r => r.IdSolicitante == currentUserId);
-
                 case PaymentListView.ManagerView:
                     return query.Where(r => r.IdGestor == currentUserId &&
                         r.Rascunho != true && r.Cancelado != true);
 
                 case PaymentListView.FinancialView:
-                    return isFinanceRole
-                        ? query.Where(r => r.AprovadoGestor == true &&
-                            r.Rascunho != true && r.Cancelado != true)
-                        : query.Where(r => r.AprovadoGestor == true && r.IdUsuarioAtribuido == currentUserId &&
-                            r.Rascunho != true && r.Cancelado != true);
+                    switch (escopoVisaoFinanceira)
+                    {
+                        case EscopoVisaoFinanceira.Todos:
+                            return query.Where(r => r.AprovadoGestor == true &&
+                                r.Rascunho != true && r.Cancelado != true);
+
+                        case EscopoVisaoFinanceira.Atribuidos:
+                            return query.Where(r => r.AprovadoGestor == true && r.IdUsuarioAtribuido == currentUserId &&
+                                r.Rascunho != true && r.Cancelado != true);
+
+                        default:
+                            return query.Where(r => false);
+                    }
 
                 case PaymentListView.Dashboard:
+                    if (!veFilaDoDashboard)
+                    {
+                        return query.Where(r => false);
+                    }
+
                     return query.Where(r =>
                         r.IdUsuarioAtribuido == null &&
                         r.IdStatusGestor == 2 &&
@@ -215,8 +275,10 @@ namespace Ares.PagueAres.API.Controllers
                         r.IdStatusContabilidade != 3 &&
                         r.Rascunho != true && r.Cancelado != true);
 
+                // Minhas Solicitações, e também Undefined e qualquer valor fora do enum.
+                case PaymentListView.MyView:
                 default:
-                    return query;
+                    return query.Where(r => r.IdSolicitante == currentUserId);
             }
         }
 

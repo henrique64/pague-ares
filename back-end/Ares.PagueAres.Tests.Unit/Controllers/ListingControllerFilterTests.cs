@@ -28,7 +28,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void ManagerView_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.ManagerView, currentUserId: 2, isFinanceRole: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.ManagerView, currentUserId: 2, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -40,7 +40,7 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         public void MyView_RetornaPropriosRegistrosInclusiveRascunho()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.MyView, currentUserId: 3, isFinanceRole: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.MyView, currentUserId: 3, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -49,10 +49,10 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         }
 
         [Fact]
-        public void FinancialView_Financeiro_NaoRetornaRascunhoNemCancelado()
+        public void FinancialView_FinanceiroOuAdministrador_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, isFinanceRole: true)
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, escopoVisaoFinanceira: EscopoVisaoFinanceira.Todos, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -61,10 +61,10 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         }
 
         [Fact]
-        public void FinancialView_NaoFinanceiro_SomenteAtribuidosSemRascunho()
+        public void FinancialView_Contabilidade_SomenteAtribuidosSemRascunho()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, isFinanceRole: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, escopoVisaoFinanceira: EscopoVisaoFinanceira.Atribuidos, veFilaDoDashboard: false)
                 .Select(r => r.Codigo)
                 .ToList();
 
@@ -73,15 +73,55 @@ namespace Ares.PagueAres.Tests.Unit.Controllers
         }
 
         [Fact]
+        public void FinancialView_SemPerfilDaAreaFinanceira_NaoRetornaNadaMesmoComTituloAtribuido()
+        {
+            var result = ListingController
+                .ApplyViewModeFilter(Sample(), PaymentListView.FinancialView, currentUserId: 4, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
+                .Select(r => r.Codigo)
+                .ToList();
+
+            // O 5 está atribuído ao usuário 4, mas sem perfil Financeiro, Contabilidade nem Administrador a visão vem vazia.
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
         public void Dashboard_NaoRetornaRascunhoNemCancelado()
         {
             var result = ListingController
-                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 1, isFinanceRole: false)
+                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 1, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: true)
                 .Select(r => r.Codigo)
                 .ToList();
 
             // Não atribuídos, StatusGestor=2, não rejeitados, não rascunho, não cancelado → 2 e 4.
             result.Should().BeEquivalentTo(new[] { 2, 4 });
+        }
+
+        [Fact]
+        public void Dashboard_SemPerfilFinanceiroContabilidadeNemAdministrador_NaoRetornaNada()
+        {
+            var result = ListingController
+                .ApplyViewModeFilter(Sample(), PaymentListView.Dashboard, currentUserId: 3, escopoVisaoFinanceira: EscopoVisaoFinanceira.Nenhum, veFilaDoDashboard: false)
+                .Select(r => r.Codigo)
+                .ToList();
+
+            // A fila traz títulos de todos os usuários (2 e 4, este de outro solicitante): sem o perfil, vem vazia.
+            result.Should().BeEmpty();
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(5)]
+        [InlineData(99)]
+        [InlineData(-1)]
+        public void VisaoIndefinidaOuForaDoEnum_RetornaSoOsPropriosRegistros(int visao)
+        {
+            var result = ListingController
+                .ApplyViewModeFilter(Sample(), (PaymentListView)visao, currentUserId: 3, escopoVisaoFinanceira: EscopoVisaoFinanceira.Todos, veFilaDoDashboard: true)
+                .Select(r => r.Codigo)
+                .ToList();
+
+            // Sem visão conhecida vale Minhas Solicitações: só os registros do solicitante 3 (1, 2, 3), nunca a lista toda.
+            result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
     }
 }
