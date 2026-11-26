@@ -1,24 +1,24 @@
 {
-  "titulos": 113,
-  "anexos": 239,
-  "bytesAnexos": 592445339,
-  "tamanhoZipBytes": 625009461,
-  "segundosAteConcluir": 20.1,
-  "segundosDownload": 3.1,
-  "memoriaApiMiBAntes": 280,
-  "memoriaApiMiBPico": 284.7,
+  "titulos": 98,
+  "anexos": 194,
+  "bytesAnexos": 513802155,
+  "tamanhoZipBytes": 542037256,
+  "segundosAteConcluir": 20.3,
+  "segundosDownload": 2.5,
+  "memoriaApiMiBAntes": 108.1,
+  "memoriaApiMiBPico": 251.8,
   "amostras": [
     {
-      "t": 7.6,
-      "mib": 217.7
+      "t": 7.7,
+      "mib": 206.8
     },
     {
-      "t": 13.6,
-      "mib": 266
+      "t": 13.8,
+      "mib": 238.4
     },
     {
-      "t": 20.5,
-      "mib": 284.7
+      "t": 19.9,
+      "mib": 251.8
     }
   ]
 }

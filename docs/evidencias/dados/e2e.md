@@ -160,3 +160,53 @@ Data: 25/11/2026, a partir das 20:25 (relógio local). Resultado: **aprovado**.
 - **Verificador** sobre esse ZIP: `RESULTADO: APROVADO`, código 0, as 16 regras ok.
 
 O ZIP não foi versionado. A seção 9.6 descreve o estado antes desta recriação; o estado final agora é: stack no ar com a semente nova e íntegra, e o job 10 (Concluído) como único job de exportação.
+
+## 10. Verificação final (código 93d3989)
+
+Data: 25/11/2026, das 20:59 às 21:11 (relógio local), com o código integrado da branch `feature/exportacao-anexos` no commit `93d3989` (F4 do worker, F5 de datas pt-BR e F6 da semente com CPF/CNPJ de dígito verificador inválido). Resultado: **aprovado**. Nenhum código de produção foi alterado.
+
+### 10.1 Reconstrução da stack
+
+`docker compose up -d --build`: imagens da API e do front reconstruídas, `pagueares-api` e `pagueares-frontend` recriados, `pagueares-db` mantido (saudável). Depois da subida, `GET http://localhost:8080/` respondeu 200 e `GET http://localhost:5000/api/exportacao` respondeu 401 (sem login), e o log da API mostra a consulta de reconciliação de `ExportacaoJob` do worker em segundo plano (que roda dentro do processo da API).
+
+### 10.2 Semente recriada
+
+`semente --limpar` e depois `semente --titulos 500 --mb-por-titulo 5 --semente 42`: 300 solicitações e 200 RDDVs exportáveis, 13 rascunhos e 12 cancelados (ficam fora da exportação), 1.092 despesas de RDDV, 1.049 anexos, 2.622.750.255 bytes de anexos, 9 usuários fictícios. A limpeza removeu também 3 jobs de exportação antigos dos usuários fictícios.
+
+Conferências em consultas só de leitura no SQL local do Docker:
+
+- Alfabeto base64 (depois do prefixo `data:...;base64,` quando existe): 0 anexos inválidos em 630 de solicitações e 0 em 419 de RDDVs. `CaminhoArquivo`: 745 `application/pdf` e 304 `image/jpeg`.
+- CPF/CNPJ (`Solicitacao.NumDocParceiro` e `Rddv.CPF` dos registros `[SEMENTE]`): 525 documentos. Numa amostra de 50 (1 a cada 10), 0 passam no dígito verificador; no conjunto todo, também 0 de 525. O validador usado foi conferido contra um CPF e um CNPJ válidos conhecidos (ambos aceitos).
+
+### 10.3 Datas no navegador real
+
+Playwright (`playwright-core`, fora do repositório) com o Edge do sistema, fuso `America/Sao_Paulo`, locale `pt-BR`, login como `fin.semente@exemplo.invalid`. Datas digitadas no formato natural; as requisições foram interceptadas (a criação de exportação foi abortada de propósito, sem gerar job).
+
+| Tela e campo | Digitado | Valor exibido | Enviado à API |
+|---|---|---|---|
+| `#/exportacoes`, Período da Solicitação | `01/11/2025` a `31/12/2025` | `01/11/2025` e `31/12/2025` | `POST api/exportacao`: `dataSolicitacaoInicio=2025-11-01`, `dataSolicitacaoFim=2025-12-31` |
+| `#/exportacoes`, Período de Vencimento | `05/12/2025` a `12/01/2026` | `05/12/2025` e `12/01/2026` | não enviado (conferido só na tela) |
+| `#/payments`, Período da Solicitação | `01/11/2025` a `31/12/2025` | `01/11/2025` e `31/12/2025` | `GET api/Listing`: `requestStart=2025-11-01T03:00:00.000Z`, `requestEnd=2025-12-31T03:00:00.000Z` (meia-noite de 01/11 e de 31/12 em São Paulo, UTC-3) |
+| `#/payments`, Período de Vencimento | `05/12/2025` a `31/12/2025` | `05/12/2025` | `dueStart=2025-12-05T03:00:00.000Z` (05/12/2025 em São Paulo) |
+| `#/create-request`, Data do Vencimento | `05/12/2025`, depois perde o foco | `05/12/2025` | o calendário abre em dez. de 2025 com o dia 5 selecionado (não salvou) |
+
+"Limpar Filtros" em `#/exportacoes`: com datas preenchidas, os 6 campos de data ficaram vazios; com o texto inválido `31/02/2025` num campo, ele também sumiu depois do botão. Observação, fora do escopo desta etapa: a tela `#/payments` envia a data final como meia-noite do dia escolhido (início do dia), comportamento que já existia; a tela Exportações envia `yyyy-MM-dd`.
+
+### 10.4 Medições com o código final
+
+Mesmo login FIN e mesmo filtro da E14 para 100 títulos (`{"tipoTitulo":0,"dataSolicitacaoInicio":"2025-11-01","dataSolicitacaoFim":"2026-01-10"}`); `medicao-100-pos-revisao.json` foi regravado e **é a medição do código final**.
+
+| | títulos | anexos | bytes de anexos | ZIP (bytes) | concluir | download | memória da API (MiB) antes / pico |
+|---|---|---|---|---|---|---|---|
+| 100 (`medicao-100-pos-revisao.json`) | 98 | 194 | 513.802.155 | 542.037.256 | 20,3 s | 2,5 s | 108,1 / 251,8 |
+| 500 (`medicao-500-codigo-final.json`) | 500 | 995 | 2.621.439.581 | 2.765.428.931 | 92,4 s | 11,7 s | 244,2 / 374,3 |
+
+Pico de memória: 374,3 MiB (limite 700) e diferença entre as duas medições de 122,5 MiB (limite 150). Os totais de títulos e anexos diferem dos da E14 porque a semente foi recriada com a F6 (os CPFs/CNPJs inválidos mudaram o gerador pseudoaleatório). O verificador aprovou os dois ZIPs (código 0, as 16 regras ok); o relatório do de 500 está em `verificacao-500-codigo-final.json`. A medição de 500 foi refeita só para regenerar `previa-pacote.html` com a semente nova (os CPFs da prévia antiga tinham dígito verificador válido); as medições e a verificação da E14 (`medicao-500.json`, `verificacao-500.json`, `amostra-pacote.txt`) ficam como registro histórico.
+
+### 10.5 Capturas regeneradas
+
+`tools/exportacao/capturas/capturar.ts` passou a digitar `01/11/2025` e `31/12/2025` (removido o contorno `11/01/2025` e `12/31/2025`) e a usar o botão "Limpar Filtros" em vez de recarregar a tela, conferindo que nenhum campo de data ficou com texto. O script saiu com 0 e regravou as 9 capturas em `docs/evidencias/img/` (mesmos nomes); as de menu, formulário e acesso negado (01, 02 e 06) saíram idênticas às anteriores, as outras seis mudaram. Cada PNG foi aberto e conferido: só dados da semente (usuários e nomes fictícios, `@exemplo.invalid`, parceiros inventados), nenhum token, senha ou URL com token. A captura 02 mostra o período `01/11/2025 – 31/12/2025`.
+
+### 10.6 Estado final
+
+Stack no ar (`pagueares-db`, `pagueares-api`, `pagueares-frontend`) com a semente nova e íntegra e 3 jobs de exportação do usuário FIN fictício, todos Concluídos (as duas exportações de 500 títulos e a de 98).
