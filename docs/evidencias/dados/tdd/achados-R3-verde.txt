@@ -1,0 +1,91 @@
+R3 — Achados da reconferência do revisor (back-end, crítica: autorização) — fase VERDE (testes depois da correção)
+Data: 2026-11-26
+Branch: fix/achados-tela (correção no commit 74decb9)
+Comandos: dotnet test back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~ListagemEscopoTests|FullyQualifiedName~AtribuicaoTests|FullyQualifiedName~VisaoFinanceiraTests"
+          dotnet build back-end/Ares.PagueAres.sln --no-incremental
+          dotnet test back-end/Ares.PagueAres.sln --no-build
+          mutação: git archive HEAD back-end, extraído em <scratchpad>/r3/copia, e dotnet test nessa cópia
+Arquivos de teste: back-end/Ares.PagueAres.Tests.Integration/Controllers/AtribuicaoTests.cs (novo, 42 casos)
+                   back-end/Ares.PagueAres.Tests.Integration/Controllers/ListagemEscopoTests.cs (18 casos novos)
+                   back-end/Ares.PagueAres.Tests.Unit/Controllers/ListingControllerFilterTests.cs (escopo novo nas
+                   chamadas; 1 caso novo; o caso "SemPerfilFinanceiroNemAdministrador_SomenteAtribuidos" passa a se chamar
+                   "Contabilidade_SomenteAtribuidosSemRascunho")
+Banco: EF Core InMemory. Só dados fictícios.
+
+Mudança
+------------------------------------------------------------------------------------------
+Achado 1 — atribuição (RequestController.SetUser e RddvController.SetUser; regras em API/Helpers/AtribuicaoHelper)
+- Papel: só Financeiro ou Administrador, pelo JWT. Os demais perfis recebem 403 com success=false e "Atribuição
+  permitida apenas para os perfis Financeiro e Administrador.". O papel é conferido antes da busca do título, para que
+  um id inexistente responda igual a um existente a quem não pode atribuir. A tela libera a lista "Atribuir" só para o
+  FIN (front-end/src/app/home/home.component.ts:89, canAssign); o ADM entra porque tem acesso total, como no resto da API.
+- Título inexistente: 404 (antes 400), com "Solicitação não encontrada." / "Relatório não encontrado.". A tela trata
+  qualquer erro HTTP com a mesma mensagem de falha, então nada muda para ela.
+- Destino: usuário ativo com perfil FIN ou CON no banco, o mesmo conjunto que a tela oferece na lista
+  (home.component.ts:98, GET /api/users/list?roles=FIN,CON, que filtra Ativo == true). Outro destino (inexistente, 0,
+  inativo, SOL, GES, ADM sem FIN nem CON) recebe 400 com success=false e "O usuário informado não pode receber a
+  atribuição: escolha um usuário ativo com perfil Financeiro ou Contabilidade.", sem gravar e sem mandar e-mail.
+- Único chamador na tela: home.component.ts:208-224 (payment.SetUser e rddv.SetUser).
+Achado 2 — defesa em profundidade na listagem (ListingController)
+- ApplyViewModeFilter recebe o escopo da visão financeira como EscopoVisaoFinanceira (Domain/Enums), no lugar do bool
+  veTodosNaVisaoFinanceira: Todos (FIN e ADM: todos os aprovados pelo gestor), Atribuidos (CON: só os atribuídos a ela)
+  e Nenhum (os demais perfis: lista vazia, 200, mesmo com título atribuído a eles, como já se fazia no Dashboard).
+- BuildQuery decide o escopo numa cadeia só: FIN/ADM, senão CON, senão Nenhum.
+Documentação: back-end/CLAUDE.md (tabela de endpoints, códigos de resposta da atribuição, regras da atribuição em
+Segurança, FinancialView e pendência 5, que fica só com RddvController.POST e TravelTypeController.POST e registra que a
+atribuição ainda não confere o estado do título).
+
+Resultado
+------------------------------------------------------------------------------------------
+Filtro dos testes da etapa: Integração 118 aprovados, 0 com falha (115 da etapa e os 3 de VisaoFinanceiraTests).
+Build (--no-incremental): 0 erros, 35 avisos, todos já existentes: os mesmos 7 CS8602/CS8604 (em RequestController e
+RddvController a linha passou de 54 para 55 por causa do using novo) e os NU1902/NU1903 de pacotes. Nenhum aviso novo.
+Unidade:    149 aprovados, 0 com falha (antes da etapa: 148; 1 novo, nenhum removido).
+Integração: 425 aprovados, 0 com falha (antes da etapa: 365; 60 novos, nenhum removido).
+
+Cenários que passaram a verde
+------------------------------------------------------------------------------------------
+[PASSOU] AtribuicaoTests.Atribuir_PerfilSemPermissao_Responde403ENaoGrava, 12 casos: 403, success=false, mensagem;
+         atribuído e data continuam nulos; o título não aparece na visão financeira de quem tentou e continua na fila
+         do Dashboard do FIN
+[PASSOU] AtribuicaoTests.Atribuir_PerfilSemPermissao_TituloInexistente_Responde403, 6 casos
+[PASSOU] AtribuicaoTests.Atribuir_TituloInexistente_Responde404, 4 casos
+[PASSOU] AtribuicaoTests.Atribuir_DestinoInvalido_Responde400ComMensagemENaoGrava, 16 casos: 400, mensagem, nada gravado
+[PASSOU] ListagemEscopoTests.Listagem_PorVisaoEPerfil_DevolveExatamenteOsTitulosDoEscopo, viewMode=3 com SOL 3 e GES 2:
+         lista vazia (S907 e S908, atribuídos a eles, ficam de fora)
+[PASSOU] ListingControllerFilterTests.FinancialView_SemPerfilDaAreaFinanceira_NaoRetornaNadaMesmoComTituloAtribuido (novo)
+
+Controles que continuam verdes
+------------------------------------------------------------------------------------------
+[PASSOU] AtribuicaoTests.Atribuir_FinanceiroOuAdministradorParaDestinoValido_GravaETiraDaFila, 4 casos
+[PASSOU] ListagemEscopoTests: os outros 16 casos novos e os 55 que já existiam
+[PASSOU] VisaoFinanceiraTests (FIN, ADM e CON), ExportLegadoFiltrosTests (aba Financeiro/Contábil do FIN) e o resto da
+         suíte
+
+Mutação do achado 2 (cópia de HEAD 74decb9 por git archive; nada no repositório foi alterado)
+------------------------------------------------------------------------------------------
+Mutação A, a do revisor — ListingController.cs:103:
+  - this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador) ? EscopoVisaoFinanceira.Todos
+  + this.CurrentUserIsInRole(Funcoes.Financeiro, Funcoes.Administrador, Funcoes.Gestor, Funcoes.Solicitante) ? EscopoVisaoFinanceira.Todos
+  dotnet test <cópia>/back-end/Ares.PagueAres.sln:
+  Unidade:    149 aprovados, 0 com falha
+  Integração: 13 com falha, 412 aprovados, 425 no total  → MUTAÇÃO MORTA
+  [FALHOU] ListagemEscopoTests.Listagem_PorVisaoEPerfil_DevolveExatamenteOsTitulosDoEscopo, viewMode=3 com SOL 3, SOL 6
+           e GES 2: "Expected titulos to be a collection with 0 item(s) ... but {"S900", "S902", "S905", "S907", "S908",
+           "R910"}"
+  [FALHOU] AtribuicaoTests.Atribuir_PerfilSemPermissao_Responde403ENaoGrava, 10 casos (os de SOL e GES; os 2 de CON
+           passam, porque a mutação não muda o escopo da Contabilidade): o título aparece na visão financeira de quem
+           tentou
+Mutação B, a da defesa em profundidade — ListingController.cs:105 (sem o escopo Nenhum, os demais perfis voltam a ver
+os atribuídos a eles, como antes da correção):
+  - : EscopoVisaoFinanceira.Nenhum;
+  + : EscopoVisaoFinanceira.Atribuidos;
+  dotnet test <cópia>/back-end/Ares.PagueAres.Tests.Integration --filter "FullyQualifiedName~ListagemEscopoTests|FullyQualifiedName~AtribuicaoTests":
+  Integração: 2 com falha, 113 aprovados, 115 no total  → MUTAÇÃO MORTA
+  [FALHOU] Listagem_PorVisaoEPerfil_DevolveExatamenteOsTitulosDoEscopo, viewMode=3: SOL 3 recebeu {"S907"} e GES 2
+           recebeu {"S908"}, esperado vazio
+
+Resumo do console
+------------------------------------------------------------------------------------------
+Aprovado!  – Com falha:     0, Aprovado:   149, Ignorado:     0, Total:   149, Duração: 10 s - Ares.PagueAres.Tests.Unit.dll (net10.0)
+Aprovado!  – Com falha:     0, Aprovado:   425, Ignorado:     0, Total:   425, Duração: 1 m 27 s - Ares.PagueAres.Tests.Integration.dll (net10.0)
