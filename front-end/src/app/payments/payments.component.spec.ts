@@ -194,6 +194,43 @@ describe('PaymentsComponent', () => {
         "Solicitante", "Descrição", "Valor bruto", "Status gestor", "Status financeiro", "Obs. gestor"]);
     });
 
+    it("linhas de RDDV: Nº do documento vazio e Parceiro = solicitante, sem o \"#\" da view, nas três abas; Solicitação não muda", async () => {
+      const base = {
+        dataSolicitacao: new Date(2026, 10, 1), dataVencimento: null, usuarioAtribuido: null, idUsuarioAtribuido: null,
+        valor: 10, observacaoGestor: "", idStatusGestor: null, idStatusFinanceiro: null, idStatusContabilidade: null,
+        statusGestor: "", statusFinanceiro: "", statusContabilidade: "", idGestor: null, aprovadoSetor: null,
+        aprovadoGestor: null, rascunho: false, cancelado: false
+      };
+      const sol = { ...base, codigo: 11, idTipo: 0, tipo: "Pagamento", numeroDocumento: "NF-77", nomeSolicitante: "Maria Solicitante",
+        idSolicitante: 6, nomeParceiro: "Fornecedor X", descricao: "Compra" };
+      const rddv = { ...base, codigo: 45, idTipo: 1, tipo: "RDDV - Adiantamento", numeroDocumento: "#", nomeSolicitante: "João Viajante",
+        idSolicitante: 7, nomeParceiro: "#", descricao: "#" };
+      (TestBed.inject(PaymentService).GetFilteredList as jasmine.Spy).and.returnValue(
+        of({ success: true, message: "", data: [sol, rddv], records: 2, pages: 1, page: 1 }));
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      for (const rotulo of abas) {
+        const ths = cabecalhos(rotulo);
+        const linhas = Array.from(aba(rotulo).querySelectorAll("tbody tr")).filter(tr => tr.querySelector("td")) as HTMLElement[];
+        const celula = (codigo: number, coluna: string) => {
+          const tr = linhas.find(l => (l.querySelectorAll("td")[1].textContent ?? "").trim() === String(codigo))!;
+          return (tr.querySelectorAll("td")[ths.indexOf(coluna)].textContent ?? "").trim();
+        };
+        expect(linhas.length).withContext(rotulo + ": linhas").toBe(2);
+        if (ths.includes("Nº do documento")) {
+          expect(celula(45, "Nº do documento")).withContext(rotulo + ": RDDV, Nº do documento").toBe("");
+          expect(celula(11, "Nº do documento")).withContext(rotulo + ": SOL, Nº do documento").toBe("NF-77");
+        }
+        if (ths.includes("Parceiro")) {
+          expect(celula(45, "Parceiro")).withContext(rotulo + ": RDDV, Parceiro").toBe("João Viajante");
+          expect(celula(11, "Parceiro")).withContext(rotulo + ": SOL, Parceiro").toBe("Fornecedor X");
+        }
+      }
+    });
+
     it("rótulos dos filtros e botões em caixa de frase, sem placeholder em Title Case", async () => {
       fixture.detectChanges();
       await fixture.whenStable();

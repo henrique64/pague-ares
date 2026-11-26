@@ -822,6 +822,27 @@ describe('ExportacoesComponent', () => {
         component.ngOnDestroy();
       });
 
+      it('Tamanho: Excluída mostra "—" (arquivo apagado); as demais situações mostram o tamanho', () => {
+        jobsAtuais = [
+          job(7, EnumStatusExportacao.Excluido, { tamanhoBytes: 1536 }),
+          job(8, EnumStatusExportacao.Concluido, { tamanhoBytes: 1536 }),
+          job(9, EnumStatusExportacao.Expirado, { tamanhoBytes: 512 }),
+        ];
+        montarTela();
+
+        const cabecalhos = Array.from(fixture.nativeElement.querySelectorAll('thead th')).map((th: any) => th.textContent.trim());
+        const col = cabecalhos.indexOf('Tamanho');
+        expect(col).toBeGreaterThanOrEqual(0);
+        const tamanhoDa = (tr: Element) => (tr.querySelectorAll('td')[col].textContent ?? '').trim();
+        const trs = linhas();
+        const porId = (id: number) => trs.find(tr => (tr.querySelectorAll('td')[1].textContent ?? '').trim() === String(id))!;
+
+        expect(tamanhoDa(porId(7))).toBe('—');
+        expect(tamanhoDa(porId(8))).toBe('1,5 KB');
+        expect(tamanhoDa(porId(9))).toBe('512 B');
+        component.ngOnDestroy();
+      });
+
       it('a coluna "Nº" vem logo depois de "Ações" e mostra o número da exportação', () => {
         jobsAtuais = [job(1234, EnumStatusExportacao.Concluido)];
         montarTela();
@@ -946,7 +967,7 @@ describe('ExportacoesComponent', () => {
       expect(campo.type).toBe('text');
       const formField = campo.closest('mat-form-field')!;
       expect(formField.querySelector('mat-hint')?.textContent?.trim())
-        .toBe('Número (123) ou código com prefixo (SOL-000123, RDDV-000045)');
+        .toBe('Ex.: 123, SOL-000123 ou RDDV-000045');
 
       campo.value = '1,5';
       campo.dispatchEvent(new Event('input'));

@@ -34,7 +34,7 @@
             [errorStateMatcher]="codigoErrorMatcher"
             [(ngModel)]="form.codigo"
           />
-          <mat-hint>Número (123) ou código com prefixo (SOL-000123, RDDV-000045)</mat-hint>
+          <mat-hint>Ex.: 123, SOL-000123 ou RDDV-000045</mat-hint>
           <mat-error>{{ erroCodigo }}</mat-error>
         </mat-form-field>
       </div>
@@ -333,7 +333,7 @@
                         <span *ngIf="job.totalTitulos > 0">({{ job.titulosProcessados }} de {{ job.totalTitulos }} títulos)</span>
                       </small>
                     </td>
-                    <td>{{ tamanhoLegivel(job.tamanhoBytes) }}</td>
+                    <td>{{ job.status === EnumStatus.Excluido ? "—" : tamanhoLegivel(job.tamanhoBytes) }}</td>
                     <td>{{ paraData(job.dataExpiracao) | date: "dd/MM/yyyy HH:mm" }}</td>
                   </tr>
                 </tbody>

@@ -324,7 +324,7 @@
                           <span *ngIf="!req.rascunho && !req.cancelado">{{ req.statusContabilidade }}</span>
                         </td>
                         <td>{{ req.nomeSolicitante }}</td>
-                        <td>{{ req.nomeParceiro }}</td>
+                        <td>{{ parceiroExibido(req) }}</td>
                         <td>{{ req.valor | currency: "BRL":true }}</td>
                         <td>{{ req.descricao }}</td>
                       </tr>
@@ -399,7 +399,7 @@
                         </td>
                         <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
                         <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
-                        <td>{{ req.numeroDocumento }}</td>
+                        <td>{{ numeroDocumentoExibido(req) }}</td>
                         <td>{{ req.nomeSolicitante }}</td>
                         <td>{{ req.descricao }}</td>
                         <td>{{ req.valor | currency: "BRL":true }}</td>
@@ -479,9 +479,9 @@
                         </td>
                         <td>{{ req.dataSolicitacao | date: "dd/MM/yyyy" }}</td>
                         <td>{{ req.dataVencimento | date: "dd/MM/yyyy" }}</td>
-                        <td>{{ req.numeroDocumento }}</td>
+                        <td>{{ numeroDocumentoExibido(req) }}</td>
                         <td>{{ req.nomeSolicitante }}</td>
-                        <td>{{ req.nomeParceiro }}</td>
+                        <td>{{ parceiroExibido(req) }}</td>
                         <td>{{ req.valor | currency: "BRL":true }}</td>
                         <td>{{ req.statusGestor }}</td>
                         <td>{{ req.statusContabilidade }}</td>

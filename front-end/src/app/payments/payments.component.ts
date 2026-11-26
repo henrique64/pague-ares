@@ -248,6 +248,21 @@ export class PaymentsComponent implements OnInit {
           this.myFilter.sortOrder === "desc";
   }
 
+  // A view vListagemSolicitacoes grava "#" em Nº do documento e em Parceiro nas linhas de RDDV, que não têm
+  // esses campos. Na tela o Nº do documento fica vazio e o Parceiro é o solicitante (mesma regra da planilha
+  // Pagamentos.xlsx). Solicitação (idTipo 0) mostra os valores como vêm.
+  private isRddv(req: PaymentListModel): boolean {
+    return req.idTipo !== 0;
+  }
+
+  numeroDocumentoExibido(req: PaymentListModel): string {
+    return this.isRddv(req) ? "" : (req.numeroDocumento ?? "");
+  }
+
+  parceiroExibido(req: PaymentListModel): string {
+    return this.isRddv(req) ? (req.nomeSolicitante ?? "") : req.nomeParceiro;
+  }
+
   print(req: PaymentListModel) {
     if(req.idTipo === 0) {
       window.open("/#/payment-report/" + req.codigo);
