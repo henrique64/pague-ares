@@ -1,0 +1,103 @@
+<article class="pagina" data-id="o-que-vem-no-pacote" data-secao="Exportar títulos com anexos" data-titulo="O que vem no pacote" data-publico="financeiro administrador">
+  <p class="resumo">Descreve o conteúdo do ZIP baixado: a planilha <code>titulos.xlsx</code>, as pastas com os anexos, os índices e o <code>LEIA-ME.txt</code>. Explica também como abrir o pacote e conferir os arquivos.</p>
+
+  <h2>Extrair antes de abrir</h2>
+  <p>O pacote é um arquivo ZIP, ou seja, uma pasta compactada. O ZIP deve ser extraído por inteiro numa pasta do computador antes de abrir a planilha. Os links da planilha apontam para as pastas e os anexos já extraídos e só funcionam depois da extração. A tela de exportações, o <code>LEIA-ME.txt</code> e esta página dão o mesmo aviso.</p>
+
+  <h2>A estrutura do ZIP</h2>
+  <p>Na raiz do ZIP há sempre quatro arquivos. Com <span class="tela">Incluir anexos</span> marcada, há ainda uma pasta para cada título que tem anexos.</p>
+  <div class="tabela"><table>
+    <thead><tr><th>Item</th><th>O que é</th></tr></thead>
+    <tbody>
+      <tr><td><code>titulos.xlsx</code></td><td>A planilha com os dados dos títulos, em quatro abas.</td></tr>
+      <tr><td><code>indice.csv</code></td><td>Lista dos anexos, com o tamanho e o SHA-256 de cada arquivo. Abre no Excel.</td></tr>
+      <tr><td><code>indice.json</code></td><td>O mesmo índice em JSON, com os filtros usados, os totais e todos os títulos exportados.</td></tr>
+      <tr><td><code>LEIA-ME.txt</code></td><td>Instruções curtas, data de geração, totais e filtros usados.</td></tr>
+      <tr><td><code>SOL-000123</code>, <code>RDDV-000045</code> e assim por diante</td><td>Uma pasta por título que tem anexos, com os arquivos dentro.</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure class="captura"><img src="img/pacote-arvore-extraida.webp" alt="Pasta do ZIP extraído, com as pastas dos títulos e os quatro arquivos da raiz" loading="lazy">
+    <figcaption>Prévia da pasta do ZIP extraído: na raiz ficam titulos.xlsx, indice.csv, indice.json e LEIA-ME.txt, e cada título com anexos tem a sua pasta SOL-… ou RDDV-…; um nome de anexo repetido ganha (2).</figcaption></figure>
+
+  <h2>As pastas dos títulos</h2>
+  <p>Cada pasta tem o código do título como nome: <code>SOL-</code> e o número para solicitações, <code>RDDV-</code> e o número para RDDVs, com seis dígitos no mínimo. Título sem anexo não ganha pasta. Com <span class="tela">Incluir anexos</span> desmarcada, o pacote não tem nenhuma pasta de título.</p>
+  <p>O nome de cada anexo dentro da pasta é o tipo de documento, um hífen e o nome original do arquivo, como <code>Nota Fiscal - boleto-marco.pdf</code>. As regras de nome:</p>
+  <ul>
+    <li>Anexo sem tipo de documento começa por <code>Documento</code>.</li>
+    <li>Anexo sem nome original recebe o nome <code>anexo-</code> seguido do número do anexo.</li>
+    <li>O nome tem no máximo 120 caracteres, e a extensão é preservada.</li>
+    <li>Nomes repetidos na mesma pasta ganham <code>(2)</code>, <code>(3)</code> e assim por diante antes da extensão. O primeiro fica sem número. A comparação não diferencia maiúsculas de minúsculas: na foto, o segundo anexo enviado, de nome igual ao primeiro, mas escrito em maiúsculas, aparece como <code>EXTRATO (2).PDF</code> ao lado de <code>extrato.pdf</code>.</li>
+    <li>Os caracteres que o Windows não aceita em nomes de arquivo saem do nome.</li>
+  </ul>
+
+  <h2>A planilha titulos.xlsx</h2>
+  <p>A planilha tem quatro abas, nesta ordem. Em todas, a primeira linha fica em negrito, congelada e com filtro automático.</p>
+  <dl class="campos">
+    <dt>Solicitações</dt>
+    <dd>Uma linha por solicitação exportada, com os dados do pedido, do parceiro e das aprovações do Gestor, do Financeiro e da Contabilidade.</dd>
+    <dt>RDDVs</dt>
+    <dd>Uma linha por RDDV exportado, com os dados da viagem, dos valores e das aprovações.</dd>
+    <dt>Despesas dos RDDVs</dt>
+    <dd>Uma linha por despesa dos RDDVs exportados.</dd>
+    <dt>Anexos</dt>
+    <dd>Uma linha por anexo que entrou no pacote. As colunas incluem <span class="tela">Código do título</span>, <span class="tela">Tipo do título</span>, <span class="tela">Tipo de documento</span>, <span class="tela">Nome original</span>, <span class="tela">Arquivo no pacote</span>, <span class="tela">Tamanho (bytes)</span>, <span class="tela">SHA-256</span> e <span class="tela">Data de envio</span>.</dd>
+  </dl>
+
+  <figure class="captura"><img src="img/pacote-planilha-abas.webp" alt="Planilha titulos.xlsx na aba Solicitações, com as quatro abas embaixo" loading="lazy">
+    <figcaption>Prévia da planilha titulos.xlsx na aba Solicitações; as abas Solicitações, RDDVs, Despesas dos RDDVs e Anexos aparecem embaixo, e o código do título é um link para a pasta.</figcaption></figure>
+
+  <h3>Links para as pastas e os anexos</h3>
+  <p>Nas abas <span class="tela">Solicitações</span> e <span class="tela">RDDVs</span>, a coluna <span class="tela">Código</span> é um link para a pasta do título, quando ele tem anexos. A coluna <span class="tela">Qtde. de anexos</span> conta os anexos que entraram no pacote. Na aba <span class="tela">Anexos</span>, a coluna <span class="tela">Arquivo no pacote</span> é um link para cada arquivo. Os links são relativos e só funcionam com o ZIP extraído.</p>
+
+  <figure class="captura"><img src="img/pacote-planilha-anexos.webp" alt="Aba Anexos do titulos.xlsx, com uma linha por anexo e as colunas de tipo, nome, caminho, tamanho e SHA-256" loading="lazy">
+    <figcaption>Prévia da aba Anexos do titulos.xlsx: uma linha por anexo, com tipo de documento, nome original, caminho no pacote (link), tamanho, SHA-256 e data de envio.</figcaption></figure>
+
+  <h3>Formato dos valores</h3>
+  <ul>
+    <li>Datas em dd/mm/aaaa. Data com hora em dd/mm/aaaa hh:mm.</li>
+    <li>Valores com duas casas decimais e separador de milhar.</li>
+    <li>Tipo de solicitação, tipo de pagamento, forma de pagamento, status e tipo de despesa saem por extenso.</li>
+    <li>Campos de sim ou não saem como <span class="tela">Sim</span> e <span class="tela">Não</span>.</li>
+    <li>A coluna <span class="tela">Tipo do título</span> da aba <span class="tela">Anexos</span> mostra <span class="tela">Solicitação</span> ou <span class="tela">RDDV</span>.</li>
+  </ul>
+
+  <h3>O tipo de título escolhido e as abas</h3>
+  <p>Com o tipo <span class="tela">Ambos (Solicitações e RDDVs)</span>, as abas <span class="tela">Solicitações</span> e <span class="tela">RDDVs</span> têm linhas. Com <span class="tela">Solicitação</span>, as abas <span class="tela">RDDVs</span> e <span class="tela">Despesas dos RDDVs</span> ficam só com o cabeçalho. Com <span class="tela">RDDV</span>, a aba <span class="tela">Solicitações</span> fica só com o cabeçalho. Com <span class="tela">Incluir anexos</span> desmarcada, a aba <span class="tela">Anexos</span> também fica só com o cabeçalho.</p>
+
+  <h2>Os índices</h2>
+  <p>O <code>indice.csv</code> e o <code>indice.json</code> listam os anexos do pacote, um por entrada, com o tipo de documento, o nome original, o caminho dentro do pacote, o tamanho em bytes e o SHA-256. O SHA-256 é um código calculado a partir do conteúdo do arquivo: se o arquivo mudar um único byte, o código muda.</p>
+  <ul>
+    <li><strong>indice.csv:</strong> texto UTF-8 com campos separados por ponto e vírgula, para abrir no Excel. Sem anexos (<span class="tela">Incluir anexos</span> desmarcada ou títulos sem anexo), traz só a linha de cabeçalho.</li>
+    <li><strong>indice.json:</strong> o mesmo índice em formato JSON, para sistemas de análise. Traz também a versão do formato, o número e a data da exportação, os filtros do pedido, os totais e a lista de todos os títulos exportados, inclusive os sem anexo.</li>
+  </ul>
+
+  <figure class="captura"><img src="img/pacote-indice-csv.webp" alt="Conteúdo do indice.csv, com o cabeçalho na primeira linha e uma linha por anexo" loading="lazy">
+    <figcaption>Prévia do arquivo indice.csv: primeira linha com o cabeçalho titulo;tipo_titulo;tipo_documento;nome_original;arquivo;caminho_relativo;tamanho_bytes;sha256 e uma linha por anexo.</figcaption></figure>
+
+  <div class="nota">
+    <p><strong>Tipo do título nos índices.</strong> No <code>indice.csv</code> e no <code>indice.json</code>, o tipo do título sai como <code>Solicitacao</code> ou <code>Rddv</code>, sem acento. A aba <span class="tela">Anexos</span> da planilha usa <span class="tela">Solicitação</span> e <span class="tela">RDDV</span>.</p>
+  </div>
+
+  <h2>O arquivo LEIA-ME.txt</h2>
+  <p>O <code>LEIA-ME.txt</code> é um texto simples, que abre em qualquer editor de texto. Traz, nesta ordem:</p>
+  <ul>
+    <li>o título do pacote e a linha com o número da exportação, a data e a hora da geração e o fuso do servidor;</li>
+    <li>o aviso para extrair o ZIP inteiro antes de abrir o Excel;</li>
+    <li>a lista do que há no pacote;</li>
+    <li>como conferir a integridade de um anexo: comparar o SHA-256 do índice com o do arquivo, no Windows com o comando <code>certutil -hashfile</code> seguido do arquivo e de <code>SHA256</code>;</li>
+    <li>os totais de solicitações, RDDVs, despesas de RDDV e anexos, com o tamanho dos anexos;</li>
+    <li>os filtros usados: uma linha por filtro preenchido, e sempre a linha final de anexos incluídos, com sim ou não.</li>
+  </ul>
+  <p>No <code>LEIA-ME.txt</code>, os filtros de usuário e de departamento aparecem pelo número de identificação, e não pelo nome. Os filtros de lista de opções, como status e tipo, aparecem por extenso. Um período com os dois lados aparece como de uma data a outra; só com o início, como a partir de uma data; só com o fim, como até uma data.</p>
+
+  <figure class="captura"><img src="img/pacote-leia-me.webp" alt="Texto do arquivo LEIA-ME.txt, do título até os filtros usados" loading="lazy">
+    <figcaption>Prévia do texto do LEIA-ME.txt, com o aviso para extrair o ZIP antes de abrir o Excel, a lista dos arquivos, os totais e os filtros usados.</figcaption></figure>
+
+  <h2>Conferir a integridade dos anexos</h2>
+  <ol class="passos">
+    <li>No <code>indice.csv</code> (ou no <code>indice.json</code>), localizar o anexo e anotar o SHA-256 dele.</li>
+    <li>Calcular o SHA-256 do arquivo extraído. No Windows, o <code>LEIA-ME.txt</code> indica o comando <code>certutil -hashfile</code>.</li>
+    <li>Comparar os dois códigos. Se forem iguais, o arquivo extraído é igual ao anexo guardado no PagueAres na hora da exportação.</li>
+  </ol>
+</article>

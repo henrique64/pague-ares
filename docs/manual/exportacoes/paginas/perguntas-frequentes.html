@@ -1,0 +1,62 @@
+<article class="pagina" data-id="perguntas-frequentes" data-secao="Referência" data-titulo="Perguntas frequentes" data-publico="financeiro administrador">
+  <p class="resumo">Respostas curtas para as dúvidas mais comuns sobre a exportação de títulos com anexos, com um link para a página que explica cada assunto.</p>
+
+  <h2>Acesso</h2>
+  <h3>Por que o item Exportações não aparece no menu?</h3>
+  <p>O item é exclusivo dos perfis Financeiro e Administrador. Contabilidade, Gestor e Solicitante não o veem. Ver <a href="#cuidados-e-limites--quem-tem-acesso">Cuidados e limites</a>.</p>
+
+  <h3>O que é RDDV?</h3>
+  <p>É o Relatório de Despesas com Deslocamento e Viagem, a prestação de contas de uma viagem. Na exportação, solicitações e RDDVs são os dois tipos de título.</p>
+
+  <h2>Gerar</h2>
+  <h3>Todos os filtros são obrigatórios?</h3>
+  <p>Nenhum. Campo em branco ou lista em <span class="tela">Todos</span> não restringe o resultado. Ver <a href="#gerar-exportacao--os-campos-do-formulario">Gerar uma exportação</a>.</p>
+
+  <h3>Por que alguns campos ficam desabilitados?</h3>
+  <p>Cada campo cujo rótulo traz <span class="tela">(só Solicitação)</span> ou <span class="tela">(só RDDV)</span> existe para um único tipo de título. Ao escolher o outro tipo em <span class="tela">Tipo de título</span>, o campo é desabilitado e não entra no filtro. Ver <a href="#gerar-exportacao--tipo-de-titulo-e-campos-desabilitados">Tipo de título e campos desabilitados</a>.</p>
+
+  <h3>O que o filtro Código aceita?</h3>
+  <p>Aceita o número do título, sem prefixo e sem zeros à esquerda. A planilha e as pastas do pacote mostram o código com prefixo, como <code>SOL-000123</code> para a solicitação de número 123.</p>
+
+  <h3>O que muda ao desmarcar Incluir anexos?</h3>
+  <p>O pacote sai sem pastas de títulos. A planilha e o <code>LEIA-ME.txt</code> continuam no pacote, e a aba <span class="tela">Anexos</span> e o <code>indice.csv</code> ficam só com o cabeçalho, e o <code>indice.json</code> traz a lista de arquivos vazia.</p>
+
+  <h3>Por que um título esperado não entrou no pacote?</h3>
+  <p>Só entram títulos que já foram aprovados pelo Gestor, que não são rascunho e que não foram cancelados. Depois disso, os filtros do formulário restringem o resultado. Conferir, em especial, os períodos e os status escolhidos.</p>
+
+  <h3>Por que o pedido foi recusado?</h3>
+  <p>O aviso que aparece traz o motivo. As recusas mais comuns e o que fazer em cada uma estão em <a href="#cuidados-e-limites--quando-o-pedido-e-recusado">Cuidados e limites</a>.</p>
+
+  <h2>Acompanhar e baixar</h2>
+  <h3>A tela pode ser fechada durante a geração?</h3>
+  <p>Sim. A preparação segue no servidor. Ao voltar para <span class="tela">Exportações</span>, a lista <span class="tela">Minhas exportações</span> mostra a situação atual.</p>
+
+  <h3>Quanto tempo o arquivo fica disponível?</h3>
+  <p>Pelo valor padrão do sistema, 48 horas depois de concluído; a equipe de TI pode alterar o prazo. A coluna <span class="tela">Expira em</span> mostra a data e a hora de cada exportação. Passado o prazo, o arquivo deixa de poder ser baixado e a situação passa a <span class="tela">Expirada</span> em até 30 minutos (a limpeza roda a cada 30 minutos, valor padrão). É preciso gerar de novo.</p>
+
+  <h3>O botão Baixar não funcionou na segunda vez. Por quê?</h3>
+  <p>O link gerado pelo botão <span class="tela">Baixar</span> vale uma vez e por 120 segundos. Clicar em <span class="tela">Baixar</span> de novo gera um link novo. Ver <a href="#acompanhar-e-baixar--baixar-o-arquivo">Acompanhar e baixar</a>.</p>
+
+  <h3>Como cancelar uma exportação?</h3>
+  <p>Pelo botão <span class="tela">Cancelar</span>, nas linhas <span class="tela">Pendente</span> e <span class="tela">Em processamento</span>. A linha <span class="tela">Em processamento</span> só muda para <span class="tela">Cancelada</span> quando o servidor para de gerar o pacote.</p>
+
+  <h3>Quantas exportações podem ficar em andamento ao mesmo tempo?</h3>
+  <p>Até 2 por usuário, contando as linhas <span class="tela">Pendente</span> e <span class="tela">Em processamento</span>. Para pedir outra, é preciso esperar uma terminar ou cancelá-la.</p>
+
+  <h3>Onde aparece o número da exportação?</h3>
+  <p>A lista <span class="tela">Minhas exportações</span> não mostra o número. Ele aparece no nome do arquivo baixado, depois de <code>exportacao-titulos-</code>, e na segunda linha do <code>LEIA-ME.txt</code>.</p>
+
+  <h2>O pacote</h2>
+  <h3>Por que os links da planilha não abrem?</h3>
+  <p>Os links só funcionam com o ZIP extraído por inteiro. Abrir o <code>titulos.xlsx</code> de dentro do ZIP quebra os links. Extrair o ZIP numa pasta do computador e abrir a planilha dessa pasta. Ver <a href="#o-que-vem-no-pacote--extrair-antes-de-abrir">O que vem no pacote</a>.</p>
+
+  <h3>Como conferir se um anexo foi alterado?</h3>
+  <p>Comparando o SHA-256 do arquivo com o que está no <code>indice.csv</code> ou no <code>indice.json</code>. Ver <a href="#o-que-vem-no-pacote--conferir-a-integridade-dos-anexos">O que vem no pacote</a>.</p>
+
+  <h3>Dois anexos de um título têm o mesmo tipo de documento e o mesmo nome. Um deles se perde?</h3>
+  <p>Não se perde. O segundo ganha <code>(2)</code> antes da extensão, o terceiro ganha <code>(3)</code>, e assim por diante.</p>
+
+  <h2>Lista de pagamentos</h2>
+  <h3>O botão Exportar da tela Solicitações gera o mesmo pacote?</h3>
+  <p>Gera outro arquivo: uma planilha <code>Pagamentos.xlsx</code>, sem anexos, baixada na hora. A comparação completa está em <a href="#exportar-lista-de-pagamentos--diferencas-para-a-exportacao-de-titulos">Exportar a lista de pagamentos</a>.</p>
+</article>

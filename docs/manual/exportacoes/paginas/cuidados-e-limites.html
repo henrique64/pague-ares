@@ -1,0 +1,82 @@
+<article class="pagina" data-id="cuidados-e-limites" data-secao="Referência" data-titulo="Cuidados e limites" data-publico="financeiro administrador">
+  <p class="resumo">Referência de quem pode usar a exportação, dos prazos e limites, das recusas que a tela mostra ao pedir uma exportação e das mensagens de uma exportação que falha. Serve ao Financeiro e ao Administrador.</p>
+
+  <h2>Quem tem acesso</h2>
+  <p>A exportação de títulos é restrita aos perfis Financeiro e Administrador.</p>
+  <div class="tabela"><table>
+    <thead><tr><th>Perfil</th><th>Menu lateral</th></tr></thead>
+    <tbody>
+      <tr><td>Financeiro</td><td><span class="tela">Home</span>, <span class="tela">Solicitações</span> e <span class="tela">Exportações</span>, nessa ordem</td></tr>
+      <tr><td>Administrador</td><td><span class="tela">Home</span>, <span class="tela">Solicitações</span>, <span class="tela">Exportações</span> e <span class="tela">Configurações</span>, nessa ordem</td></tr>
+      <tr><td>Contabilidade</td><td><span class="tela">Home</span> e <span class="tela">Solicitações</span>, sem o item <span class="tela">Exportações</span></td></tr>
+      <tr><td>Gestor e Solicitante</td><td>Só <span class="tela">Solicitações</span>, sem o item <span class="tela">Exportações</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>Quem tem mais de um perfil recebe o menu do primeiro que aparecer na ordem Administrador, Financeiro, Contabilidade, Gestor e Solicitante. Quem não é Financeiro nem Administrador e digita o endereço da tela de exportações é levado para a tela <span class="tela">Solicitações</span>, sem nenhum aviso.</p>
+
+  <div class="galeria">
+    <figure class="captura"><img src="img/menu-exportacoes-administrador.webp" alt="Menu lateral do Administrador, com Home, Solicitações, Exportações e Configurações" loading="lazy">
+    <figcaption>Menu do Administrador: Home, Solicitações, Exportações e Configurações.</figcaption></figure>
+    <figure class="captura"><img src="img/menu-exportacoes-contabilidade.webp" alt="Menu lateral da Contabilidade, com Home e Solicitações apenas" loading="lazy">
+    <figcaption>Menu da Contabilidade: Home e Solicitações, sem o item Exportações.</figcaption></figure>
+  </div>
+
+  <p>Cada pessoa vê, na lista <span class="tela">Minhas exportações</span>, só as exportações que ela mesma pediu. O link de download é de uso único e vale por pouco tempo.</p>
+
+  <h2>Limites de uso</h2>
+  <p>Os valores abaixo são os valores padrão do sistema. A equipe de TI pode alterá-los.</p>
+  <div class="tabela"><table>
+    <thead><tr><th>Limite</th><th>Valor</th></tr></thead>
+    <tbody>
+      <tr><td>Disponibilidade do arquivo depois de concluído</td><td>48 horas. Passado o prazo, o download deixa de ser possível e, na limpeza que o servidor faz a cada 30 minutos (também um valor padrão), o arquivo é apagado e a situação passa a <span class="tela">Expirada</span>.</td></tr>
+      <tr><td>Títulos por exportação</td><td>até 5000</td></tr>
+      <tr><td>Exportações em andamento por usuário</td><td>até 2, contando as linhas <span class="tela">Pendente</span> e <span class="tela">Em processamento</span></td></tr>
+      <tr><td>Anexos por pacote</td><td>até 20 GB</td></tr>
+      <tr><td>Espaço livre no disco do servidor</td><td>no mínimo 2048 MB para gerar uma exportação</td></tr>
+      <tr><td>Validade do link de download</td><td>120 segundos, e uma única vez</td></tr>
+      <tr><td>Exportações na lista</td><td>as dos últimos 30 dias</td></tr>
+    </tbody>
+  </table></div>
+  <div class="dica">
+    <p><strong>Exportar por período.</strong> Para volumes grandes, filtrar por um período mais curto reduz o número de títulos e o tamanho do pacote. As mensagens de recusa e de falha da tela dão a mesma sugestão.</p>
+  </div>
+
+  <h2>Quando o pedido é recusado</h2>
+  <p>Ao clicar em <span class="tela">Gerar exportação</span>, o servidor pode recusar o pedido. Nesse caso nenhuma linha nova entra na lista, e um aviso de poucos segundos traz o motivo.</p>
+
+  <figure class="captura"><img src="img/exportacoes-aviso-sem-titulos.webp" alt="Formulário preenchido com o código 999999 e o aviso de que nenhum título foi encontrado" loading="lazy">
+    <figcaption>Aviso de recusa quando os filtros não encontram nenhum título, sobre o formulário preenchido com o código 999999.</figcaption></figure>
+
+  <div class="tabela"><table>
+    <thead><tr><th>Mensagem</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tela">Nenhum título encontrado com os filtros informados.</span></td><td>Ampliar os filtros. Lembrar que só entram títulos aprovados pelo Gestor, que não são rascunho nem cancelados.</td></tr>
+      <tr><td>Os filtros trazem mais títulos que o máximo por exportação. A mensagem informa o total e o máximo e termina com <span class="tela">Refine os filtros, por exemplo por período.</span></td><td>Restringir o período ou outro filtro até ficar dentro do limite.</td></tr>
+      <tr><td><span class="tela">A data final da solicitação é anterior à data inicial.</span></td><td>Corrigir o <span class="tela">Período da Solicitação (RDDV: cadastro)</span>. O mesmo vale para vencimento e para aprovação do Financeiro, com as mensagens <span class="tela">A data final de vencimento é anterior à data inicial.</span> e <span class="tela">A data final de aprovação do financeiro é anterior à data inicial.</span></td></tr>
+      <tr><td>A mensagem informa a quantidade de <span class="tela">exportações em andamento, o máximo permitido.</span> e segue com <span class="tela">Aguarde uma terminar ou cancele uma delas.</span></td><td>Esperar uma exportação terminar ou cancelá-la na lista, com o botão <span class="tela">Cancelar</span>.</td></tr>
+      <tr><td><span class="tela">A exportação está indisponível neste servidor por falta de configuração. Acione o suporte.</span></td><td>Acionar o suporte. A exportação não funciona neste servidor até a configuração ser corrigida.</td></tr>
+      <tr><td><span class="tela">Filtro de exportação inválido.</span> ou <span class="tela">Tipo de título inválido.</span></td><td>A mensagem não indica outra ação.</td></tr>
+      <tr><td><span class="tela">Não foi possível solicitar a exportação. Tente novamente.</span> (aparece quando o servidor não responde)</td><td>Tentar de novo.</td></tr>
+      <tr><td><span class="tela">Não foi possível concluir a operação. Tente de novo.</span> (mensagem do servidor para um erro inesperado)</td><td>Tentar de novo.</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure class="captura"><img src="img/exportacoes-recusa-429.webp" alt="Formulário no padrão com o aviso de que já há duas exportações em andamento" loading="lazy">
+    <figcaption>Aviso de recusa por excesso de exportações em andamento (o máximo é 2), com o botão OK, sobre o formulário no padrão.</figcaption></figure>
+
+  <h2>Quando a exportação falha</h2>
+  <p>Se a geração termina com erro, a linha mostra a situação <span class="tela">Falhou</span> e, abaixo do selo, a mensagem do erro em vermelho. A linha não tem ações; a saída é gerar a exportação de novo.</p>
+  <div class="tabela"><table>
+    <thead><tr><th>Mensagem na linha</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tela">A exportação foi interrompida por um reinício do servidor. Gere a exportação de novo.</span></td><td>Gerar de novo. Nenhum arquivo pela metade fica disponível para baixar.</td></tr>
+      <tr><td><span class="tela">Não foi possível gerar a exportação. Gere de novo; se o erro continuar, acione o suporte.</span></td><td>Gerar de novo. Persistindo, acionar o suporte.</td></tr>
+      <tr><td><span class="tela">O servidor está sem espaço em disco suficiente para gerar a exportação agora.</span> seguida de <span class="tela">Tente de novo mais tarde; se o erro continuar, acione o suporte.</span></td><td>Tentar mais tarde. Persistindo, acionar o suporte.</td></tr>
+      <tr><td>A mensagem informa que a exportação <span class="tela">passou do limite de</span> um tamanho <span class="tela">de anexos por pacote.</span> e termina com <span class="tela">Gere de novo com filtros menores, por exemplo um período mais curto.</span></td><td>Gerar de novo com filtros menores, como um período mais curto.</td></tr>
+      <tr><td>A mensagem cita um anexo e o título dele e termina com <span class="tela">está corrompido e não pôde ser exportado.</span></td><td>A exportação inteira falha e nenhum pacote fica disponível, enquanto esse título estiver entre os filtros. A mensagem diz qual é o anexo e qual é o título. Gerar de novo com filtros que deixem esse título de fora, por exemplo outro período, produz o pacote dos demais títulos.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Dados pessoais no pacote</h2>
+  <p>A planilha <code>titulos.xlsx</code> traz sem máscara o documento do parceiro (CPF ou CNPJ) nas solicitações, o CPF do funcionário nos RDDVs, e banco, agência e conta. Compartilhar o pacote só com quem precisa, por um canal seguro, e apagar as cópias quando o uso terminar reduz o risco de vazamento. Excluir o arquivo na lista (botão <span class="tela">Excluir</span>) apaga o arquivo guardado no servidor, e depois disso não é possível baixá-lo de novo. As cópias que já foram baixadas continuam nos computadores onde foram salvas.</p>
+</article>

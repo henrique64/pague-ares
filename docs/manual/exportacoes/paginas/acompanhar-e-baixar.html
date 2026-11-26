@@ -1,0 +1,73 @@
+<article class="pagina" data-id="acompanhar-e-baixar" data-secao="Exportar títulos com anexos" data-titulo="Acompanhar e baixar" data-publico="financeiro administrador">
+  <p class="resumo">Como ler a lista <span class="tela">Minhas exportações</span>, acompanhar o andamento, baixar o ZIP pronto e cancelar ou excluir uma exportação. Serve ao Financeiro e ao Administrador.</p>
+
+  <h2>A lista Minhas exportações</h2>
+  <p>Cada exportação pedida vira uma linha na lista <span class="tela">Minhas exportações</span>, da mais recente para a mais antiga. A lista mostra só as exportações do próprio usuário, dos últimos 30 dias. Abaixo do título, a tela lembra que <span class="tela">Os arquivos ficam disponíveis por tempo limitado.</span></p>
+  <dl class="campos">
+    <dt>Ações</dt>
+    <dd>Os botões que valem para a situação da linha: <span class="tela">Baixar</span>, <span class="tela">Cancelar</span> ou <span class="tela">Excluir</span>.</dd>
+    <dt>Solicitada em</dt>
+    <dd>Data e hora do pedido, no formato dd/mm/aaaa hh:mm.</dd>
+    <dt>Filtros</dt>
+    <dd>Resumo dos filtros usados, com as partes separadas por um ponto central (·). Começa sempre por <span class="tela">Solicitações</span>, <span class="tela">RDDVs</span> ou <span class="tela">Solicitações e RDDVs</span> e termina por <span class="tela">Com anexos</span> ou <span class="tela">Sem anexos</span>. No meio, aparecem só os filtros que foram preenchidos, cada um com um rótulo curto e o valor, como <span class="tela">Solicitante</span> e <span class="tela">Departamento</span>. Os rótulos curtos nem sempre são os do formulário (por exemplo <span class="tela">Gestor</span>, <span class="tela">Financeiro</span>, <span class="tela">Contabilidade</span>, <span class="tela">Tipo</span>, <span class="tela">Pagamento</span>, <span class="tela">Forma</span> e <span class="tela">Relatório</span>), e o código e o número do documento saem sem dois-pontos. Cada período aparece com o rótulo <span class="tela">Solicitação</span>, <span class="tela">Vencimento</span> ou <span class="tela">Aprovação financeiro</span> e as duas datas ligadas por a; um lado sem data aparece com reticências.</dd>
+    <dt>Situação</dt>
+    <dd>O estado da exportação, num selo colorido (ver a próxima seção).</dd>
+    <dt>Andamento</dt>
+    <dd>Uma barra e o percentual concluído. Quando o total de títulos é maior que zero, o texto mostra também quantos títulos já foram tratados, no formato N de M títulos, seja qual for a situação da linha: <span class="tela">Pendente</span>, <span class="tela">Em processamento</span>, <span class="tela">Concluída</span>, <span class="tela">Falhou</span>, <span class="tela">Cancelada</span> ou <span class="tela">Expirada</span>.</dd>
+    <dt>Tamanho</dt>
+    <dd>Tamanho do ZIP, em B, KB, MB, GB ou TB, com vírgula decimal. Fica vazio enquanto a exportação não conclui.</dd>
+    <dt>Expira em</dt>
+    <dd>Data e hora em que o arquivo deixa de estar disponível. Fica vazia enquanto a exportação não conclui. Numa linha <span class="tela">Expirada</span>, mostra quando o arquivo deixou de estar disponível.</dd>
+  </dl>
+  <p>Sem nenhuma exportação nos últimos 30 dias, a tela mostra <span class="tela">Você ainda não gerou nenhuma exportação nos últimos 30 dias.</span> no lugar da tabela. Enquanto a lista carrega pela primeira vez, aparece o indicador <span class="tela">Carregando exportações...</span>. Se a carga falhar, um aviso temporário diz <span class="tela">Não foi possível carregar as exportações. Tente novamente.</span> e a lista fica como estava.</p>
+
+  <figure class="captura"><img src="img/exportacoes-lista-vazia.webp" alt="Lista Minhas exportações sem tabela, só com a frase sobre os últimos 30 dias" loading="lazy">
+    <figcaption>Lista Minhas exportações sem nenhuma exportação: no lugar da tabela, a tela mostra a frase sobre os últimos 30 dias.</figcaption></figure>
+
+  <h2>As situações</h2>
+  <div class="tabela"><table>
+    <thead><tr><th>Situação</th><th>O que significa</th><th>Ações na linha</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tela">Pendente</span></td><td>Pedido aceito e aguardando a vez no servidor. Barra em 0%.</td><td><span class="tela">Cancelar</span></td></tr>
+      <tr><td><span class="tela">Em processamento</span></td><td>Pacote em preparação. A barra mostra o percentual.</td><td><span class="tela">Cancelar</span></td></tr>
+      <tr><td><span class="tela">Concluída</span></td><td>Pacote pronto. A linha mostra o tamanho e a data de expiração. Barra em 100%.</td><td><span class="tela">Baixar</span> e <span class="tela">Excluir</span></td></tr>
+      <tr><td><span class="tela">Falhou</span></td><td>A geração terminou com erro. A mensagem do erro aparece em vermelho, abaixo do selo. A barra fica no ponto em que a geração parou.</td><td>Nenhuma</td></tr>
+      <tr><td><span class="tela">Cancelada</span></td><td>A exportação foi cancelada. A barra fica no ponto em que a geração parou.</td><td>Nenhuma</td></tr>
+      <tr><td><span class="tela">Expirada</span></td><td>O arquivo deixou de estar disponível, pelo prazo ou porque foi excluído. Barra em 100%; a linha continua mostrando o tamanho e a coluna <span class="tela">Expira em</span>. Se o arquivo expirou pelo prazo, é o prazo que venceu; se foi excluído antes, é o momento da exclusão.</td><td>Nenhuma</td></tr>
+    </tbody>
+  </table></div>
+  <p>As linhas <span class="tela">Falhou</span>, <span class="tela">Cancelada</span> e <span class="tela">Expirada</span> ficam na lista até completar 30 dias, contados do pedido (coluna <span class="tela">Solicitada em</span>). As mensagens de erro e o que fazer com cada uma estão em <a href="#cuidados-e-limites--quando-a-exportacao-falha">Cuidados e limites</a>.</p>
+
+  <figure class="captura"><img src="img/exportacoes-lista-falhou-cancelada-expirada.webp" alt="Lista com três linhas sem botões: Falhou com mensagem de erro em vermelho, Cancelada e Expirada" loading="lazy">
+    <figcaption>Linhas Falhou (com a mensagem de erro), Cancelada e Expirada: nenhuma tem botões. A barra de Falhou e a de Cancelada ficam onde a geração parou, e a de Expirada está completa, com tamanho e data de Expira em.</figcaption></figure>
+
+  <figure class="captura"><img src="img/exportacoes-lista-em-processamento.webp" alt="Lista com uma linha Pendente e uma linha Em processamento, ambas com o botão Cancelar" loading="lazy">
+    <figcaption>Linhas Pendente e Em processamento, com a barra de andamento e a contagem de títulos; as duas têm o botão Cancelar.</figcaption></figure>
+
+  <h2>Acompanhar o andamento</h2>
+  <p>Enquanto houver alguma linha <span class="tela">Pendente</span> ou <span class="tela">Em processamento</span>, a lista se atualiza sozinha a cada 5 segundos. Não é preciso recarregar a página. A preparação segue no servidor mesmo que a tela seja fechada; ao voltar para <span class="tela">Exportações</span>, a lista mostra a situação atual.</p>
+
+  <h2>Baixar o arquivo</h2>
+  <ol class="passos">
+    <li>Esperar a situação <span class="tela">Concluída</span>.</li>
+    <li>Clicar em <span class="tela">Baixar</span> na linha da exportação.</li>
+    <li>Aguardar o navegador baixar o arquivo, sem sair da tela de exportações.</li>
+    <li>Extrair o ZIP numa pasta do computador e abrir a planilha <code>titulos.xlsx</code> dessa pasta.</li>
+  </ol>
+  <p>O arquivo baixado se chama <code>exportacao-titulos-</code>, seguido do número da exportação, da data e hora da conclusão no horário do servidor (aaaaMMdd-HHmm) e de <code>.zip</code>.</p>
+
+  <figure class="captura"><img src="img/exportacoes-lista-concluida.webp" alt="Lista com uma linha Em processamento e uma linha Concluída, com tamanho, expiração e os botões Baixar e Excluir" loading="lazy">
+    <figcaption>Exportação concluída, com tamanho, data de expiração e os botões Baixar e Excluir, ao lado de uma exportação em processamento.</figcaption></figure>
+
+  <div class="atencao">
+    <p><strong>O link de download vale uma vez.</strong> Ao clicar em <span class="tela">Baixar</span>, o sistema gera um link de uso único que vale 120 segundos. Link já usado, vencido ou arquivo apagado: a tela avisa <span class="tela">Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.</span> Basta clicar em <span class="tela">Baixar</span> outra vez. Se a geração do link falhar, o aviso traz a mensagem enviada pelo servidor, quando houver (por exemplo, <span class="tela">O arquivo desta exportação expirou ou não está mais disponível. Gere a exportação de novo.</span>), e só sem resposta do servidor diz <span class="tela">Não foi possível iniciar o download. Tente novamente.</span> A lista é recarregada nos dois casos.</p>
+  </div>
+
+  <h2>Cancelar uma exportação</h2>
+  <p>O botão <span class="tela">Cancelar</span> aparece nas linhas <span class="tela">Pendente</span> e <span class="tela">Em processamento</span>. O navegador pergunta <span class="tela">Cancelar esta exportação?</span>; sem confirmar, nada acontece. Confirmado o pedido, um aviso de poucos segundos diz <span class="tela">Cancelamento solicitado.</span></p>
+  <p>Numa linha <span class="tela">Pendente</span>, a situação passa a <span class="tela">Cancelada</span>. Numa linha <span class="tela">Em processamento</span>, o cancelamento é só pedido: a linha segue <span class="tela">Em processamento</span> até o servidor parar de gerar o pacote, e então passa a <span class="tela">Cancelada</span>.</p>
+
+  <h2>Excluir o arquivo</h2>
+  <p>O botão <span class="tela">Excluir</span> aparece nas linhas <span class="tela">Concluída</span>. Serve para apagar o pacote antes do prazo. O navegador pergunta <span class="tela">Excluir o arquivo desta exportação? Depois disso não será possível baixá-lo.</span> Confirmado, o aviso diz <span class="tela">Arquivo excluído.</span> e a situação passa a <span class="tela">Expirada</span>. Para ter o pacote de novo, é preciso gerar outra exportação.</p>
+
+</article>

@@ -1,0 +1,72 @@
+{
+  "versao": 1,
+  "idioma": "pt-BR",
+  "playwright": {
+    "comando": ["npx", "playwright", "test"],
+    "diretorio": "e2e-docs"
+  },
+  "manuais": [
+    {
+      "id": "exportacoes",
+      "titulo": "Exportações de títulos com anexos",
+      "marca": "PagueAres",
+      "fontes": "docs/manual/exportacoes",
+      "corpusDeTelas": {
+        "incluir": [
+          "front-end/src/app/exportacoes/**",
+          "front-end/src/app/payments/**",
+          "front-end/src/app/components/sidebar/**",
+          "front-end/src/app/components/navbar/**",
+          "front-end/src/app/models/exportacao/**",
+          "front-end/src/app/services/exportacao.service.ts",
+          "front-end/src/app/services/export.service.ts",
+          "back-end/Ares.PagueAres.Application/Exportacao/*.cs"
+        ],
+        "excluir": ["**/*.spec.ts", "**/*.test.*", "**/__contrato__/**"]
+      },
+      "publicos": ["todos", "financeiro", "administrador"],
+      "trilha": "usuario",
+      "servidor": {
+        "comando": "npm start -- --port {porta}",
+        "diretorio": "front-end"
+      },
+      "dados": {
+        "modo": "real",
+        "urlBaseEnv": "DOC_PAGUEARES_URL",
+        "usuarioEnv": "DOC_PAGUEARES_USUARIO",
+        "senhaEnv": "DOC_PAGUEARES_SENHA",
+        "mascaras": [".username"]
+      },
+      "fotos": {
+        "grupos": [
+          { "id": "g1", "config": "e2e-docs/e2e/manual/playwright.g1.config.ts", "porta": 5701 },
+          { "id": "g2", "config": "e2e-docs/e2e/manual/playwright.g2.config.ts", "porta": 5702 }
+        ],
+        "viewport": { "largura": 1360, "altura": 860 },
+        "plataformaExigida": "win32",
+        "qualidade": 84
+      },
+      "video": {
+        "config": "e2e-docs/e2e/manual/playwright.video.config.ts",
+        "porta": 5710,
+        "tarefas": [
+          {
+            "id": "exportar-titulos-com-anexos",
+            "spec": "e2e-docs/e2e/manual/video/exportar-titulos-com-anexos.video.spec.ts"
+          }
+        ],
+        "tts": {
+          "provedor": "azure",
+          "voz": "pt-BR-AntonioNeural",
+          "velocidade": "-8%",
+          "chaveEnv": "SPEECH_KEY",
+          "regiaoEnv": "SPEECH_REGION"
+        },
+        "mp4": { "versionar": "nao" },
+        "duracao": { "minS": 120, "maxS": 240 },
+        "resolucao": { "largura": 1280, "altura": 720 },
+        "capa": { "modo": "escura" }
+      }
+    }
+  ]
+}
