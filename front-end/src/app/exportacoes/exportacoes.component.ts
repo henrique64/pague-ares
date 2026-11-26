@@ -3,7 +3,7 @@ import { NgModel } from "@angular/forms";
 import { HttpErrorResponse } from "@angular/common/http";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { MatEndDate, MatStartDate } from "@angular/material/datepicker";
-import { Subject, Subscription, interval, of } from "rxjs";
+import { Observable, Subject, Subscription, interval, of } from "rxjs";
 import { catchError, exhaustMap, takeUntil } from "rxjs/operators";
 import { ExportacaoService } from "app/services/exportacao.service";
 import { UsersService } from "app/services/users.service";
@@ -50,6 +50,8 @@ export interface FormularioExportacao {
 })
 export class ExportacoesComponent implements OnInit, OnDestroy {
   static readonly INTERVALO_POLLING_MS = 5000;
+  static readonly AVISO_DOWNLOAD_RECUSADO =
+    "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: gere o link de novo clicando em Baixar.";
 
   readonly EnumStatus = EnumStatusExportacao;
   readonly EnumTipoTitulo = EnumTipoTituloExportacao;
@@ -379,6 +381,16 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     return job.status === EnumStatusExportacao.Concluido;
   }
 
+  // Exportação encerrada: não há mais o que fazer com ela, só tirá-la da lista.
+  podeRemoverDaLista(job: ExportacaoJobModel): boolean {
+    return (
+      job.status === EnumStatusExportacao.Falhou ||
+      job.status === EnumStatusExportacao.Cancelado ||
+      job.status === EnumStatusExportacao.Expirado ||
+      job.status === EnumStatusExportacao.Excluido
+    );
+  }
+
   baixar(job: ExportacaoJobModel) {
     if (this.isBusy) return;
 
@@ -410,7 +422,8 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       job,
       "Cancelar esta exportação?",
       "Cancelamento solicitado.",
-      "Não foi possível cancelar a exportação."
+      "Não foi possível cancelar a exportação.",
+      (id) => this.exportacao.cancelar(id)
     );
   }
 
@@ -419,16 +432,33 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       job,
       "Excluir o arquivo desta exportação? Depois disso não será possível baixá-lo.",
       "Arquivo excluído.",
-      "Não foi possível excluir a exportação."
+      "Não foi possível excluir a exportação.",
+      (id) => this.exportacao.cancelar(id)
     );
   }
 
-  private removerJob(job: ExportacaoJobModel, pergunta: string, sucesso: string, falha: string) {
+  removerDaLista(job: ExportacaoJobModel) {
+    this.removerJob(
+      job,
+      "Remover esta exportação da lista?",
+      "Exportação removida da lista.",
+      "Não foi possível remover a exportação da lista.",
+      (id) => this.exportacao.removerDaLista(id)
+    );
+  }
+
+  private removerJob(
+    job: ExportacaoJobModel,
+    pergunta: string,
+    sucesso: string,
+    falha: string,
+    acao: (id: number) => Observable<void>
+  ) {
     if (this.isBusy || !this.confirmar(pergunta)) return;
 
     this.isBusy = true;
 
-    this.exportacao.cancelar(job.id).pipe(takeUntil(this.destroy$)).subscribe({
+    acao(job.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.isBusy = false;
         this.snackbar.open(sucesso, "OK", { duration: 3000 });
@@ -447,6 +477,10 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   // Um arquivo aceito (Content-Disposition: attachment) vira download e não dispara "load"; já um
   // documento devolvido pelo servidor dispara, e é assim que a falha é detectada. Nada passa pela
   // memória do app: o navegador baixa em streaming.
+  //
+  // Quando o servidor recusa o download, o documento do iframe é o envelope JSON de erro da API e a
+  // mensagem dele é a que serve ao usuário. Isso só é legível com o front e a API na mesma origem
+  // (BaseUrl vazio, o padrão); em origem diferente o navegador bloqueia a leitura e vale o aviso fixo.
   protected baixarArquivo(url: string) {
     this.removerIframeDownload();
 
@@ -459,16 +493,33 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
     frame.addEventListener("load", () => {
       if (this.iframeDownload !== frame || ExportacoesComponent.ehPaginaEmBranco(frame)) return;
 
+      // A leitura vem antes da remoção: sem o iframe no documento, o corpo some.
+      const mensagem = ExportacoesComponent.mensagemDoIframe(frame);
+
       this.removerIframeDownload();
-      this.snackbar.open(
-        "Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.",
-        "OK",
-        { duration: 8000 }
-      );
+      this.snackbar.open(mensagem ?? ExportacoesComponent.AVISO_DOWNLOAD_RECUSADO, "OK", { duration: 8000 });
     });
 
     this.iframeDownload = frame;
     document.body.appendChild(frame);
+  }
+
+  // Lê o corpo do documento do iframe e, se for o envelope de erro da API, devolve a mensagem dele.
+  // Origem diferente lança exceção; corpo que não é o envelope (HTML de proxy, por exemplo) dá null.
+  private static mensagemDoIframe(frame: HTMLIFrameElement): string | null {
+    try {
+      const texto = frame.contentDocument?.body?.textContent;
+      if (!texto) return null;
+
+      return ExportacoesComponent.mensagemDoEnvelope(JSON.parse(texto));
+    } catch {
+      return null;
+    }
+  }
+
+  private static mensagemDoEnvelope(corpo: any): string | null {
+    const msg = corpo?.message;
+    return typeof msg === "string" && msg.trim().length > 0 ? msg : null;
   }
 
   // Alguns navegadores disparam um "load" inicial do about:blank; ele não é resposta do servidor.
@@ -500,6 +551,9 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
       case EnumStatusExportacao.Pendente:
       case EnumStatusExportacao.Processando:
         return "status-andamento";
+      case EnumStatusExportacao.Expirado:
+      case EnumStatusExportacao.Cancelado:
+      case EnumStatusExportacao.Excluido:
       default:
         return "status-inativa";
     }
@@ -588,8 +642,8 @@ export class ExportacoesComponent implements OnInit, OnDestroy {
   // Usa a mensagem amigável do servidor (envelope GenericResponse) quando existir.
   private mensagemDeErro(err: any, padrao: string): string {
     if (err instanceof HttpErrorResponse) {
-      const msg = err.error?.message;
-      if (typeof msg === "string" && msg.trim().length > 0) return msg;
+      const msg = ExportacoesComponent.mensagemDoEnvelope(err.error);
+      if (msg) return msg;
     }
 
     return padrao;

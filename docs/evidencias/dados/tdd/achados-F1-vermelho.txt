@@ -1,0 +1,38 @@
+F1 — Lista de exportações: download, Excluída, Remover da lista e número — fase VERMELHA (testes antes da correção)
+Data: 2026-11-26
+Branch: fix/achados-front (base cf2353f)
+Comando: cd front-end && CHROME_BIN=<msedge.exe> npx ng test --watch=false --karma-config=<karma.headless.js fora do repositório: reaproveita o karma.conf.js e troca o navegador por ChromeHeadless sobre o Edge>
+Arquivos de teste: front-end/src/app/exportacoes/exportacoes.component.spec.ts, front-end/src/app/services/exportacao.service.spec.ts
+Dados: só fictícios; o serviço de exportação é um spy, nenhuma requisição de rede.
+
+A enum EnumStatusExportacao.Excluido = 6 e assinaturas vazias de removerDaLista/podeRemoverDaLista existiam só para o teste compilar;
+nenhum comportamento estava implementado.
+
+Resultado: 151 testes — 12 com falha, 139 aprovados (137 da base + 2 novos que já passam por serem guardas de regressão:
+'Excluída não tem Baixar nem Excluir, e a situação aparece como inativa' e 'Remover da lista sem confirmar não chama o serviço').
+
+------------------------------------------------------------------------------------------
+[FALHOU] ExportacoesComponent Remover da lista e situação Excluída podeRemoverDaLista é verdadeiro só para Falhou, Cancelada, Expirada e Excluída
+         3: Expected false to be true.
+[FALHOU] ExportacoesComponent Remover da lista e situação Excluída Remover da lista pede confirmação, chama o serviço, avisa e recarrega a lista
+         Expected spy confirmar to have been called only once, and with given args:
+[FALHOU] ExportacoesComponent Remover da lista e situação Excluída Remover da lista com erro mostra a mensagem do servidor e recarrega a lista
+         Expected spy MatSnackBar.open to have been called with:
+[FALHOU] ExportacoesComponent Remover da lista e situação Excluída na tela a coluna "Nº" vem logo depois de "Ações" e mostra o número da exportação
+         Expected $[1] = 'Solicitada em' to equal 'Nº'.
+[FALHOU] ExportacoesComponent Remover da lista e situação Excluída na tela lista vazia diz que não há exportações para mostrar nos últimos 30 dias
+         Expected 'Você ainda não gerou nenhuma exportação nos últimos 30 dias.' to be 'Nenhuma exportação para mostrar nos últimos 30 dias.'.
+[FALHOU] ExportacoesComponent Remover da lista e situação Excluída na tela clicar no botão remove o job da lista
+         TypeError: Cannot read properties of null (reading 'click')
+[FALHOU] ExportacoesComponent Remover da lista e situação Excluída na tela o botão aparece nas quatro situações encerradas e em nenhuma outra
+         situação 3: Expected false to be true.
+[FALHOU] ExportacoesComponent ações download sem sair da aplicação iframe ilegível (origem diferente): mostra o aviso fixo, com "g" minúsculo depois dos dois-pontos
+         Expected 'Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.' to be 'Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: gere o link de novo cl
+[FALHOU] ExportacoesComponent ações download sem sair da aplicação iframe sem acesso ao documento (null) mostra o aviso fixo
+         Expected 'Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.' to contain ': gere o link de novo'.
+[FALHOU] ExportacoesComponent ações download sem sair da aplicação iframe com o envelope JSON de erro da API: mostra a mensagem do servidor
+         Expected 'Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.' to be 'O arquivo desta exportação foi excluído. Gere a exportação de novo.'.
+[FALHOU] ExportacoesComponent ações download sem sair da aplicação iframe com texto que não é o envelope (HTML, JSON sem message): mostra o aviso fixo
+         corpo: <h1>Bad Gateway</h1>: Expected 'Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: Gere o link de novo clicando em Baixar.' to contain ': gere o link de novo'.
+[FALHOU] ExportacaoService removerDaLista faz DELETE em api/exportacao/{id}/lista
+         não implementado

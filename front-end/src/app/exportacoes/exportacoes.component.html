@@ -231,13 +231,14 @@
 
           <div class="card-body">
             <p class="vazio" *ngIf="!isLoadingLista && jobs.length === 0">
-              Você ainda não gerou nenhuma exportação nos últimos 30 dias.
+              Nenhuma exportação para mostrar nos últimos 30 dias.
             </p>
 
             <div class="table-responsive" *ngIf="jobs.length > 0">
               <table class="table">
                 <thead class="text-primary">
                   <th>Ações</th>
+                  <th>Nº</th>
                   <th>Solicitada em</th>
                   <th>Filtros</th>
                   <th>Situação</th>
@@ -278,7 +279,18 @@
                       >
                         Excluir
                       </button>
+                      <button
+                        mat-button
+                        type="button"
+                        class="acao-remover"
+                        *ngIf="podeRemoverDaLista(job)"
+                        (click)="removerDaLista(job)"
+                        [disabled]="isBusy"
+                      >
+                        Remover da lista
+                      </button>
                     </td>
+                    <td class="numero">{{ job.id }}</td>
                     <td>{{ paraData(job.dataCriacao) | date: "dd/MM/yyyy HH:mm" }}</td>
                     <td class="filtros">{{ resumoFiltros(job) }}</td>
                     <td>

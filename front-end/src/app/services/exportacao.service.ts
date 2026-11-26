@@ -36,4 +36,9 @@ export class ExportacaoService {
   public cancelar(id: number): Observable<void> {
     return this.http.delete<void>(this.url.Exportacao.Base + "/" + id);
   }
+
+  // Tira da lista do usuário uma exportação encerrada (Falhou, Cancelada, Expirada ou Excluída).
+  public removerDaLista(id: number): Observable<void> {
+    return this.http.delete<void>(this.url.Exportacao.Base + "/" + id + "/lista");
+  }
 }

@@ -48,7 +48,7 @@ describe('ExportacoesComponent', () => {
 
   beforeEach(async () => {
     jobsAtuais = [];
-    exportacao = jasmine.createSpyObj('ExportacaoService', ['criar', 'listar', 'obter', 'gerarLinkDownload', 'urlDownload', 'cancelar']);
+    exportacao = jasmine.createSpyObj('ExportacaoService', ['criar', 'listar', 'obter', 'gerarLinkDownload', 'urlDownload', 'cancelar', 'removerDaLista']);
     exportacao.listar.and.callFake(() => of(envelope(jobsAtuais)));
     exportacao.urlDownload.and.callFake((t: string) => 'http://api/exportacao/download?token=' + t);
 
@@ -470,15 +470,56 @@ describe('ExportacoesComponent', () => {
         expect(frames[0].style.display).toBe('none');
       });
 
-      it('se o servidor devolve um documento (token recusado), o usuário é orientado a gerar o link de novo', () => {
+      // O iframe da tela fica fora do DOM nestes testes; o documento que o servidor devolveria é simulado.
+      function documentoDoIframe(frame: HTMLIFrameElement, leitura: () => unknown) {
+        Object.defineProperty(frame, 'contentDocument', { get: leitura, configurable: true });
+      }
+
+      it('iframe ilegível (origem diferente): mostra o aviso fixo, com "g" minúsculo depois dos dois-pontos', () => {
         component.baixar(jobsAtuais[0]);
+        documentoDoIframe(frames[0], () => { throw new DOMException('Blocked a frame', 'SecurityError'); });
 
         frames[0].dispatchEvent(new Event('load'));
 
         expect(snackbar.open).toHaveBeenCalledTimes(1);
         const texto = snackbar.open.calls.mostRecent().args[0];
-        expect(texto).toContain('Gere o link de novo');
+        expect(texto).toBe(
+          'Não foi possível baixar o arquivo. O link expira rápido e só vale uma vez: gere o link de novo clicando em Baixar.');
         expect(frames[0].isConnected).toBeFalse();
+      });
+
+      it('iframe sem acesso ao documento (null) mostra o aviso fixo', () => {
+        component.baixar(jobsAtuais[0]);
+
+        frames[0].dispatchEvent(new Event('load'));
+
+        expect(snackbar.open.calls.mostRecent().args[0]).toContain(': gere o link de novo');
+      });
+
+      it('iframe com o envelope JSON de erro da API: mostra a mensagem do servidor', () => {
+        component.baixar(jobsAtuais[0]);
+        const corpo = JSON.stringify({ success: false, message: 'O arquivo desta exportação foi excluído. Gere a exportação de novo.', data: null });
+        documentoDoIframe(frames[0], () => ({ body: { textContent: corpo } }));
+
+        frames[0].dispatchEvent(new Event('load'));
+
+        expect(snackbar.open).toHaveBeenCalledTimes(1);
+        expect(snackbar.open.calls.mostRecent().args[0]).toBe(
+          'O arquivo desta exportação foi excluído. Gere a exportação de novo.');
+        expect(frames[0].isConnected).toBeFalse();
+      });
+
+      it('iframe com texto que não é o envelope (HTML, JSON sem message): mostra o aviso fixo', () => {
+        for (const corpo of ['<h1>Bad Gateway</h1>', '{"title":"x"}', '{"message":"   "}', '', '[1]']) {
+          snackbar.open.calls.reset();
+          component.baixar(jobsAtuais[0]);
+          const frame = frames[frames.length - 1];
+          documentoDoIframe(frame, () => ({ body: { textContent: corpo } }));
+
+          frame.dispatchEvent(new Event('load'));
+
+          expect(snackbar.open.calls.mostRecent().args[0]).withContext('corpo: ' + corpo).toContain(': gere o link de novo');
+        }
       });
 
       it('download que o navegador aceita como arquivo (sem load) não mostra erro', () => {
@@ -577,6 +618,10 @@ describe('ExportacoesComponent', () => {
       montarTela();
       const c = (s: EnumStatusExportacao) => job(1, s);
 
+      expect(component.podeBaixar(c(EnumStatusExportacao.Excluido))).toBeFalse();
+      expect(component.podeExcluir(c(EnumStatusExportacao.Excluido))).toBeFalse();
+      expect(component.podeCancelar(c(EnumStatusExportacao.Excluido))).toBeFalse();
+
       expect(component.podeBaixar(c(EnumStatusExportacao.Concluido))).toBeTrue();
       expect(component.podeExcluir(c(EnumStatusExportacao.Concluido))).toBeTrue();
       expect(component.podeCancelar(c(EnumStatusExportacao.Concluido))).toBeFalse();
@@ -592,6 +637,128 @@ describe('ExportacoesComponent', () => {
         expect(component.podeCancelar(c(s))).toBeFalse();
         expect(component.podeExcluir(c(s))).toBeFalse();
       }
+    });
+  });
+
+  describe('Remover da lista e situação Excluída', () => {
+    const encerradas = [
+      EnumStatusExportacao.Falhou, EnumStatusExportacao.Cancelado,
+      EnumStatusExportacao.Expirado, EnumStatusExportacao.Excluido,
+    ];
+    const outras = [EnumStatusExportacao.Pendente, EnumStatusExportacao.Processando, EnumStatusExportacao.Concluido];
+
+    it('podeRemoverDaLista é verdadeiro só para Falhou, Cancelada, Expirada e Excluída', () => {
+      const c = criar();
+
+      for (const s of encerradas) expect(c.podeRemoverDaLista(job(1, s))).withContext(String(s)).toBeTrue();
+      for (const s of outras) expect(c.podeRemoverDaLista(job(1, s))).withContext(String(s)).toBeFalse();
+    });
+
+    it('Remover da lista pede confirmação, chama o serviço, avisa e recarrega a lista', () => {
+      jobsAtuais = [job(7, EnumStatusExportacao.Excluido)];
+      exportacao.removerDaLista.and.returnValue(of(undefined));
+      montarTela();
+      exportacao.listar.calls.reset();
+
+      component.removerDaLista(jobsAtuais[0]);
+
+      expect((component as any).confirmar).toHaveBeenCalledOnceWith('Remover esta exportação da lista?');
+      expect(exportacao.removerDaLista).toHaveBeenCalledOnceWith(7);
+      expect(snackbar.open).toHaveBeenCalledWith('Exportação removida da lista.', 'OK', jasmine.anything());
+      expect(exportacao.listar).toHaveBeenCalledTimes(1);
+      component.ngOnDestroy();
+    });
+
+    it('Remover da lista sem confirmar não chama o serviço', () => {
+      jobsAtuais = [job(7, EnumStatusExportacao.Falhou)];
+      montarTela();
+      (component as any).confirmar.and.returnValue(false);
+
+      component.removerDaLista(jobsAtuais[0]);
+
+      expect(exportacao.removerDaLista).not.toHaveBeenCalled();
+      component.ngOnDestroy();
+    });
+
+    it('Remover da lista com erro mostra a mensagem do servidor e recarrega a lista', () => {
+      jobsAtuais = [job(7, EnumStatusExportacao.Falhou)];
+      exportacao.removerDaLista.and.returnValue(throwError(new HttpErrorResponse({
+        status: 409, error: { success: false, message: 'Só exportações encerradas podem ser removidas da lista.' },
+      })));
+      montarTela();
+      exportacao.listar.calls.reset();
+
+      component.removerDaLista(jobsAtuais[0]);
+
+      expect(snackbar.open).toHaveBeenCalledWith('Só exportações encerradas podem ser removidas da lista.', 'OK', jasmine.anything());
+      expect(exportacao.listar).toHaveBeenCalledTimes(1);
+      expect(component.isBusy).toBeFalse();
+      component.ngOnDestroy();
+    });
+
+    describe('na tela', () => {
+      function linhas(): HTMLElement[] {
+        return Array.from(fixture.nativeElement.querySelectorAll('tbody tr'));
+      }
+
+      it('o botão aparece nas quatro situações encerradas e em nenhuma outra', () => {
+        jobsAtuais = [...encerradas, ...outras].map((s, i) => job(i + 1, s));
+        montarTela();
+
+        const linhasTela = linhas();
+        expect(linhasTela.length).toBe(7);
+        linhasTela.forEach((tr, i) => {
+          const tem = tr.querySelector('button.acao-remover') !== null;
+          expect(tem).withContext('situação ' + jobsAtuais[i].status).toBe(i < encerradas.length);
+        });
+        const botao = linhasTela[0].querySelector('button.acao-remover') as HTMLElement;
+        expect(botao.textContent!.trim()).toBe('Remover da lista');
+        component.ngOnDestroy();
+      });
+
+      it('clicar no botão remove o job da lista', () => {
+        jobsAtuais = [job(7, EnumStatusExportacao.Expirado)];
+        exportacao.removerDaLista.and.returnValue(of(undefined));
+        montarTela();
+
+        (linhas()[0].querySelector('button.acao-remover') as HTMLElement).click();
+
+        expect(exportacao.removerDaLista).toHaveBeenCalledOnceWith(7);
+        component.ngOnDestroy();
+      });
+
+      it('Excluída não tem Baixar nem Excluir, e a situação aparece como inativa', () => {
+        jobsAtuais = [job(7, EnumStatusExportacao.Excluido, { statusDescricao: 'Excluída' })];
+        montarTela();
+
+        const tr = linhas()[0];
+        expect(tr.querySelector('button.acao-baixar')).toBeNull();
+        expect(tr.querySelector('button.acao-excluir')).toBeNull();
+        expect(tr.querySelector('button.acao-cancelar')).toBeNull();
+        const situacao = tr.querySelector('span.status') as HTMLElement;
+        expect(situacao.textContent!.trim()).toBe('Excluída');
+        expect(situacao.classList).toContain('status-inativa');
+        component.ngOnDestroy();
+      });
+
+      it('a coluna "Nº" vem logo depois de "Ações" e mostra o número da exportação', () => {
+        jobsAtuais = [job(1234, EnumStatusExportacao.Concluido)];
+        montarTela();
+
+        const cabecalhos = Array.from(fixture.nativeElement.querySelectorAll('thead th')).map((th: any) => th.textContent.trim());
+        expect(cabecalhos.slice(0, 3)).toEqual(['Ações', 'Nº', 'Solicitada em']);
+        const celulas = linhas()[0].querySelectorAll('td');
+        expect(celulas[1].textContent!.trim()).toBe('1234');
+        component.ngOnDestroy();
+      });
+
+      it('lista vazia diz que não há exportações para mostrar nos últimos 30 dias', () => {
+        jobsAtuais = [];
+        montarTela();
+
+        const vazio = fixture.nativeElement.querySelector('p.vazio') as HTMLElement;
+        expect(vazio.textContent!.trim()).toBe('Nenhuma exportação para mostrar nos últimos 30 dias.');
+      });
     });
   });
 
