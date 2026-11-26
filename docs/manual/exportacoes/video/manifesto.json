@@ -11,17 +11,17 @@
     "estilo": "",
     "velocidade": "-8%",
     "caracteres": 2442,
-    "gerado_em": "2026-11-26T18:57:09-03:00",
+    "gerado_em": "2026-11-26T19:27:28-03:00",
     "telas": {
-      "front-end/src/app/exportacoes/exportacoes.component.html": "19566168557c0ccb39a90736fd2ef9f929739518dfb509f681d8a6d09587bdac",
+      "front-end/src/app/exportacoes/exportacoes.component.html": "fdbdba168364da561c663d07f6fe131d4f64989b1a9f86f3de36ad6b573710b6",
       "front-end/src/app/components/sidebar/sidebar.component.ts": "8c18f8d3f6d124ff8946d3a2e8b6837e087152a65e1880ea794408b0e52a8013",
       "back-end/Ares.PagueAres.Application/Exportacao/PlanilhaExportacao.cs": "38cce11b9f1a20ebbaf2e050c75bb9df9868930288f86352fe6cd1b066d9ac45"
     },
     "mp4": {
       "arquivo": "exportar-titulos-com-anexos.mp4",
-      "bytes": 8502824,
-      "sha256": "5a38cf07fc8a3550173ff08c4bffe9511a3e547a173b3f04220ddc7c60f0aa66",
-      "duracao_s": 207.971,
+      "bytes": 8488771,
+      "sha256": "38e517eccb1fffcb261ba1d003eaac882387f101b7a2e3e20ad204eeb86bd6b7",
+      "duracao_s": 208,
       "largura": 1280,
       "altura": 720,
       "video": "h264",
@@ -31,79 +31,79 @@
       {
         "id": "p01",
         "inicio_s": 0,
-        "fim_s": 8.56,
+        "fim_s": 8.561,
         "audio_s": 7.848
       },
       {
         "id": "p02",
-        "inicio_s": 8.56,
-        "fim_s": 18.75,
+        "inicio_s": 8.561,
+        "fim_s": 18.758,
         "audio_s": 9.48
       },
       {
         "id": "p03",
-        "inicio_s": 18.75,
-        "fim_s": 35.788,
+        "inicio_s": 18.758,
+        "fim_s": 35.793,
         "audio_s": 16.32
       },
       {
         "id": "p04",
-        "inicio_s": 35.788,
-        "fim_s": 56.881,
+        "inicio_s": 35.793,
+        "fim_s": 56.877,
         "audio_s": 20.376
       },
       {
         "id": "p05",
-        "inicio_s": 56.881,
-        "fim_s": 75.138,
+        "inicio_s": 56.877,
+        "fim_s": 75.14,
         "audio_s": 17.544
       },
       {
         "id": "p06",
-        "inicio_s": 75.138,
-        "fim_s": 87.723,
+        "inicio_s": 75.14,
+        "fim_s": 87.741,
         "audio_s": 11.88
       },
       {
         "id": "p07",
-        "inicio_s": 87.723,
-        "fim_s": 98.679,
+        "inicio_s": 87.741,
+        "fim_s": 98.708,
         "audio_s": 10.248
       },
       {
         "id": "p08",
-        "inicio_s": 98.679,
-        "fim_s": 115.139,
+        "inicio_s": 98.708,
+        "fim_s": 115.161,
         "audio_s": 15.744
       },
       {
         "id": "p09",
-        "inicio_s": 115.139,
-        "fim_s": 131.936,
+        "inicio_s": 115.161,
+        "fim_s": 131.953,
         "audio_s": 16.08
       },
       {
         "id": "p10",
-        "inicio_s": 131.936,
-        "fim_s": 147.417,
+        "inicio_s": 131.953,
+        "fim_s": 147.432,
         "audio_s": 14.76
       },
       {
         "id": "p11",
-        "inicio_s": 147.417,
-        "fim_s": 169.682,
+        "inicio_s": 147.432,
+        "fim_s": 169.7,
         "audio_s": 21.552
       },
       {
         "id": "p12",
-        "inicio_s": 169.682,
-        "fim_s": 189.803,
+        "inicio_s": 169.7,
+        "fim_s": 189.829,
         "audio_s": 19.416
       },
       {
         "id": "p13",
-        "inicio_s": 189.803,
-        "fim_s": 207.971,
+        "inicio_s": 189.829,
+        "fim_s": 208,
         "audio_s": 17.448
       }
     ]
