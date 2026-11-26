@@ -1,0 +1,12 @@
+{
+  "name": "pagueares-e2e-docs",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright do manual de documentação (plugin documentacao); separado do front-end.",
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.11",
+    "typescript": "^7.0.2"
+  }
+}

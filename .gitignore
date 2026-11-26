@@ -26,3 +26,9 @@ desktop.ini
 
 # Worktrees de agentes
 .claude/worktrees/
+
+# Documentação (plugin documentacao): dependências e resultados do Playwright
+e2e-docs/node_modules/
+e2e-docs/test-results/
+e2e-docs/playwright-report/
+docs/manual/exportacoes/.capturas/
