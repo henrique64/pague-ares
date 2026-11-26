@@ -1,19 +1,20 @@
 // Fotos do grupo g1 do manual "exportacoes" (modo de dados real): menu de Financeiro, Administrador e Contabilidade,
-// tela Exportações em vários estados, e a aba Financeiro/Contábil de Solicitações com e sem o botão Exportar.
+// tela Exportações em vários estados, e a aba Financeiro/Contábil de Solicitações com e sem o botão Exportar planilha.
 //
 // Ambiente: o app de verdade (DOC_URL_BASE), com a massa fictícia da semente. ANTES de rodar, execute
 // `node e2e-docs/e2e/manual/preparar-g1.ts` (ver o cabeçalho dele): fin02 fica com uma exportação Falhou, uma Cancelada
 // e uma Expirada; fin03 e adm02 ficam sem nenhuma. Este spec confere isso no início e reprova com a instrução se o
 // ambiente não estiver assim (cada rodada deixa exportações novas nessas contas, então o preparo vale para uma rodada).
-// Concluída, Em processamento, Pendente, o aviso de sucesso e as recusas são feitos aqui, ao vivo, pela própria tela, e
-// os pedidos grandes (500 títulos) são cancelados no fim.
+// Concluída, Em processamento, Pendente, Excluída (pelo botão Excluir de uma Concluída), o aviso de sucesso, as recusas e
+// as validações do formulário (Código, avisos de "Ambos") são feitos aqui, ao vivo, pela própria tela, e os pedidos
+// grandes (500 títulos) são cancelados no fim.
 //
 // Contas (todas fictícias, @exemplo.invalid, mesma senha da semente, lida da variável de ambiente que o capturar indica):
-//   Financeiro da configuração (DOC_USUARIO_ENV) — aba Financeiro/Contábil com o botão Exportar;
-//   con.semente   — Contabilidade: menu sem Exportações e aba sem o botão Exportar;
+//   Financeiro da configuração (DOC_USUARIO_ENV) — aba Financeiro/Contábil com o botão Exportar planilha e a sua dica;
+//   con.semente   — Contabilidade: menu sem Exportações e aba com registros, sem o botão Exportar planilha;
 //   adm02.semente — Administrador: menu e lista vazia;
 //   fin02.semente — Financeiro: formulário, recusas e a lista com Falhou, Cancelada, Expirada, Concluída e as em andamento;
-//   fin03.semente — Financeiro: a tela inteira com uma Em processamento e uma Concluída.
+//   fin03.semente — Financeiro: a tela inteira com uma Em processamento e uma Concluída, e depois a linha Excluída.
 //
 // Relógio: no modo real as datas das linhas vêm do servidor (a data de hoje), então o relógio da página não é fixado
 // (um relógio diferente do servidor poderia invalidar o token de sessão). O calendário abre no mês de hoje.
@@ -186,9 +187,16 @@ async function fotoDaFaixa(page: Page, id: string, ate: Locator): Promise<void> 
   });
 }
 
+/** Foto da tela como está, com o ponteiro onde ficou (a dica de um botão só aparece com o mouse em cima). */
+async function fotoComPonteiro(page: Page, id: string): Promise<void> {
+  const bruto = process.env.DOC_MASCARAS;
+  const mascaras = bruto ? (JSON.parse(bruto) as string[]).map((s) => page.locator(s)) : [];
+  await page.screenshot({ path: path.join(pastaDasFotos(), `${id}.png`), fullPage: false, animations: "disabled", caret: "hide", mask: mascaras });
+}
+
 /** Digita o período da Solicitação, no formato dd/MM/aaaa que o app lê como dia/mês/ano. */
 async function digitarPeriodo(page: Page, inicio: string, fim: string): Promise<void> {
-  const periodo = campo(page, "Período da Solicitação");
+  const periodo = campo(page, "Período da solicitação");
   await periodo.locator('input[placeholder="Início"]').fill(inicio);
   await periodo.locator('input[placeholder="Fim"]').fill(fim);
   await periodo.locator('input[placeholder="Fim"]').blur();
@@ -196,24 +204,31 @@ async function digitarPeriodo(page: Page, inicio: string, fim: string): Promise<
 }
 
 // ---------- Financeiro (conta da configuração): Solicitações com Exportar ----------
-test("aba Financeiro/Contábil com o botão Exportar", async ({ page }) => {
+test("aba Financeiro/Contábil com o botão Exportar planilha", async ({ page }) => {
   await entrar(page, FIN);
   await page.locator(".sidebar-wrapper").getByRole("link", { name: "Solicitações" }).click();
   await page.getByRole("tab", { name: "Financeiro/Contábil" }).click();
   await expect(page.getByRole("tab", { name: "Financeiro/Contábil" })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".loader-text")).toHaveCount(0);
-  const exportar = page.getByRole("button", { name: "Exportar", exact: true });
+  const exportar = page.getByRole("button", { name: "Exportar planilha", exact: true });
   await expect(exportar).toBeVisible();
-  await expect(page.getByRole("button", { name: "Limpar Filtros" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Limpar filtros" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Filtrar", exact: true })).toBeVisible();
   await expect(page.getByRole("tabpanel", { name: "Financeiro/Contábil" }).locator("tbody tr").first()).toBeVisible();
   const apagar = await destacar(page, exportar);
   await tela(page, "pagamentos-botao-exportar");
   await apagar();
+
+  // a dica do botão: aparece com o ponteiro em cima dele
+  await exportar.hover();
+  const dica = page.locator(".mat-mdc-tooltip");
+  await expect(dica).toHaveText("Baixa a lista desta aba em Excel (Pagamentos.xlsx), sem anexos. Os anexos ficam no menu Exportações.");
+  await conferir(page, "pagamentos-dica-exportar-planilha");
+  await fotoComPonteiro(page, "pagamentos-dica-exportar-planilha");
 });
 
 // ---------- Contabilidade: menu sem Exportações e aba sem o botão ----------
-test("menu da Contabilidade e aba Financeiro/Contábil sem o botão Exportar", async ({ page }) => {
+test("menu da Contabilidade e aba Financeiro/Contábil com registros e sem o botão Exportar planilha", async ({ page }) => {
   await entrar(page, CON);
   await expect(page.locator(".sidebar-wrapper ul.nav li")).toHaveText([/Home/, /Solicitações/]);
   await expect(page.locator(".sidebar-wrapper").getByRole("link", { name: "Exportações" })).toHaveCount(0);
@@ -223,8 +238,12 @@ test("menu da Contabilidade e aba Financeiro/Contábil sem o botão Exportar", a
   await expect(page.getByRole("tab", { name: "Financeiro/Contábil" })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".loader-text")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Filtrar", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Exportar", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("tabpanel", { name: "Financeiro/Contábil" }).getByRole("heading", { name: "Solicitações de Pagamento" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Exportar planilha", exact: true })).toHaveCount(0);
+  const painel = page.getByRole("tabpanel", { name: "Financeiro/Contábil" });
+  await expect(painel.getByRole("heading", { name: "Solicitações de pagamento" })).toBeVisible();
+  // a semente atribui títulos aprovados pelo gestor à Contabilidade: a aba traz registros
+  await expect(painel.locator("tbody tr").first()).toBeVisible();
+  expect(await painel.locator("tbody tr").count()).toBeGreaterThan(5);
   await tela(page, "pagamentos-sem-botao-exportar");
 });
 
@@ -235,7 +254,7 @@ test("menu do Administrador e lista de exportações vazia", async ({ page }) =>
   await expect(page.locator(".sidebar-wrapper ul.nav li")).toHaveText([/Home/, /Solicitações/, /Exportações/, /Configurações/]);
   await fotoDoMenu(page, "menu-exportacoes-administrador");
 
-  await expect(page.getByText("Você ainda não gerou nenhuma exportação nos últimos 30 dias.")).toBeVisible();
+  await expect(page.getByText("Nenhuma exportação para mostrar nos últimos 30 dias.")).toBeVisible();
   await rolarPara(tituloDaLista(page), 20);
   await tela(page, "exportacoes-lista-vazia");
 });
@@ -254,7 +273,7 @@ test("tela Exportações com uma exportação concluída e uma em processamento"
   await page.locator("#btnGerar").click();
   await expect(aviso(page)).toContainText("Exportação solicitada.");
   await expect(linhas.first().locator(".status")).toHaveText("Concluída", { timeout: 60_000 });
-  await page.getByRole("button", { name: "Limpar Filtros" }).click();
+  await page.getByRole("button", { name: "Limpar filtros" }).click();
   await expect(page.locator("#tipoTitulo")).toContainText("Ambos (Solicitações e RDDVs)");
   await expect(aviso(page)).toBeHidden({ timeout: 15_000 });
 
@@ -276,6 +295,21 @@ test("tela Exportações com uma exportação concluída e uma em processamento"
   await rolarPara(tituloDaLista(page), 24);
   await linhas.first().getByRole("button", { name: "Cancelar" }).click();
   await expect(linhas.first().locator(".status")).toHaveText("Cancelada", { timeout: 60_000 });
+
+  // "Excluir" na Concluída: a linha passa a Excluída, sem Baixar nem Excluir, com Remover da lista e o Expira em original
+  const concluida = linhas.nth(1);
+  await expect(concluida.locator(".status")).toHaveText("Concluída");
+  const expiraAntes = (await concluida.locator("td").last().innerText()).trim();
+  expect(expiraAntes).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
+  await concluida.getByRole("button", { name: "Excluir" }).click();
+  await expect(aviso(page)).toContainText("Arquivo excluído.");
+  await expect(concluida.locator(".status")).toHaveText("Excluída");
+  await expect(concluida.getByRole("button", { name: "Remover da lista" })).toBeVisible();
+  await expect(concluida.getByRole("button", { name: "Baixar" })).toHaveCount(0);
+  await expect(concluida.getByRole("button", { name: "Excluir" })).toHaveCount(0);
+  await expect(concluida.locator("td").last()).toHaveText(expiraAntes);
+  await expect(aviso(page)).toBeHidden({ timeout: 15_000 });
+  await fotoDaFaixa(page, "exportacoes-lista-excluida", concluida);
 });
 
 // ---------- Financeiro (fin02): formulário, recusa e lista ----------
@@ -291,7 +325,7 @@ test("formulário: padrão, tipos, período e recusa sem títulos", async ({ pag
   await tela(page, "exportacoes-formulario-padrao");
 
   // seletor de período aberto
-  await campo(page, "Período de Vencimento").locator("mat-datepicker-toggle button").click();
+  await campo(page, "Período de vencimento").locator("mat-datepicker-toggle button").click();
   await expect(page.locator("mat-calendar")).toBeVisible();
   await tela(page, "exportacoes-seletor-de-periodo");
   await page.keyboard.press("Escape");
@@ -300,7 +334,7 @@ test("formulário: padrão, tipos, período e recusa sem títulos", async ({ pag
   // Tipo de título = RDDV
   await escolher(page, "Tipo de título", "RDDV");
   const soSolicitacao = [
-    caixa(page, "Número do Documento (só Solicitação)"),
+    caixa(page, "Nº do documento (só Solicitação)"),
     caixa(page, "Tipo de solicitação (só Solicitação)"),
     caixa(page, "Tipo de pagamento (só Solicitação)"),
     caixa(page, "Forma de pagamento (só Solicitação)"),
@@ -308,16 +342,16 @@ test("formulário: padrão, tipos, período e recusa sem títulos", async ({ pag
   await expect(campo(page, "Tipo de solicitação (só Solicitação)").locator("mat-select")).toHaveAttribute("aria-disabled", "true");
   await expect(campo(page, "Tipo de pagamento (só Solicitação)").locator("mat-select")).toHaveAttribute("aria-disabled", "true");
   await expect(campo(page, "Forma de pagamento (só Solicitação)").locator("mat-select")).toHaveAttribute("aria-disabled", "true");
-  await expect(campo(page, "Número do Documento (só Solicitação)").locator("input")).toBeDisabled();
+  await expect(campo(page, "Nº do documento (só Solicitação)").locator("input")).toBeDisabled();
   await expect(campo(page, "Tipo de relatório (só RDDV)").locator("mat-select")).toHaveAttribute("aria-disabled", "false");
   let apagar = await destacar(page, soSolicitacao);
   await tela(page, "exportacoes-tipo-rddv");
   await apagar();
 
-  // formulário preenchido: Solicitação, período da solicitação e Status Gestor
+  // formulário preenchido: Solicitação, período da solicitação e Status gestor
   await escolher(page, "Tipo de título", "Solicitação");
   await digitarPeriodo(page, "01/11/2025", "31/12/2025");
-  await escolher(page, "Status Gestor", "Autorizado");
+  await escolher(page, "Status gestor", "Autorizado");
   await expect(campo(page, "Tipo de relatório (só RDDV)").locator("mat-select")).toHaveAttribute("aria-disabled", "true");
   await expect(campo(page, "Tipo de pagamento (só Solicitação)").locator("mat-select")).toHaveAttribute("aria-disabled", "false");
   apagar = await destacar(page, caixa(page, "Tipo de relatório (só RDDV)"));
@@ -329,17 +363,45 @@ test("formulário: padrão, tipos, período e recusa sem títulos", async ({ pag
   await page.locator("#btnGerar").click();
   await expect(aviso(page)).toContainText("Nenhum título encontrado com os filtros informados.");
   await tela(page, "exportacoes-aviso-sem-titulos");
-  await page.getByRole("button", { name: "Limpar Filtros" }).click();
+  await page.getByRole("button", { name: "Limpar filtros" }).click();
   await expect(page.locator("#codigo")).toHaveValue("");
   await expect(page.locator("#tipoTitulo")).toContainText("Ambos (Solicitações e RDDVs)");
   await expect(aviso(page)).toBeHidden({ timeout: 15_000 });
 
-  // a lista com Falhou, Cancelada e Expirada, sem ações
+  // Código inválido (zero): a mensagem de validação aparece sob o campo e a exportação não é pedida
+  await page.locator("#codigo").fill("0");
+  await page.locator("#btnGerar").click();
+  const mensagemDoCodigo = "Informe o código como número inteiro maior que zero (ex.: 123) ou com o prefixo (SOL-000123, RDDV-000045).";
+  await expect(campo(page, "Código").locator("mat-error")).toHaveText(mensagemDoCodigo);
+  await expect(aviso(page)).toContainText(mensagemDoCodigo);
+  await noTopo(page);
+  await tela(page, "exportacoes-codigo-recusado");
+  await page.getByRole("button", { name: "Limpar filtros" }).click();
+  await expect(page.locator("#codigo")).toHaveValue("");
+  await expect(campo(page, "Código").locator("mat-error")).toHaveCount(0);
+  await expect(aviso(page)).toBeHidden({ timeout: 15_000 });
+
+  // tipo "Ambos" com um campo só de Solicitação preenchido: o aviso diz que os RDDVs ficam de fora
+  await expect(page.locator("#tipoTitulo")).toContainText("Ambos (Solicitações e RDDVs)");
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await page.locator("#numeroDocumento").fill("123456");
+  const avisoAmbos = page.locator(".aviso-ambos");
+  await expect(avisoAmbos).toBeVisible();
+  await expect(avisoAmbos).toContainText("só existem em solicitações: com eles preenchidos, os RDDVs ficam de fora.");
+  await rolarPara(caixa(page, "Nº do documento (só Solicitação)"), 260);
+  await expect(avisoAmbos).toBeInViewport();
+  await tela(page, "exportacoes-aviso-ambos");
+  await page.locator("#numeroDocumento").fill("");
+  await expect(avisoAmbos).toHaveCount(0);
+  await noTopo(page);
+
+  // a lista com Falhou, Cancelada e Expirada, cada uma só com Remover da lista
   const linhas = page.locator("tbody tr");
   await expect(linhas).toHaveCount(3);
   for (const [i, situacao] of ["Falhou", "Cancelada", "Expirada"].entries()) {
     await expect(linhas.nth(i).locator(".status")).toHaveText(situacao);
-    await expect(linhas.nth(i).locator("button")).toHaveCount(0);
+    await expect(linhas.nth(i).locator("button")).toHaveCount(1);
+    await expect(linhas.nth(i).getByRole("button", { name: "Remover da lista" })).toBeVisible();
   }
   await expect(linhas.first()).toContainText("A exportação foi interrompida por um reinício do servidor. Gere a exportação de novo.");
   await fotoDaFaixa(page, "exportacoes-lista-falhou-cancelada-expirada", linhas.nth(2));
@@ -364,7 +426,7 @@ test("aviso de solicitada, lista em processamento e recusa por excesso de pedido
   await page.locator("#btnGerar").click();
   await expect(aviso(page)).toContainText("Exportação solicitada.");
   await expect(linhas.first().locator(".status")).toHaveText("Concluída", { timeout: 60_000 });
-  await page.getByRole("button", { name: "Limpar Filtros" }).click();
+  await page.getByRole("button", { name: "Limpar filtros" }).click();
   await expect(page.locator("#tipoTitulo")).toContainText("Ambos (Solicitações e RDDVs)");
   await expect(aviso(page)).toBeHidden({ timeout: 15_000 });
 

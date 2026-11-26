@@ -10,15 +10,18 @@
 //      adm02.semente (Administrador), clonadas das contas da semente (mesma senha, mesmo departamento). Isso isola as
 //      fotos das contas que outros trabalhos usam e dá a cada foto uma lista de exportações previsível.
 //   2. Zera as exportações dessas três contas: antes, cancela as em andamento e exclui pela API as Concluídas (para o
-//      arquivo sair do disco), depois apaga as linhas restantes da tabela ExportacaoJob (SQL local; a API não tem como
-//      apagar linha de Falhou, Cancelada ou Expirada).
+//      arquivo sair do disco; a API as marca como Excluída), depois apaga as linhas restantes da tabela ExportacaoJob
+//      (SQL local; a API só tira a linha da lista, não a apaga).
 //   3. Monta para fin02, pela API de verdade, as linhas que não dá para fotografar "ao vivo", da mais antiga à mais nova:
-//        Expirada   — exportação pequena, depois "Excluir" (a API a marca como Expirada);
+//        Expirada   — exportação pequena Concluída, com o prazo (DataExpiracao) recuado no SQL para um segundo depois do
+//                     pedido; a limpeza que roda ao subir a API (a mesma de produção) a expira e apaga o arquivo. "Excluir"
+//                     não serve mais: agora leva a Excluída, não a Expirada;
 //        Cancelada  — pedido grande (500 títulos) em andamento, depois cancelado;
 //        Falhou     — outro pedido grande em andamento quando a API é reiniciada (`docker restart pagueares-api`): a
 //                     recuperação da subida o encerra como Falhou, com a mensagem de interrupção.
-//   fin03 e adm02 ficam sem exportações. Em processamento, Pendente, Concluída (da foto da lista), o aviso de sucesso e as
-//   recusas são feitos pelo spec, ao vivo, pela própria tela.
+//   As quatro situações encerradas (Falhou, Cancelada, Expirada e Excluída) têm "Remover da lista" na tela. fin03 e adm02
+//   ficam sem exportações. Em processamento, Pendente, Concluída (da foto da lista), Excluída (pelo botão "Excluir" de uma
+//   Concluída), o aviso de sucesso e as recusas são feitos pelo spec, ao vivo, pela própria tela.
 import { spawnSync } from "node:child_process";
 
 const API = process.env.PAGUEARES_API ?? "http://localhost:5000";
@@ -112,17 +115,17 @@ async function esperarApi() {
 }
 
 // ---------- 1. contas extras ----------
-function garantirConta(email: string, nome: string, modelo: number, funcao: number) {
+function garantirConta(email: string, nome: string, emailDoModelo: string, funcao: number) {
   sql(
     `if not exists (select 1 from Usuario where Email='${email}') begin ` +
       `insert into Usuario(Email,Codigo,Nome,Origem,IdExterno,Senha,IdDepartamento,Ativo,DataCadastro) ` +
-      `select '${email}',Codigo,'${nome}',Origem,IdExterno,Senha,IdDepartamento,Ativo,SYSUTCDATETIME() from Usuario where Email=(select Email from Usuario where IdUsuario=${modelo}); ` +
+      `select '${email}',Codigo,'${nome}',Origem,IdExterno,Senha,IdDepartamento,Ativo,SYSUTCDATETIME() from Usuario where Email='${emailDoModelo}'; ` +
       `insert into UsuarioFuncao(IdUsuario,IdFuncao) select IdUsuario,${funcao} from Usuario where Email='${email}'; end`,
   );
 }
-garantirConta("fin02.semente@exemplo.invalid", "Usuario Ficticio Financeiro 02", 1020, 4);
-garantirConta("fin03.semente@exemplo.invalid", "Usuario Ficticio Financeiro 03", 1020, 4);
-garantirConta("adm02.semente@exemplo.invalid", "Usuario Ficticio Administrador 02", 1019, 1);
+garantirConta("fin02.semente@exemplo.invalid", "Usuario Ficticio Financeiro 02", "fin.semente@exemplo.invalid", 4);
+garantirConta("fin03.semente@exemplo.invalid", "Usuario Ficticio Financeiro 03", "fin.semente@exemplo.invalid", 4);
+garantirConta("adm02.semente@exemplo.invalid", "Usuario Ficticio Administrador 02", "adm.semente@exemplo.invalid", 1);
 log("contas fin02, fin03 e adm02 garantidas");
 
 // ---------- 2. zerar as exportações das duas contas ----------
@@ -147,9 +150,7 @@ const fin = await Sessao.de("fin02.semente");
 
 const pequena = await fin.pedir({ tipoTitulo: 0, dataSolicitacaoInicio: "2025-12-01", dataSolicitacaoFim: "2025-12-20", incluirAnexos: false });
 await fin.esperar(pequena.id, "Concluída");
-await fin.remover(pequena.id);
-await fin.esperar(pequena.id, "Expirada");
-log(`Expirada: exportação ${pequena.id}`);
+log(`Concluída: exportação ${pequena.id} (vira Expirada quando a API subir, mais abaixo)`);
 
 async function pedidoGrandeEmProcessamento(): Promise<Job> {
   const g = await fin.pedir({ tipoTitulo: 0, incluirAnexos: true });
@@ -170,11 +171,15 @@ log(`Cancelada: exportação ${aCancelar.id}`);
 
 // Falhou: a API é reiniciada com outro pedido grande em andamento
 const aInterromper = await pedidoGrandeEmProcessamento();
+// O prazo da pequena vence um segundo depois do pedido (já passou), e a limpeza da subida da API a expira.
+sql(`update ExportacaoJob set DataExpiracao = dateadd(second, 1, DataCriacao) where IdExportacaoJob = ${pequena.id}`);
 const reinicio = spawnSync("docker", ["restart", "pagueares-api"], { encoding: "utf8" });
 if (reinicio.status !== 0) throw new Error(`docker restart falhou: ${reinicio.stderr}`);
 await esperarApi();
 const reconectado = await Sessao.de("fin02.semente");
 const falhou = await reconectado.esperar(aInterromper.id, "Falhou", 120_000);
+await reconectado.esperar(pequena.id, "Expirada", 120_000);
+log(`Expirada: exportação ${pequena.id}`);
 log(`Falhou: exportação ${aInterromper.id} (${falhou.mensagemErro})`);
 
 log("pronto: fin02 com Falhou, Cancelada e Expirada; fin03 e adm02 sem exportações");
